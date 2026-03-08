@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "no-clue",
+  "productName": "No-Clue",
   "version": "0.1.0",
-  "identifier": "no-clue",
+  "identifier": "com.theandru.noclue",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,10 +12,20 @@
   "app": {
     "windows": [
       {
-        "title": "no-clue",
-        "width": 800,
-        "height": 600,
-        "contentProtected": true
+        "label": "overlay",
+        "url": "/",
+        "width": 600,
+        "height": 54,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "visibleOnAllWorkspaces": true,
+        "skipTaskbar": true,
+        "contentProtected": true,
+        "focus": false,
+        "acceptFirstMouse": true,
+        "shadow": false
       }
     ],
     "security": {
