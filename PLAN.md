@@ -71,24 +71,27 @@ no-clue/
 │   ├── router/
 │   │   └── index.ts               # Vue Router config
 │   ├── views/
-│   │   ├── OverlayView.vue        # Main overlay window
-│   │   └── DashboardView.vue      # Dashboard container
-│   ├── components/
 │   │   ├── overlay/
-│   │   │   ├── OverlayToolbar.vue # Top bar with buttons
-│   │   │   ├── OverlayPopover.vue # Expandable popover
-│   │   │   ├── ChatTab.vue        # Chat with LLM
-│   │   │   ├── TranscriptTab.vue  # Live transcription
-│   │   │   └── QuickActions.vue    # Quick action buttons
-│   │   ├── dashboard/
-│   │   │   ├── DashboardSidebar.vue
-│   │   │   ├── ChatsPanel.vue     # Chat history
-│   │   │   ├── PromptsPanel.vue   # System prompts
-│   │   │   ├── SettingsPanel.vue  # App settings
-│   │   │   ├── AudioPanel.vue     # Audio devices
-│   │   │   ├── ShortcutsPanel.vue # Keyboard shortcuts
-│   │   │   └── ProvidersPanel.vue  # AI + Transcription providers
+│   │   │   ├── OverlayView.vue    # Main overlay window
+│   │   │   └── components/        # Components only for overlay
+│   │   │       ├── OverlayToolbar.vue
+│   │   │       ├── OverlayPopover.vue
+│   │   │       ├── ChatTab.vue
+│   │   │       ├── TranscriptTab.vue
+│   │   │       └── QuickActions.vue
+│   │   └── dashboard/
+│   │       ├── DashboardView.vue  # Dashboard container
+│   │       └── components/        # Components only for dashboard
+│   │           ├── DashboardSidebar.vue
+│   │           ├── ChatsPanel.vue
+│   │           ├── PromptsPanel.vue
+│   │           ├── SettingsPanel.vue
+│   │           ├── AudioPanel.vue
+│   │           ├── ShortcutsPanel.vue
+│   │           └── ProvidersPanel.vue
+│   ├── components/
 │   │   └── ui/                    # Radix UI + Tailwind components
+│   ├── composables/               # Shared Vue composables
 │   ├── stores/
 │   │   ├── overlay.ts             # Overlay state (expanded, mic on)
 │   │   ├── chat.ts                # Chat messages, history
