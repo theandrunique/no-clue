@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 const COLLAPSED_HEIGHT = 54;
@@ -24,6 +24,9 @@ export const useOverlayStore = defineStore("overlay", () => {
   async function resizeWindow() {
     const window = getCurrentWindow();
     const height = isExpanded.value ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+    // await nextTick();
+    // const contentHeight = document.documentElement.scrollHeight;
+    // const height = Math.ceil(contentHeight); 
     await window.setSize(new LogicalSize(600, height));
   }
 

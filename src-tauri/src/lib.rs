@@ -7,16 +7,14 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 async fn open_dashboard(app: AppHandle) -> Result<(), String> {
-    // Check if dashboard already exists
     if let Some(window) = app.get_webview_window("dashboard") {
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
 
-    // Create new dashboard window
     WebviewWindowBuilder::new(&app, "dashboard", WebviewUrl::App("/dashboard".into()))
-        .title("No-Clue Settings")
+        .title("No-Clue Dashboard")
         .inner_size(900.0, 700.0)
         .center()
         .decorations(true)

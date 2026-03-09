@@ -6,11 +6,15 @@
 |-----------|------------|
 | Framework | Tauri 2.x |
 | Frontend | Vue 3 + TypeScript |
-| UI | Radix UI + TailwindCSS |
+| UI | shadcn-vue (Button, Popover, etc.) + TailwindCSS |
 | State | Pinia |
 | Markdown | streamdown (streaming + анимация) |
 | Storage | @tauri-apps/plugin-sql (SQLite) |
 | Screen Capture | xcap (Rust) |
+
+**Важно:**
+- Все базовые UI компоненты использовать из shadcn-vue
+- Не использовать `title` атрибут на кнопках (видно на записи)
 
 ---
 
