@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import Popover from '@/components/ui/popover/Popover.vue';
 import PopoverContent from '@/components/ui/popover/PopoverContent.vue';
 import PopoverTrigger from '@/components/ui/popover/PopoverTrigger.vue';
@@ -6,10 +7,18 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, MessageSquare, FileText } from 'lucide-vue-next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useOverlayStore } from '@/stores/overlay';
+import { useSettingsStore } from '@/stores/settings';
 import ChatTab from './ChatTab.vue';
 import TranscriptTab from './TranscriptTab.vue';
 
 const overlayStore = useOverlayStore();
+const settingsStore = useSettingsStore();
+
+const popoverStyle = computed(() => ({
+  '--overlay-opacity': settingsStore.settings.overlayOpacity,
+  width: `${settingsStore.settings.overlayWidth}px`,
+  height: `${settingsStore.settings.overlayHeight - 59}px`,
+}));
 
 function handleOpenChange(open: boolean) {
   if (open !== overlayStore.isExpanded) {
@@ -31,14 +40,15 @@ function handleInteractOutside(event: Event) {
         </Button>
     </PopoverTrigger>
     <PopoverContent
+      :style="popoverStyle"
       align="end"
       side="bottom"
       :sideOffset="10"
-      class="dark w-screen h-[246px] p-0"
+      class="dark p-0 overflow-hidden overlay-card"
       @interactOutside="handleInteractOutside"
     >
         <Tabs defaultValue="chat" class="h-full">
-          <TabsList class="w-full justify-start rounded-none border-b bg-transparent px-2">
+          <TabsList class="w-full justify-start rounded-none border-b bg-transparent px-2 h-9">
             <TabsTrigger value="chat" class="gap-2">
               <MessageSquare class="w-4 h-4" />
               Chat
@@ -49,10 +59,10 @@ function handleInteractOutside(event: Event) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat" class="h-full">
+          <TabsContent value="chat" class="h-full m-0">
             <ChatTab />
           </TabsContent>
-          <TabsContent value="transcript">
+          <TabsContent value="transcript" class="h-full m-0">
             <TranscriptTab />
           </TabsContent>
         </Tabs>

@@ -1,66 +1,80 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useChatStore } from "@/stores/chat";
+import { useConversationStore } from "@/stores/conversation";
 import { useOverlayStore } from "@/stores/overlay";
 import { Send } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input/Input.vue";
+import ChatMessage from "./ChatMessage.vue";
+import StreamingMessage from "./StreamingMessage.vue";
+import QuickActions from "./QuickActions.vue";
 
-const chatStore = useChatStore();
+const conversationStore = useConversationStore();
 const overlayStore = useOverlayStore();
 
 const inputMessage = ref("");
 
-async function sendMessage() {
-  if (!inputMessage.value.trim() || !overlayStore.currentConversationId) return;
+function sendMessage(content: string) {
+  if (!content.trim()) return;
 
-  const userMessage = inputMessage.value;
+  const message = content;
   inputMessage.value = "";
 
-  chatStore.addUserMessage(overlayStore.currentConversationId, userMessage);
-
-  chatStore.setStreaming(true);
-
-  try {
-    // TODO: Implement actual chat completion via Rust
-  } catch (error) {
-    console.error("Failed to send message:", error);
+  if (overlayStore.currentConversationId) {
+    conversationStore.addUserMessage(overlayStore.currentConversationId, message);
+    conversationStore.setStreaming(true);
   }
+}
+
+function handleSend() {
+  sendMessage(inputMessage.value);
+}
+
+function handleQuickAction(prompt: string) {
+  sendMessage(prompt);
 }
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    sendMessage();
+    handleSend();
   }
 }
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div class="flex flex-col h-full">
+    <!-- Messages Area -->
     <div class="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
-      <div v-if="chatStore.messages.length === 0" class="flex flex-col items-center justify-center h-full text-white/50 text-center">
-        <p>No messages yet</p>
-        <p class="text-xs mt-1">Start a conversation or use Quick Actions</p>
+      <div v-if="conversationStore.messages.length === 0" class="flex flex-col items-center justify-center h-full text-white/40 text-center">
+        <p class="text-sm">No messages yet</p>
+        <p class="text-xs mt-1 opacity-60">Start a conversation or use Quick Actions below</p>
       </div>
-      <div
-        v-for="message in chatStore.messages"
+      <ChatMessage
+        v-for="message in conversationStore.messages"
         :key="message.id"
-        class="max-w-[85%] px-3 py-2 rounded-lg text-sm break-words"
-        :class="message.role === 'user' ? 'self-end bg-blue-600/80' : 'self-start bg-neutral-700/80'"
-      >
-        {{ message.content }}
-      </div>
-      <div v-if="chatStore.isStreaming" class="self-start bg-neutral-700/80 px-3 py-2 rounded-lg text-sm">
-        {{ chatStore.currentStreamingContent }}<span class="animate-pulse">▊</span>
-      </div>
+        :message="message"
+      />
+      <StreamingMessage
+        v-if="conversationStore.isStreaming"
+        :content="conversationStore.currentStreamingContent"
+      />
     </div>
+
+    <!-- Quick Actions -->
+    <div class="px-3 pb-2">
+      <QuickActions @select="handleQuickAction" />
+    </div>
+
+    <!-- Input -->
     <div class="flex gap-2 px-3 py-2 border-t border-white/10 items-end">
       <Input
+        v-model="inputMessage"
         placeholder="Type a message..."
+        class="bg-transparent"
         @keydown="handleKeydown"
       />
-      <Button variant="ghost" size="icon" @click="sendMessage" :disabled="!inputMessage.trim()">
+      <Button variant="ghost" size="icon" @click="handleSend" :disabled="!inputMessage.trim()">
         <Send class="w-4 h-4" />
       </Button>
     </div>

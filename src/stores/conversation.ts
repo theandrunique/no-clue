@@ -19,9 +19,17 @@ export interface Transcript {
   timestamp: number;
 }
 
-export const useChatStore = defineStore("chat", () => {
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export const useConversationStore = defineStore("conversation", () => {
   const messages = ref<Message[]>([]);
   const transcripts = ref<Transcript[]>([]);
+  const currentConversationId = ref<string | null>(null);
   const isStreaming = ref(false);
   const currentStreamingContent = ref("");
 
@@ -61,6 +69,13 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
+  function setCurrentConversation(id: string | null) {
+    currentConversationId.value = id;
+    if (id) {
+      // TODO: Load conversation from backend
+    }
+  }
+
   function setStreaming(value: boolean) {
     isStreaming.value = value;
   }
@@ -77,9 +92,16 @@ export const useChatStore = defineStore("chat", () => {
     transcripts.value = [];
   }
 
+  function clearAll() {
+    clearMessages();
+    clearTranscripts();
+    currentConversationId.value = null;
+  }
+
   return {
     messages,
     transcripts,
+    currentConversationId,
     isStreaming,
     currentStreamingContent,
     addMessage,
@@ -87,9 +109,11 @@ export const useChatStore = defineStore("chat", () => {
     addAssistantMessage,
     addTranscript,
     updateTranscript,
+    setCurrentConversation,
     setStreaming,
     setStreamingContent,
     clearMessages,
     clearTranscripts,
+    clearAll,
   };
 });

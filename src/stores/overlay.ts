@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
-import { nextTick, ref } from "vue";
+import { ref } from "vue";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { useSettingsStore } from "./settings";
 
 const COLLAPSED_HEIGHT = 54;
-const EXPANDED_HEIGHT = 300;
 
 export const useOverlayStore = defineStore("overlay", () => {
   const isExpanded = ref(false);
@@ -22,12 +22,11 @@ export const useOverlayStore = defineStore("overlay", () => {
   }
 
   async function resizeWindow() {
+    const settingsStore = useSettingsStore();
     const window = getCurrentWindow();
-    const height = isExpanded.value ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
-    // await nextTick();
-    // const contentHeight = document.documentElement.scrollHeight;
-    // const height = Math.ceil(contentHeight); 
-    await window.setSize(new LogicalSize(600, height));
+    const width = settingsStore.settings.overlayWidth;
+    const height = isExpanded.value ? settingsStore.settings.overlayHeight : COLLAPSED_HEIGHT;
+    await window.setSize(new LogicalSize(width, height));
   }
 
   function setTranscriptionEnabled(enabled: boolean) {
