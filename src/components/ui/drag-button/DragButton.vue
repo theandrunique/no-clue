@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 </script>
 
 <template>
-  <Button 
-    variant="ghost" 
-    size="icon-sm"
+  <Button
+    variant="ghost"
+    size="icon"
+    class="-ml-[2px] w-fit"
     data-tauri-drag-region
   >
     <GripVertical :size="16" />
