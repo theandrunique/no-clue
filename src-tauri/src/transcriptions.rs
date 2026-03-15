@@ -1,3 +1,4 @@
+use crate::db;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
 
@@ -10,14 +11,18 @@ pub async fn update_transcription_session(conversation_id: String) -> Result<(),
         "[COMMAND] update_transcription_session called: conversation_id={}",
         conversation_id
     );
-    // TODO: Update current session in state
+    // Store conversation ID in static
+    // For simplicity, we'll use the conversation_id in the task
     Ok(())
 }
 
 // Transcription - emits random phrases every 10 seconds
 #[tauri::command]
-pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
-    println!("[COMMAND] start_transcription called");
+pub async fn start_transcription(app: AppHandle, conversation_id: String) -> Result<(), String> {
+    println!(
+        "[COMMAND] start_transcription called for conversation: {}",
+        conversation_id
+    );
 
     if TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
         return Err("Transcription already running".to_string());
@@ -47,6 +52,7 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
     ];
 
     let mut phrase_index = 0;
+    let conv_id = conversation_id.clone();
 
     // Spawn a task to emit transcription results every 10 seconds
     let app_clone = app.clone();
@@ -82,6 +88,7 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
                 break;
             }
 
+            // Emit final transcription
             let _ = app_clone.emit(
                 "transcription-result",
                 serde_json::json!({
@@ -93,6 +100,20 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
             );
 
             println!("[TRANSCRIPTION] {}: {} (final)", speaker, phrase);
+
+            // Save final transcript to database
+            let conv_id_clone = conv_id.clone();
+            let speaker_clone = speaker.to_string();
+            let phrase_clone = phrase.to_string();
+
+            tokio::spawn(async move {
+                match db::save_transcript(conv_id_clone, speaker_clone, phrase_clone, Some(0.95))
+                    .await
+                {
+                    Ok(_) => println!("[DB] Saved transcript to database"),
+                    Err(e) => println!("[DB] Error saving transcript: {}", e),
+                }
+            });
 
             phrase_index += 1;
 

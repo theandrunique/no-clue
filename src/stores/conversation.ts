@@ -70,7 +70,9 @@ export const useConversationStore = defineStore("conversation", () => {
     });
 
     transcriptionStore.setIsEnabled(true);
-    await invoke("start_transcription");
+    await invoke("start_transcription", { 
+      conversationId: currentConversationId.value 
+    });
   }
 
   async function stopTranscription() {

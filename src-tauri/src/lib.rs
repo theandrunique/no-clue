@@ -6,8 +6,10 @@ use crate::{
     utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 mod conversations;
+mod db;
 mod transcriptions;
 mod utils;
 
@@ -36,7 +38,6 @@ async fn save_provider_settings(
         "[COMMAND] save_provider_settings called: provider={}, model={}",
         provider, model
     );
-    // TODO: Save to SQLite
     Ok(())
 }
 
@@ -46,7 +47,6 @@ async fn get_provider_settings(provider: String) -> Result<ProviderSettings, Str
         "[COMMAND] get_provider_settings called: provider={}",
         provider
     );
-    // TODO: Read from SQLite
     Err("Not implemented".to_string())
 }
 
@@ -71,14 +71,12 @@ async fn save_stt_settings(
         "[COMMAND] save_stt_settings called: model={}, language={}",
         model, language
     );
-    // TODO: Save to SQLite
     Ok(())
 }
 
 #[tauri::command]
 async fn get_stt_settings() -> Result<SttSettings, String> {
     println!("[COMMAND] get_stt_settings called");
-    // TODO: Read from SQLite
     Ok(SttSettings {
         api_key: "".to_string(),
         model: "nova-3".to_string(),
@@ -86,21 +84,33 @@ async fn get_stt_settings() -> Result<SttSettings, String> {
     })
 }
 
-// Database
-#[tauri::command]
-async fn init_database() -> Result<(), String> {
-    println!("[COMMAND] init_database called");
-    // TODO: Initialize SQLite tables
-    println!("[COMMAND] Database initialized");
-    Ok(())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_sql::Builder::new().build())
+        .plugin(
+            tauri_plugin_sql::Builder::new()
+                .add_migrations(
+                    "sqlite:no-clue.db",
+                    vec![tauri_plugin_sql::Migration {
+                        version: 1,
+                        description: "create_initial_schema",
+                        sql: include_str!("../migrations/001_initial.sql"),
+                        kind: tauri_plugin_sql::MigrationKind::Up,
+                    }],
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .setup(|app| {
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data dir");
+            std::fs::create_dir_all(&app_data_dir).ok();
+            db::init_db(&app_data_dir).expect("Failed to initialize database");
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             open_dashboard,
             move_overlay,
@@ -118,7 +128,11 @@ pub fn run() {
             get_all_providers,
             save_stt_settings,
             get_stt_settings,
-            init_database,
+            db::save_transcript,
+            db::save_message,
+            db::create_conversation_db,
+            db::get_conversations_db,
+            db::get_conversation_db,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

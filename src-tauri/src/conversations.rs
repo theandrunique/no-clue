@@ -1,53 +1,43 @@
-use serde::{Deserialize, Serialize};
+use crate::db::{self, Conversation};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
 
 static STREAMING: AtomicBool = AtomicBool::new(false);
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Conversation {
-    pub id: String,
-    pub title: String,
-    pub created_at: i64,
-    pub updated_at: i64,
-}
 
 // Conversation management
 #[tauri::command]
 pub async fn create_conversation() -> Result<Conversation, String> {
     println!("[COMMAND] create_conversation called");
 
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| e.to_string())?
-        .as_millis() as i64;
+    let title = "New conversation".to_string();
+    let _id = db::create_conversation_db(title).await?;
 
-    let conversation = Conversation {
-        id: uuid::Uuid::new_v4().to_string(),
-        title: "New conversation".to_string(),
-        created_at: now,
-        updated_at: now,
-    };
+    let conversations = db::get_conversations_db().await?;
+    let conversation = conversations
+        .into_iter()
+        .next()
+        .ok_or_else(|| "Failed to create conversation".to_string())?;
 
-    println!("[COMMAND] Created conversation: {:?}", conversation);
+    println!("[COMMAND] Created conversation: {}", conversation.id);
     Ok(conversation)
 }
 
 #[tauri::command]
 pub async fn get_conversations() -> Result<Vec<Conversation>, String> {
     println!("[COMMAND] get_conversations called");
-    // TODO: Read from SQLite
-    Ok(vec![])
+    let conversations = db::get_conversations_db().await?;
+    Ok(conversations)
 }
 
 #[tauri::command]
 pub async fn get_conversation(id: String) -> Result<Conversation, String> {
     println!("[COMMAND] get_conversation called: id={}", id);
-    // TODO: Read from SQLite
-    Err("Not implemented".to_string())
+    db::get_conversation_db(id)
+        .await?
+        .ok_or_else(|| "Conversation not found".to_string())
 }
 
-// AI Chat - streams a poem with markdown
+// AI Chat
 #[tauri::command]
 pub async fn send_message(
     app: AppHandle,
@@ -67,9 +57,16 @@ pub async fn send_message(
         return Err("Already streaming".to_string());
     }
 
+    // Save user message immediately
+    if let Err(e) =
+        db::save_message(conversation_id.clone(), "user".to_string(), user_message).await
+    {
+        println!("[DB] Error saving user message: {}", e);
+    }
+
     STREAMING.store(true, Ordering::SeqCst);
 
-    // Poem with markdown to stream over ~3 seconds
+    // Poem with markdown to stream over ~15 seconds
     let poem = r#"Here's a poem for you:
 
 ## The Code
@@ -93,24 +90,47 @@ That's the way the *poem* goes..."#;
 
     let chars: Vec<char> = poem.chars().collect();
     let total_chars = chars.len();
-    let duration_ms = 15000u64; // 15 seconds for slower streaming
+    let duration_ms = 15000u64;
     let delay_per_char = duration_ms / total_chars as u64;
 
-    for chunk in chars.chunks(3) {
+    let mut assistant_response = String::new();
+    let completed = loop {
         if !STREAMING.load(Ordering::SeqCst) {
             println!("[COMMAND] Stream stopped by user");
-            break;
+            break false;
         }
 
-        let chunk_str: String = chunk.iter().collect();
-        let _ = app.emit("chat-stream", chunk_str);
+        let chunk: String = chars
+            .iter()
+            .skip(assistant_response.len())
+            .take(3)
+            .collect();
+
+        if chunk.is_empty() {
+            break true;
+        }
+
+        assistant_response.push_str(&chunk);
+        let _ = app.emit("chat-stream", chunk);
 
         tokio::time::sleep(tokio::time::Duration::from_millis(delay_per_char * 3)).await;
-    }
+    };
 
     let _ = app.emit("chat-stream", "[DONE]");
     STREAMING.store(false, Ordering::SeqCst);
-    println!("[COMMAND] Stream completed");
+
+    if completed {
+        println!("[COMMAND] Stream completed");
+    } else {
+        println!("[COMMAND] Stream stopped - saving partial response");
+    }
+
+    // Save assistant response (full or partial)
+    if let Err(e) =
+        db::save_message(conversation_id, "assistant".to_string(), assistant_response).await
+    {
+        println!("[DB] Error saving assistant message: {}", e);
+    }
 
     Ok(())
 }
