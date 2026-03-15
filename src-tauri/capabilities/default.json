@@ -19,7 +19,6 @@
     "core:window:allow-is-visible",
     "core:window:allow-create",
     "core:tray:default",
-    "global-shortcut:default",
-    "sql:default"
+    "global-shortcut:default"
   ]
 }

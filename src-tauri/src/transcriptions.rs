@@ -1,4 +1,5 @@
-use crate::db;
+use crate::db::transcript as transcript_repo;
+use crate::models::Speaker;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
 
@@ -107,10 +108,18 @@ pub async fn start_transcription(app: AppHandle, conversation_id: String) -> Res
             let phrase_clone = phrase.to_string();
 
             tokio::spawn(async move {
-                match db::save_transcript(conv_id_clone, speaker_clone, phrase_clone, Some(0.95))
-                    .await
+                let speaker = if speaker_clone == "user" {
+                    Speaker::User
+                } else {
+                    Speaker::System
+                };
+                match tokio::task::spawn_blocking(move || {
+                    transcript_repo::create(conv_id_clone, speaker, phrase_clone, Some(0.95))
+                })
+                .await
                 {
-                    Ok(_) => println!("[DB] Saved transcript to database"),
+                    Ok(Ok(_)) => println!("[DB] Saved transcript to database"),
+                    Ok(Err(e)) => println!("[DB] Error saving transcript: {}", e),
                     Err(e) => println!("[DB] Error saving transcript: {}", e),
                 }
             });

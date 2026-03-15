@@ -1,4 +1,6 @@
-use crate::db::{self, Conversation};
+use crate::db::conversation as conv_repo;
+use crate::db::message as msg_repo;
+use crate::models::{Conversation, MessageRole};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
 
@@ -10,9 +12,16 @@ pub async fn create_conversation() -> Result<Conversation, String> {
     println!("[COMMAND] create_conversation called");
 
     let title = "New conversation".to_string();
-    let _id = db::create_conversation_db(title).await?;
+    let id = tokio::task::spawn_blocking(move || conv_repo::create(title))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
 
-    let conversations = db::get_conversations_db().await?;
+    let conversations = tokio::task::spawn_blocking(|| conv_repo::get_all())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+
     let conversation = conversations
         .into_iter()
         .next()
@@ -25,16 +34,23 @@ pub async fn create_conversation() -> Result<Conversation, String> {
 #[tauri::command]
 pub async fn get_conversations() -> Result<Vec<Conversation>, String> {
     println!("[COMMAND] get_conversations called");
-    let conversations = db::get_conversations_db().await?;
+    let conversations = tokio::task::spawn_blocking(|| conv_repo::get_all())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
     Ok(conversations)
 }
 
 #[tauri::command]
 pub async fn get_conversation(id: String) -> Result<Conversation, String> {
     println!("[COMMAND] get_conversation called: id={}", id);
-    db::get_conversation_db(id)
-        .await?
-        .ok_or_else(|| "Conversation not found".to_string())
+    let id_clone = id.clone();
+    let result = tokio::task::spawn_blocking(move || conv_repo::get_by_id(&id_clone))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Conversation not found".to_string())?;
+    Ok(result)
 }
 
 // AI Chat
@@ -58,8 +74,12 @@ pub async fn send_message(
     }
 
     // Save user message immediately
-    if let Err(e) =
-        db::save_message(conversation_id.clone(), "user".to_string(), user_message).await
+    let conv_id_clone = conversation_id.clone();
+    let user_msg_clone = user_message.clone();
+    if let Err(e) = tokio::task::spawn_blocking(move || {
+        msg_repo::create(conv_id_clone, MessageRole::User, user_msg_clone)
+    })
+    .await
     {
         println!("[DB] Error saving user message: {}", e);
     }
@@ -126,8 +146,12 @@ That's the way the *poem* goes..."#;
     }
 
     // Save assistant response (full or partial)
-    if let Err(e) =
-        db::save_message(conversation_id, "assistant".to_string(), assistant_response).await
+    let conv_id_final = conversation_id.clone();
+    let assistant_final = assistant_response.clone();
+    if let Err(e) = tokio::task::spawn_blocking(move || {
+        msg_repo::create(conv_id_final, MessageRole::Assistant, assistant_final)
+    })
+    .await
     {
         println!("[DB] Error saving assistant message: {}", e);
     }

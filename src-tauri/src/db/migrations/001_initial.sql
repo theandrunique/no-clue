@@ -1,4 +1,3 @@
--- Migration 001: Initial schema
 CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY NOT NULL,
     title TEXT NOT NULL,

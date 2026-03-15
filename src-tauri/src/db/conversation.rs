@@ -1,0 +1,53 @@
+use crate::db::get_connection;
+use crate::models::Conversation;
+use rusqlite::{params, Result};
+
+pub fn create(title: String) -> Result<String> {
+    let conn = get_connection()?;
+    let id = crate::db::create_uuid();
+    let timestamp = crate::db::now_timestamp();
+
+    conn.execute(
+        "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
+        params![id, title, timestamp, timestamp],
+    )?;
+
+    Ok(id)
+}
+
+pub fn get_all() -> Result<Vec<Conversation>> {
+    let conn = get_connection()?;
+    let mut stmt = conn.prepare(
+        "SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(Conversation {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            created_at: row.get(2)?,
+            updated_at: row.get(3)?,
+        })
+    })?;
+
+    rows.collect()
+}
+
+pub fn get_by_id(id: &str) -> Result<Option<Conversation>> {
+    let conn = get_connection()?;
+    let mut stmt =
+        conn.prepare("SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?1")?;
+
+    let mut rows = stmt.query(params![id])?;
+
+    if let Some(row) = rows.next()? {
+        Ok(Some(Conversation {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            created_at: row.get(2)?,
+            updated_at: row.get(3)?,
+        }))
+    } else {
+        Ok(None)
+    }
+}

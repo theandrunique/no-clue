@@ -1,3 +1,4 @@
+use crate::models::{Conversation, MessageRole, Speaker};
 use crate::{
     conversations::{
         create_conversation, get_conversation, get_conversations, send_message, stop_stream,
@@ -10,6 +11,7 @@ use tauri::Manager;
 
 mod conversations;
 mod db;
+mod models;
 mod transcriptions;
 mod utils;
 
@@ -88,19 +90,6 @@ async fn get_stt_settings() -> Result<SttSettings, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(
-            tauri_plugin_sql::Builder::new()
-                .add_migrations(
-                    "sqlite:no-clue.db",
-                    vec![tauri_plugin_sql::Migration {
-                        version: 1,
-                        description: "create_initial_schema",
-                        sql: include_str!("../migrations/001_initial.sql"),
-                        kind: tauri_plugin_sql::MigrationKind::Up,
-                    }],
-                )
-                .build(),
-        )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let app_data_dir = app
@@ -128,11 +117,6 @@ pub fn run() {
             get_all_providers,
             save_stt_settings,
             get_stt_settings,
-            db::save_transcript,
-            db::save_message,
-            db::create_conversation_db,
-            db::get_conversations_db,
-            db::get_conversation_db,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
