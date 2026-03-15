@@ -47,8 +47,8 @@ function handleInteractOutside(event: Event) {
       class="dark p-0 overflow-hidden overlay-card"
       @interactOutside="handleInteractOutside"
     >
-        <Tabs defaultValue="chat" class="h-full">
-          <TabsList class="w-full justify-start rounded-none border-b bg-transparent px-2 h-9">
+        <Tabs defaultValue="chat" class="h-full flex flex-col">
+          <TabsList class="shrink-0 w-full justify-start rounded-none border-b bg-transparent px-2 h-9">
             <TabsTrigger value="chat" class="gap-2">
               <MessageSquare class="w-4 h-4" />
               Chat
@@ -59,10 +59,10 @@ function handleInteractOutside(event: Event) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat" class="h-full m-0">
+          <TabsContent value="chat" class="flex-1 min-h-0 m-0 overflow-hidden">
             <ChatTab />
           </TabsContent>
-          <TabsContent value="transcript" class="h-full m-0">
+          <TabsContent value="transcript" class="flex-1 min-h-0 m-0 overflow-hidden">
             <TranscriptTab />
           </TabsContent>
         </Tabs>

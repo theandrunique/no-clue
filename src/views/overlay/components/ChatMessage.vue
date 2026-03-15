@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { marked } from "marked";
-import type { Message } from "@/stores/conversation";
+import type { Message } from "@/stores/chat";
 
 interface Props {
   message: Message;

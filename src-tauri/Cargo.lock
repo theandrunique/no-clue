@@ -2772,6 +2772,7 @@ dependencies = [
  "tauri-plugin-sql",
  "tokio",
  "tokio-tungstenite",
+ "uuid",
  "windows 0.58.0",
  "xcap",
 ]

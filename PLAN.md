@@ -269,23 +269,24 @@ fn open_dashboard(app: AppHandle) -> Result<(), String>
 fn move_overlay(app: AppHandle, direction: String, step: i32) -> Result<(), String>
 
 #[tauri::command]
-fn set_overlay_height(window: WebviewWindow, height: u32) -> Result<(), String>
-
-#[tauri::command]
 fn set_overlay_visible(window: WebviewWindow, visible: bool) -> Result<(), String>
 
 // LLM Proxy - Rust reads settings from SQLite, API keys never exposed to frontend
 #[tauri::command]
-async fn chat_completion(
+async fn send_message(
+    provider: String,
     conversation_id: String,
     user_message: String,
     capture_screenshot: bool,  // Rust сам делает скриншот если true (xcap)
-) -> Result<StreamReader, String>
+) -> Result<(), String>
 // Rust самостоятельно:
 // 1. Если capture_screenshot=true → xcap делает скриншот → base64
-// 2. Читает из SQLite: active provider, api_key, model, system_prompt
+// 2. Читает из SQLite: api_key, model, system_prompt - для выбранного провайдера
 // 3. Читает историю сообщений для conversation_id
-// 4. Формирует запрос к LLM и возвращает стрим
+// 4. Формирует запрос к LLM
+// 5. Создает tokio задачу, которая стримит ответ от API на фронтенд по chat-stream
+// Кроме самого сообщения будут передаваться различные метаданные, например, закончен ли ответ
+// Также нужно продумать функционал, чтобы можно было останавливать генерацию ответа
 
 // Transcription (Deepgram WebSocket) - полностью на Rust
 #[tauri::command]
@@ -319,6 +320,7 @@ fn init_database(app: AppHandle) -> Result<(), String>
 // AI Provider Settings
 #[tauri::command]
 fn save_provider_settings(provider: String, api_key: String, model: String) -> Result<(), String>
+// Возможно тут нужно использовать другую структуру, предположительно это enum и каждого провайдера будут свои настройки
 
 #[tauri::command]
 fn get_provider_settings(provider: String) -> Result<ProviderSettings, String>
@@ -332,13 +334,6 @@ fn save_stt_settings(api_key: String, model: String, language: String) -> Result
 
 #[tauri::command]
 fn get_stt_settings() -> Result<SttSettings, String>
-
-// App Settings
-#[tauri::command]
-fn save_app_settings(key: String, value: String) -> Result<(), String>
-
-#[tauri::command]
-fn get_app_settings(key: String) -> Result<String, String>
 ```
 
 ---
@@ -538,4 +533,3 @@ END;
    - API ключи НИКОГДА не передаются во Frontend
 5. **Скриншоты** - Rust (xcap) → base64 → отправка в LLM
 6. **Streamdown** - для рендеринга markdown со стримингом
-

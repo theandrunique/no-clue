@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useConversationStore } from "@/stores/conversation";
-import { useOverlayStore } from "@/stores/overlay";
-import { Send } from "lucide-vue-next";
+import { Send, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input/Input.vue";
 import ChatMessage from "./ChatMessage.vue";
@@ -10,20 +9,20 @@ import StreamingMessage from "./StreamingMessage.vue";
 import QuickActions from "./QuickActions.vue";
 
 const conversationStore = useConversationStore();
-const overlayStore = useOverlayStore();
 
 const inputMessage = ref("");
 
 function sendMessage(content: string) {
-  if (!content.trim()) return;
+  if (!content.trim() || conversationStore.isStreaming) return;
 
   const message = content;
   inputMessage.value = "";
 
-  if (overlayStore.currentConversationId) {
-    conversationStore.addUserMessage(overlayStore.currentConversationId, message);
-    conversationStore.setStreaming(true);
-  }
+  conversationStore.sendMessage(message);
+}
+
+function stopStreaming() {
+  conversationStore.stopStream();
 }
 
 function handleSend() {
@@ -43,10 +42,10 @@ function handleKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full min-h-0">
     <!-- Messages Area -->
-    <div class="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
-      <div v-if="conversationStore.messages.length === 0" class="flex flex-col items-center justify-center h-full text-white/40 text-center">
+    <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+      <div v-if="conversationStore.messages.length === 0 && !conversationStore.isStreaming" class="flex flex-col items-center justify-center min-h-[100px] text-white/40 text-center">
         <p class="text-sm">No messages yet</p>
         <p class="text-xs mt-1 opacity-60">Start a conversation or use Quick Actions below</p>
       </div>
@@ -62,19 +61,23 @@ function handleKeydown(e: KeyboardEvent) {
     </div>
 
     <!-- Quick Actions -->
-    <div class="px-3 pb-2">
+    <div class="flex-shrink-0 px-3 pb-2">
       <QuickActions @select="handleQuickAction" />
     </div>
 
     <!-- Input -->
-    <div class="flex gap-2 px-3 py-2 border-t border-white/10 items-end">
+    <div class="flex-shrink-0 flex gap-2 px-3 py-2 border-t border-white/10 items-end">
       <Input
         v-model="inputMessage"
         placeholder="Type a message..."
         class="bg-transparent"
+        :disabled="conversationStore.isStreaming"
         @keydown="handleKeydown"
       />
-      <Button variant="ghost" size="icon" @click="handleSend" :disabled="!inputMessage.trim()">
+      <Button v-if="conversationStore.isStreaming" variant="ghost" size="icon" @click="stopStreaming">
+        <Square class="w-4 h-4" />
+      </Button>
+      <Button v-else variant="ghost" size="icon" @click="handleSend" :disabled="!inputMessage.trim()">
         <Send class="w-4 h-4" />
       </Button>
     </div>

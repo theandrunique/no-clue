@@ -7,8 +7,6 @@ const COLLAPSED_HEIGHT = 54;
 
 export const useOverlayStore = defineStore("overlay", () => {
   const isExpanded = ref(false);
-  const isTranscriptionEnabled = ref(false);
-  const captureScreenshot = ref(true);
   const currentConversationId = ref<string | null>(null);
 
   async function toggleExpanded() {
@@ -29,28 +27,16 @@ export const useOverlayStore = defineStore("overlay", () => {
     await window.setSize(new LogicalSize(width, height));
   }
 
-  function setTranscriptionEnabled(enabled: boolean) {
-    isTranscriptionEnabled.value = enabled;
-  }
-
-  function setCaptureScreenshot(capture: boolean) {
-    captureScreenshot.value = capture;
-  }
-
   function setCurrentConversationId(id: string | null) {
     currentConversationId.value = id;
   }
 
   return {
     isExpanded,
-    isTranscriptionEnabled,
-    captureScreenshot,
     currentConversationId,
     toggleExpanded,
     setExpanded,
     resizeWindow,
-    setTranscriptionEnabled,
-    setCaptureScreenshot,
     setCurrentConversationId,
   };
 });

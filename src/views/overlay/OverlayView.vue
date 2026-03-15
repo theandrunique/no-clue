@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed } from "vue";
-import { useOverlayStore } from "@/stores/overlay";
 import { useSettingsStore } from "@/stores/settings";
+import { useConversationStore } from "@/stores/conversation";
 import { Mic, MicOff, Settings, Camera, CameraOff } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import DragButton from "@/components/ui/drag-button/DragButton.vue";
@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import OverlayPopover from "./components/OverlayPopover.vue";
 import Card from "@/components/ui/card/Card.vue";
 
-const overlayStore = useOverlayStore();
 const settingsStore = useSettingsStore();
+const conversationStore = useConversationStore();
 
 const cardStyle = computed(() => ({
   "--overlay-opacity": settingsStore.settings.overlayOpacity,
@@ -27,7 +27,6 @@ onUnmounted(() => {
 async function openDashboard() {
   await invoke("open_dashboard");
 }
-
 </script>
 
 <template>
@@ -39,18 +38,18 @@ async function openDashboard() {
           <Button
             variant="default"
             size="icon"
-            @click="overlayStore.setTranscriptionEnabled(!overlayStore.isTranscriptionEnabled)"
+            @click="conversationStore.toggleTranscription()"
           >
-            <Mic v-if="overlayStore.isTranscriptionEnabled" class="w-4 h-4" />
+            <Mic v-if="conversationStore.isTranscriptionEnabled" class="w-4 h-4" />
             <MicOff v-else class="w-4 h-4" />
           </Button>
 
           <Button
             variant="default"
             size="icon"
-            @click="overlayStore.setCaptureScreenshot(!overlayStore.captureScreenshot)"
+            @click="conversationStore.setCaptureScreenshot(!conversationStore.captureScreenshot)"
           >
-            <Camera v-if="overlayStore.captureScreenshot" class="w-4 h-4" />
+            <Camera v-if="conversationStore.captureScreenshot" class="w-4 h-4" />
             <CameraOff v-else class="w-4 h-4" />
           </Button>
         </div>

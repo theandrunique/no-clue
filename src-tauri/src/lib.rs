@@ -1,28 +1,97 @@
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use crate::{
+    conversations::{
+        create_conversation, get_conversation, get_conversations, send_message, stop_stream,
+    },
+    transcriptions::{start_transcription, stop_transcription, update_transcription_session},
+    utils::{move_overlay, open_dashboard, set_overlay_visible},
+};
+use serde::{Deserialize, Serialize};
 
+mod conversations;
+mod transcriptions;
+mod utils;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProviderSettings {
+    pub provider: String,
+    pub api_key: String,
+    pub model: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SttSettings {
+    pub api_key: String,
+    pub model: String,
+    pub language: String,
+}
+
+// Provider Settings
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+async fn save_provider_settings(
+    provider: String,
+    _api_key: String,
+    model: String,
+) -> Result<(), String> {
+    println!(
+        "[COMMAND] save_provider_settings called: provider={}, model={}",
+        provider, model
+    );
+    // TODO: Save to SQLite
+    Ok(())
 }
 
 #[tauri::command]
-async fn open_dashboard(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("dashboard") {
-        window.show().map_err(|e| e.to_string())?;
-        window.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
+async fn get_provider_settings(provider: String) -> Result<ProviderSettings, String> {
+    println!(
+        "[COMMAND] get_provider_settings called: provider={}",
+        provider
+    );
+    // TODO: Read from SQLite
+    Err("Not implemented".to_string())
+}
 
-    WebviewWindowBuilder::new(&app, "dashboard", WebviewUrl::App("/dashboard".into()))
-        .title("No-Clue Dashboard")
-        .inner_size(900.0, 700.0)
-        .center()
-        .decorations(true)
-        .resizable(true)
-        .content_protected(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+#[tauri::command]
+async fn get_all_providers() -> Result<Vec<String>, String> {
+    println!("[COMMAND] get_all_providers called");
+    Ok(vec![
+        "openrouter".to_string(),
+        "openai".to_string(),
+        "anthropic".to_string(),
+    ])
+}
 
+// STT Settings
+#[tauri::command]
+async fn save_stt_settings(
+    _api_key: String,
+    model: String,
+    language: String,
+) -> Result<(), String> {
+    println!(
+        "[COMMAND] save_stt_settings called: model={}, language={}",
+        model, language
+    );
+    // TODO: Save to SQLite
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_stt_settings() -> Result<SttSettings, String> {
+    println!("[COMMAND] get_stt_settings called");
+    // TODO: Read from SQLite
+    Ok(SttSettings {
+        api_key: "".to_string(),
+        model: "nova-3".to_string(),
+        language: "ru".to_string(),
+    })
+}
+
+// Database
+#[tauri::command]
+async fn init_database() -> Result<(), String> {
+    println!("[COMMAND] init_database called");
+    // TODO: Initialize SQLite tables
+    println!("[COMMAND] Database initialized");
     Ok(())
 }
 
@@ -32,7 +101,25 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![greet, open_dashboard])
+        .invoke_handler(tauri::generate_handler![
+            open_dashboard,
+            move_overlay,
+            set_overlay_visible,
+            create_conversation,
+            get_conversations,
+            get_conversation,
+            update_transcription_session,
+            send_message,
+            stop_stream,
+            start_transcription,
+            stop_transcription,
+            save_provider_settings,
+            get_provider_settings,
+            get_all_providers,
+            save_stt_settings,
+            get_stt_settings,
+            init_database,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
