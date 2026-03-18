@@ -12,106 +12,76 @@ export interface Conversation {
 }
 
 export const useConversationStore = defineStore("conversation", () => {
+  const currentConversationId = ref<string | null>(null);
+
   const chatStore = useChatStore();
   const transcriptionStore = useTranscriptionStore();
 
-  const currentConversationId = ref<string | null>(null);
-  const isInitialized = ref(false);
-
   const messages = computed(() => chatStore.messages);
-  const isStreaming = computed(() => chatStore.isStreaming);
-  const currentStreamingContent = computed(() => chatStore.currentStreamingContent);
-  const captureScreenshot = computed(() => chatStore.captureScreenshot);
-
+  const isStreamingResponse = computed(() => chatStore.isStreamingResponse);
+  const streamingMessage = computed(() => chatStore.currentStreamingMessage);
+  const isScreenshotEnabled = computed(() => chatStore.isScreenshotEnabled);
   const transcripts = computed(() => transcriptionStore.transcripts);
   const currentTranscript = computed(() => transcriptionStore.currentTranscript);
   const isTranscriptionEnabled = computed(() => transcriptionStore.isEnabled);
 
-  async function createConversation(): Promise<string> {
+  async function createConversation() {
+    console.log("[ConversationStore] createConversation called");
     const conversation = await invoke<{ id: string }>("create_conversation");
+    console.log("[ConversationStore] Got conversation:", conversation);
     currentConversationId.value = conversation.id;
 
-    chatStore.setCurrentConversation(conversation.id);
-    transcriptionStore.setCurrentConversation(conversation.id);
-
-    return conversation.id;
+    await transcriptionStore.updateSession(conversation.id);
   }
 
   async function ensureConversation() {
+    console.log("[ConversationStore] ensureConversation called, current:", currentConversationId.value);
     if (!currentConversationId.value) {
       await createConversation();
     }
   }
 
   async function sendMessage(content: string) {
+    console.log("[ConversationStore] sendMessage called:", content);
     await ensureConversation();
-
-    chatStore.sendMessage(
-      currentConversationId.value!,
-      content,
-      "openrouter",
-      chatStore.captureScreenshot
-    );
-  }
-
-  function stopStream() {
-    chatStore.stopStream();
-  }
-
-  function setCaptureScreenshot(capture: boolean) {
-    chatStore.setCaptureScreenshot(capture);
-  }
-
-  async function startTranscription() {
-    await ensureConversation();
-
-    await invoke("update_transcription_session", {
-      conversationId: currentConversationId.value,
-    });
-
-    transcriptionStore.setIsEnabled(true);
-    await invoke("start_transcription", { 
-      conversationId: currentConversationId.value 
-    });
-  }
-
-  async function stopTranscription() {
-    transcriptionStore.setIsEnabled(false);
-    await invoke("stop_transcription");
+    console.log("[ConversationStore] After ensureConversation, id:", currentConversationId.value);
+    await chatStore.sendMessage(currentConversationId.value!, content, "openrouter");
   }
 
   async function toggleTranscription() {
-    if (isTranscriptionEnabled.value) {
-      await stopTranscription();
-    } else {
-      await startTranscription();
+    if (!currentConversationId.value) {
+      await createConversation();
     }
+    await transcriptionStore.setIsEnabled(!transcriptionStore.isEnabled);
   }
 
-  function clearCurrentConversation() {
+  async function clearCurrentConversation() {
     chatStore.clearMessages();
     transcriptionStore.clearTranscripts();
-    currentConversationId.value = null;
+
+    if (transcriptionStore.isEnabled) {
+      await createConversation();
+    } else {
+      currentConversationId.value = null;
+    }
   }
 
   return {
     currentConversationId,
-    isInitialized,
+
     messages,
-    isStreaming,
-    currentStreamingContent,
-    captureScreenshot,
+    isStreamingResponse,
+    streamingMessage,
+    isScreenshotEnabled,
+    setCaptureScreenshot: chatStore.setCaptureScreenshot,
+    stopStream: chatStore.stopStream,
+    sendMessage,
+
     transcripts,
     currentTranscript,
     isTranscriptionEnabled,
-    createConversation,
-    ensureConversation,
-    sendMessage,
-    stopStream,
-    setCaptureScreenshot,
-    startTranscription,
-    stopTranscription,
     toggleTranscription,
+
     clearCurrentConversation,
   };
 });

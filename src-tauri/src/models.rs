@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 pub struct Conversation {
     pub id: String,
     pub title: String,
+    #[serde(rename = "createdAt")]
     pub created_at: i64,
+    #[serde(rename = "updatedAt")]
     pub updated_at: i64,
 }
 
@@ -15,6 +17,22 @@ pub struct Message {
     pub role: MessageRole,
     pub content: String,
     pub timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(tag = "event_type", content = "payload")]
+pub enum ChatStreamEvent {
+    #[serde(rename = "message:chunk")]
+    Chunk {
+        #[serde(rename = "conversationId")]
+        conversation_id: String,
+        content: String,
+        #[serde(rename = "isFinish")]
+        is_finish: bool,
+        timestamp: i64,
+    },
+    #[serde(rename = "message:error")]
+    Error { code: String, message: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -51,11 +69,39 @@ impl std::str::FromStr for MessageRole {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transcript {
     pub id: String,
+    #[serde(rename = "conversationId")]
     pub conversation_id: String,
     pub speaker: Speaker,
     pub text: String,
-    pub confidence: Option<f64>,
+    pub confidence: f64,
     pub timestamp: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionResult {
+    pub id: String,
+    #[serde(rename = "conversationId")]
+    pub conversation_id: String,
+    pub speaker: String,
+    pub text: String,
+    #[serde(rename = "isFinal")]
+    pub is_final: bool,
+    pub confidence: f64,
+    pub timestamp: i64,
+}
+
+impl From<Transcript> for TranscriptionResult {
+    fn from(t: Transcript) -> Self {
+        TranscriptionResult {
+            id: t.id,
+            conversation_id: t.conversation_id,
+            speaker: t.speaker.to_string(),
+            text: t.text,
+            is_final: true,
+            confidence: t.confidence,
+            timestamp: t.timestamp,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

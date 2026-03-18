@@ -3,21 +3,28 @@ use crate::models::{Speaker, Transcript};
 use rusqlite::{params, Result};
 
 pub fn create(
+    id: String,
     conversation_id: String,
     speaker: Speaker,
     text: String,
-    confidence: Option<f64>,
-) -> Result<String> {
+    confidence: f64,
+    timestamp: i64,
+) -> Result<Transcript> {
     let conn = get_connection()?;
-    let id = crate::db::create_uuid();
-    let timestamp = crate::db::now_timestamp();
 
     conn.execute(
         "INSERT INTO transcripts (id, conversation_id, speaker, text, confidence, timestamp) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![id, conversation_id, speaker.to_string(), text, confidence, timestamp],
     )?;
 
-    Ok(id)
+    Ok(Transcript {
+        id,
+        conversation_id,
+        speaker,
+        text,
+        confidence,
+        timestamp,
+    })
 }
 
 pub fn get_by_conversation(conversation_id: &str) -> Result<Vec<Transcript>> {

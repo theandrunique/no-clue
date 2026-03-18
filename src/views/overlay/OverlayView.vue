@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, computed } from "vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useConversationStore } from "@/stores/conversation";
-import { Mic, MicOff, Settings, Camera, CameraOff } from "lucide-vue-next";
+import { Mic, MicOff, Settings, Camera, CameraOff, Trash2 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import DragButton from "@/components/ui/drag-button/DragButton.vue";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,14 @@ const conversationStore = useConversationStore();
 const cardStyle = computed(() => ({
   "--overlay-opacity": settingsStore.settings.overlayOpacity,
 }));
+
+function toggleMic() {
+  conversationStore.toggleTranscription();
+}
+
+function toggleScreenshot() {
+  conversationStore.setCaptureScreenshot(!conversationStore.isScreenshotEnabled);
+}
 
 onMounted(() => {
   document.body.classList.add("transparent");
@@ -38,7 +46,7 @@ async function openDashboard() {
           <Button
             variant="default"
             size="icon"
-            @click="conversationStore.toggleTranscription()"
+            @click="toggleMic"
           >
             <Mic v-if="conversationStore.isTranscriptionEnabled" class="w-4 h-4" />
             <MicOff v-else class="w-4 h-4" />
@@ -47,16 +55,24 @@ async function openDashboard() {
           <Button
             variant="default"
             size="icon"
-            @click="conversationStore.setCaptureScreenshot(!conversationStore.captureScreenshot)"
+            @click="toggleScreenshot"
           >
-            <Camera v-if="conversationStore.captureScreenshot" class="w-4 h-4" />
+            <Camera v-if="conversationStore.isScreenshotEnabled" class="w-4 h-4" />
             <CameraOff v-else class="w-4 h-4" />
           </Button>
         </div>
 
         <div class="flex gap-2 items-center">
+        <Button
+            variant="ghost"
+            size="icon"
+            @click="conversationStore.clearCurrentConversation()"
+        >
+            <Trash2 class="w-4 h-4" />
+        </Button>
+
           <Button variant="ghost" size="icon" @click="openDashboard">
-            <Settings :size="18" />
+            <Settings class="w-4 h-4" />
           </Button>
 
           <DragButton />

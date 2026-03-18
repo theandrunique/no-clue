@@ -13,12 +13,16 @@ const conversationStore = useConversationStore();
 const inputMessage = ref("");
 
 function sendMessage(content: string) {
-  if (!content.trim() || conversationStore.isStreaming) return;
+  console.log("[ChatTab] sendMessage called with:", content);
+  console.log("[ChatTab] isStreamingResponse:", conversationStore.isStreamingResponse);
+  if (!content.trim() || conversationStore.isStreamingResponse) {
+    console.log("[ChatTab] Early return - empty or streaming");
+    return;
+  }
 
-  const message = content;
   inputMessage.value = "";
-
-  conversationStore.sendMessage(message);
+  console.log("[ChatTab] Calling conversationStore.sendMessage");
+  conversationStore.sendMessage(content);
 }
 
 function stopStreaming() {
@@ -45,7 +49,7 @@ function handleKeydown(e: KeyboardEvent) {
   <div class="flex flex-col h-full min-h-0">
     <!-- Messages Area -->
     <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-2">
-      <div v-if="conversationStore.messages.length === 0 && !conversationStore.isStreaming" class="flex flex-col items-center justify-center min-h-[100px] text-white/40 text-center">
+      <div v-if="conversationStore.messages.length === 0 && !conversationStore.isStreamingResponse" class="flex flex-col items-center justify-center min-h-[100px] text-white/40 text-center">
         <p class="text-sm">No messages yet</p>
         <p class="text-xs mt-1 opacity-60">Start a conversation or use Quick Actions below</p>
       </div>
@@ -55,8 +59,8 @@ function handleKeydown(e: KeyboardEvent) {
         :message="message"
       />
       <StreamingMessage
-        v-if="conversationStore.isStreaming"
-        :content="conversationStore.currentStreamingContent"
+        v-if="conversationStore.isStreamingResponse"
+        :content="conversationStore.streamingMessage?.content ?? ''"
       />
     </div>
 
@@ -71,10 +75,10 @@ function handleKeydown(e: KeyboardEvent) {
         v-model="inputMessage"
         placeholder="Type a message..."
         class="bg-transparent"
-        :disabled="conversationStore.isStreaming"
+        :disabled="conversationStore.isStreamingResponse"
         @keydown="handleKeydown"
       />
-      <Button v-if="conversationStore.isStreaming" variant="ghost" size="icon" @click="stopStreaming">
+      <Button v-if="conversationStore.isStreamingResponse" variant="ghost" size="icon" @click="stopStreaming">
         <Square class="w-4 h-4" />
       </Button>
       <Button v-else variant="ghost" size="icon" @click="handleSend" :disabled="!inputMessage.trim()">

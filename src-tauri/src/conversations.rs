@@ -1,8 +1,10 @@
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
-use crate::models::{Conversation, MessageRole};
+use crate::models::{ChatStreamEvent, Conversation, MessageRole};
 use std::sync::atomic::{AtomicBool, Ordering};
+use chrono::Utc;
 use tauri::{AppHandle, Emitter};
+use uuid::Uuid;
 
 static STREAMING: AtomicBool = AtomicBool::new(false);
 
@@ -17,18 +19,18 @@ pub async fn create_conversation() -> Result<Conversation, String> {
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
 
-    let conversations = tokio::task::spawn_blocking(|| conv_repo::get_all())
+    let conversation = tokio::task::spawn_blocking(move || conv_repo::get_by_id(&id))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
 
-    let conversation = conversations
-        .into_iter()
-        .next()
-        .ok_or_else(|| "Failed to create conversation".to_string())?;
-
-    println!("[COMMAND] Created conversation: {}", conversation.id);
-    Ok(conversation)
+    match conversation {
+        Some(c) => {
+            println!("[COMMAND] Created conversation: {}", c.id);
+            Ok(c)
+        }
+        None => Err("Failed to get conversation".to_string()),
+    }
 }
 
 #[tauri::command]
@@ -77,7 +79,13 @@ pub async fn send_message(
     let conv_id_clone = conversation_id.clone();
     let user_msg_clone = user_message.clone();
     if let Err(e) = tokio::task::spawn_blocking(move || {
-        msg_repo::create(conv_id_clone, MessageRole::User, user_msg_clone)
+        msg_repo::create(
+            conv_id_clone,
+            Uuid::new_v4().to_string(),
+            MessageRole::User,
+            user_msg_clone,
+            Utc::now().timestamp(),
+        )
     })
     .await
     {
@@ -131,12 +139,24 @@ That's the way the *poem* goes..."#;
         }
 
         assistant_response.push_str(&chunk);
-        let _ = app.emit("chat-stream", chunk);
+        let timestamp = Utc::now().timestamp();
+        let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
+            conversation_id: conversation_id.clone(),
+            content: chunk,
+            is_finish: false,
+            timestamp,
+        });
 
         tokio::time::sleep(tokio::time::Duration::from_millis(delay_per_char * 3)).await;
     };
 
-    let _ = app.emit("chat-stream", "[DONE]");
+    let conv_id_for_final = conversation_id.clone();
+    let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
+        conversation_id,
+        content: String::new(),
+        is_finish: true,
+        timestamp: Utc::now().timestamp(),
+    });
     STREAMING.store(false, Ordering::SeqCst);
 
     if completed {
@@ -146,10 +166,15 @@ That's the way the *poem* goes..."#;
     }
 
     // Save assistant response (full or partial)
-    let conv_id_final = conversation_id.clone();
     let assistant_final = assistant_response.clone();
     if let Err(e) = tokio::task::spawn_blocking(move || {
-        msg_repo::create(conv_id_final, MessageRole::Assistant, assistant_final)
+        msg_repo::create(
+            conv_id_for_final,
+            Uuid::new_v4().to_string(),
+            MessageRole::Assistant,
+            assistant_final,
+            Utc::now().timestamp(),
+        )
     })
     .await
     {

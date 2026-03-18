@@ -11,57 +11,80 @@ export interface Message {
   timestamp: number;
 }
 
-export interface Conversation {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
+export interface ChunkPayload {
+  conversationId: string,
+  content: string;
+  isFinish: boolean;
+  timestamp: number;
 }
+
+export interface ErrorPayload {
+  code: string;
+  message: string;
+}
+
+export type ChatStreamEvent =
+  | { event_type: 'message:chunk'; payload: ChunkPayload }
+  | { event_type: 'message:error'; payload: ErrorPayload };
 
 export const useChatStore = defineStore("chat", () => {
   const messages = ref<Message[]>([]);
-  const isStreaming = ref(false);
-  const currentStreamingContent = ref("");
-  const currentConversationId = ref<string | null>(null);
-  const captureScreenshot = ref(true);
-  let initialized = false;
+  const isStreamingResponse = ref(false);
+  const streamingMessage = ref<Message | null>(null);
+  const isScreenshotEnabled = ref(true);
+  const currentStreamingConversationId = ref<string | null>(null);
+
   let unlistenStream: UnlistenFn | null = null;
 
-  function init() {
-    if (initialized) return;
-    initialized = true;
+  async function setupListeners() {
+    if (unlistenStream) return;
 
-    listen<string>("chat-stream", (event) => {
-      if (event.payload === "[DONE]") {
-        if (currentStreamingContent.value && currentConversationId.value) {
-          addAssistantMessage(currentConversationId.value, currentStreamingContent.value);
+    console.log("[ChatStore] Setting up chat-stream listener");
+
+    unlistenStream = await listen<ChatStreamEvent>("chat-stream", (event) => {
+      console.log("[ChatStore] chat-stream event received:", event.payload);
+      const event_type = event.payload.event_type;
+
+      if (event_type === "message:chunk") {
+        const { payload } = event.payload;
+
+        if (payload.isFinish) {
+          console.log("[ChatStore] Stream finished");
+          if (streamingMessage.value) {
+            messages.value.push(streamingMessage.value);
+          }
+          isStreamingResponse.value = false;
+          streamingMessage.value = null;
+        } else {
+          console.log("[ChatStore] Chunk received:", payload.content);
+          isStreamingResponse.value = true;
+
+          if (!streamingMessage.value) {
+            streamingMessage.value = {
+              id: crypto.randomUUID(),
+              conversationId: payload.conversationId,
+              role: "assistant",
+              content: "",
+              timestamp: Date.now(),
+            };
+          }
+          streamingMessage.value.content += payload.content;
         }
-        isStreaming.value = false;
-        currentStreamingContent.value = "";
-      } else {
-        isStreaming.value = true;
-        currentStreamingContent.value += event.payload;
       }
-    }).then((unlisten) => {
-      unlistenStream = unlisten;
     });
 
     onScopeDispose(() => {
-      if (unlistenStream) {
-        unlistenStream();
-        unlistenStream = null;
-      }
+      unlistenStream?.();
+      unlistenStream = null;
     });
   }
 
-  function setCurrentConversation(id: string | null) {
-    init();
-    currentConversationId.value = id;
-    clearMessages();
-  }
+  async function sendMessage(conversationId: string, content: string, provider: string) {
+    console.log("[ChatStore] sendMessage called:", { conversationId, content, provider });
+    
+    currentStreamingConversationId.value = conversationId;
+    await setupListeners();
 
-  function addUserMessage(conversationId: string, content: string) {
-    init();
     const newMessage: Message = {
       id: crypto.randomUUID(),
       conversationId,
@@ -69,36 +92,20 @@ export const useChatStore = defineStore("chat", () => {
       content,
       timestamp: Date.now(),
     };
+    console.log("[ChatStore] Adding user message:", newMessage);
     messages.value.push(newMessage);
-    return newMessage;
-  }
-
-  function addAssistantMessage(conversationId: string, content: string) {
-    init();
-    const newMessage: Message = {
-      id: crypto.randomUUID(),
-      conversationId,
-      role: "assistant",
-      content,
-      timestamp: Date.now(),
-    };
-    messages.value.push(newMessage);
-    return newMessage;
-  }
-
-  async function sendMessage(conversationId: string, content: string, provider: string, captureScreenshot: boolean) {
-    init();
-    addUserMessage(conversationId, content);
 
     try {
+      console.log("[ChatStore] Calling invoke send_message");
       await invoke("send_message", {
         provider,
         conversationId,
         userMessage: content,
-        captureScreenshot,
+        captureScreenshot: isScreenshotEnabled.value,
       });
+      console.log("[ChatStore] invoke completed");
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("[ChatStore] Failed to send message:", error);
     }
   }
 
@@ -111,28 +118,27 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   function setCaptureScreenshot(capture: boolean) {
-    captureScreenshot.value = capture;
+    isScreenshotEnabled.value = capture;
   }
 
-  function clearMessages() {
+  async function clearMessages() {
+    if (isStreamingResponse.value) {
+      await stopStream();
+    }
+
     messages.value = [];
-    currentStreamingContent.value = "";
-    isStreaming.value = false;
+    streamingMessage.value = null;
+    isStreamingResponse.value = false;
   }
 
   return {
     messages,
-    isStreaming,
-    currentStreamingContent,
-    currentConversationId,
-    captureScreenshot,
-    setCurrentConversation,
+    isStreamingResponse,
+    currentStreamingMessage: streamingMessage,
+    isScreenshotEnabled,
     setCaptureScreenshot,
-    addUserMessage,
-    addAssistantMessage,
     sendMessage,
     stopStream,
     clearMessages,
-    init,
   };
 });

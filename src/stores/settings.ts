@@ -11,8 +11,8 @@ export interface Settings {
 
 const defaultSettings: Settings = {
   overlayOpacity: 80,
-  overlayWidth: 600,
-  overlayHeight: 500,
+  overlayWidth: 900,
+  overlayHeight: 600,
 };
 
 function loadSettings(): Settings {
