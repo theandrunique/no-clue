@@ -1,7 +1,6 @@
-use crate::models::{Conversation, MessageRole, Speaker};
 use crate::{
     conversations::{
-        create_conversation, get_conversation, get_conversations, send_message, stop_stream,
+        create_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
     },
     transcriptions::{start_transcription, stop_transcription, update_transcription_session},
     utils::{move_overlay, open_dashboard, set_overlay_visible},
@@ -12,6 +11,7 @@ use tauri::Manager;
 mod conversations;
 mod db;
 mod models;
+mod screenshot;
 mod transcriptions;
 mod utils;
 
@@ -107,6 +107,8 @@ pub fn run() {
             create_conversation,
             get_conversations,
             get_conversation,
+            get_messages,
+            get_transcripts,
             update_transcription_session,
             send_message,
             stop_stream,

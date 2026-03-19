@@ -4,7 +4,7 @@ import { useConversationStore } from "@/stores/conversation";
 import { Send, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input/Input.vue";
-import ChatMessage from "./ChatMessage.vue";
+import ChatMessage from "@/components/ChatMessage.vue";
 import StreamingMessage from "./StreamingMessage.vue";
 import QuickActions from "./QuickActions.vue";
 
@@ -65,12 +65,12 @@ function handleKeydown(e: KeyboardEvent) {
     </div>
 
     <!-- Quick Actions -->
-    <div class="flex-shrink-0 px-3 pb-2">
+    <div class="shrink-0 px-3 pb-2">
       <QuickActions @select="handleQuickAction" />
     </div>
 
     <!-- Input -->
-    <div class="flex-shrink-0 flex gap-2 px-3 py-2 border-t border-white/10 items-end">
+    <div class="shrink-0 flex gap-2 px-3 py-2 border-t border-white/10 items-end">
       <Input
         v-model="inputMessage"
         placeholder="Type a message..."

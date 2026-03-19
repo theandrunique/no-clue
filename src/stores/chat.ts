@@ -8,6 +8,7 @@ export interface Message {
   conversationId: string;
   role: "user" | "assistant" | "system";
   content: string;
+  screenshotPath?: string;
   timestamp: number;
 }
 
@@ -90,6 +91,7 @@ export const useChatStore = defineStore("chat", () => {
       conversationId,
       role: "user",
       content,
+      screenshotPath: undefined,
       timestamp: Date.now(),
     };
     console.log("[ChatStore] Adding user message:", newMessage);

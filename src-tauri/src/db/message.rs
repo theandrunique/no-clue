@@ -7,13 +7,14 @@ pub fn create(
     message_id: String,
     role: MessageRole,
     content: String,
+    screenshot_path: Option<String>,
     timestamp: i64,
 ) -> Result<()> {
     let conn = get_connection()?;
 
     conn.execute(
-        "INSERT INTO messages (id, conversation_id, role, content, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![message_id, conversation_id, role.to_string(), content, timestamp],
+        "INSERT INTO messages (id, conversation_id, role, content, screenshot_path, timestamp) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![message_id, conversation_id, role.to_string(), content, screenshot_path, timestamp],
     )?;
 
     Ok(())
@@ -22,7 +23,7 @@ pub fn create(
 pub fn get_by_conversation(conversation_id: &str) -> Result<Vec<Message>> {
     let conn = get_connection()?;
     let mut stmt = conn.prepare(
-        "SELECT id, conversation_id, role, content, timestamp FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
+        "SELECT id, conversation_id, role, content, screenshot_path, timestamp FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
     )?;
 
     let rows = stmt.query_map(params![conversation_id], |row| {
@@ -32,7 +33,8 @@ pub fn get_by_conversation(conversation_id: &str) -> Result<Vec<Message>> {
             conversation_id: row.get(1)?,
             role: role_str.parse().unwrap_or(MessageRole::User),
             content: row.get(3)?,
-            timestamp: row.get(4)?,
+            screenshot_path: row.get(4)?,
+            timestamp: row.get(5)?,
         })
     })?;
 

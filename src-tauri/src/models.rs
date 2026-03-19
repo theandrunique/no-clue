@@ -13,9 +13,12 @@ pub struct Conversation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub id: String,
+    #[serde(rename = "conversationId")]
     pub conversation_id: String,
     pub role: MessageRole,
     pub content: String,
+    #[serde(rename = "screenshotPath", skip_serializing_if = "Option::is_none")]
+    pub screenshot_path: Option<String>,
     pub timestamp: i64,
 }
 

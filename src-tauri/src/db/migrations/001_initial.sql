@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS messages (
     conversation_id TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
+    screenshot_path TEXT,
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS transcripts (
     conversation_id TEXT NOT NULL,
     speaker TEXT NOT NULL CHECK (speaker IN ('user', 'system')),
     text TEXT NOT NULL,
-    confidence REAL,
+    confidence REAL NOT NULL,
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );

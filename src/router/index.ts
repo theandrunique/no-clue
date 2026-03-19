@@ -9,8 +9,13 @@ const router = createRouter({
       component: () => import("../views/overlay/OverlayView.vue"),
     },
     {
-      path: "/dashboard",
-      name: "dashboard",
+      path: "/dashboard/conversations",
+      name: "conversations",
+      component: () => import("../views/dashboard/DashboardView.vue"),
+    },
+    {
+      path: "/dashboard/settings",
+      name: "settings",
       component: () => import("../views/dashboard/DashboardView.vue"),
     },
   ],

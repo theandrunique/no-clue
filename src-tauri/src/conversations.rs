@@ -1,6 +1,8 @@
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
-use crate::models::{ChatStreamEvent, Conversation, MessageRole};
+use crate::db::transcript as transcript_repo;
+use crate::models::{ChatStreamEvent, Conversation, Message, Transcript, MessageRole};
+use crate::screenshot::capture_screenshot as do_capture_screenshot;
 use std::sync::atomic::{AtomicBool, Ordering};
 use chrono::Utc;
 use tauri::{AppHandle, Emitter};
@@ -75,15 +77,32 @@ pub async fn send_message(
         return Err("Already streaming".to_string());
     }
 
+    let screenshot_path = if capture_screenshot {
+        match do_capture_screenshot(app.clone()) {
+            Ok(path) => {
+                println!("[COMMAND] Screenshot captured: {}", path);
+                Some(path)
+            }
+            Err(e) => {
+                println!("[COMMAND] Failed to capture screenshot: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     // Save user message immediately
     let conv_id_clone = conversation_id.clone();
     let user_msg_clone = user_message.clone();
+    let screenshot_clone = screenshot_path.clone();
     if let Err(e) = tokio::task::spawn_blocking(move || {
         msg_repo::create(
             conv_id_clone,
             Uuid::new_v4().to_string(),
             MessageRole::User,
             user_msg_clone,
+            screenshot_clone,
             Utc::now().timestamp(),
         )
     })
@@ -173,6 +192,7 @@ That's the way the *poem* goes..."#;
             Uuid::new_v4().to_string(),
             MessageRole::Assistant,
             assistant_final,
+            None,
             Utc::now().timestamp(),
         )
     })
@@ -189,4 +209,24 @@ pub async fn stop_stream() -> Result<(), String> {
     println!("[COMMAND] stop_stream called");
     STREAMING.store(false, Ordering::SeqCst);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_messages(conversation_id: String) -> Result<Vec<Message>, String> {
+    println!("[COMMAND] get_messages called: conversation_id={}", conversation_id);
+    let messages = tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conversation_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(messages)
+}
+
+#[tauri::command]
+pub async fn get_transcripts(conversation_id: String) -> Result<Vec<Transcript>, String> {
+    println!("[COMMAND] get_transcripts called: conversation_id={}", conversation_id);
+    let transcripts = tokio::task::spawn_blocking(move || transcript_repo::get_by_conversation(&conversation_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(transcripts)
 }

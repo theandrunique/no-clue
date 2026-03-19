@@ -54,7 +54,7 @@ pub async fn open_dashboard(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(&app, "dashboard", WebviewUrl::App("/dashboard".into()))
+    WebviewWindowBuilder::new(&app, "dashboard", WebviewUrl::App("/dashboard/conversations".into()))
         .title("No-Clue Dashboard")
         .inner_size(900.0, 700.0)
         .center()
