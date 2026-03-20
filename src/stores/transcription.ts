@@ -2,16 +2,7 @@ import { defineStore } from "pinia";
 import { ref, onScopeDispose } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-
-export interface TranscriptionResult {
-  id: string;
-  conversationId: string;
-  speaker: "user" | "system";
-  text: string;
-  isFinal: boolean;
-  confidence: number;
-  timestamp: number;
-}
+import { TranscriptionResult } from "@/types";
 
 export const useTranscriptionStore = defineStore("transcription", () => {
   const isEnabled = ref(false);

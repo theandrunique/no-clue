@@ -1,6 +1,6 @@
 use crate::{
     conversations::{
-        create_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
+        create_conversation, delete_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
     },
     transcriptions::{start_transcription, stop_transcription, update_transcription_session},
     utils::{move_overlay, open_dashboard, set_overlay_visible},
@@ -105,6 +105,7 @@ pub fn run() {
             move_overlay,
             set_overlay_visible,
             create_conversation,
+            delete_conversation,
             get_conversations,
             get_conversation,
             get_messages,

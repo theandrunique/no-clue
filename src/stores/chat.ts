@@ -2,15 +2,7 @@ import { defineStore } from "pinia";
 import { ref, onScopeDispose } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-
-export interface Message {
-  id: string;
-  conversationId: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  screenshotPath?: string;
-  timestamp: number;
-}
+import { Message } from "@/types";
 
 export interface ChunkPayload {
   conversationId: string,

@@ -22,8 +22,7 @@ pub fn capture_screenshot(app: tauri::AppHandle) -> Result<String, String> {
 
     image.save(&path).map_err(|e| e.to_string())?;
 
-    let path_str = path.to_string_lossy().to_string();
-    println!("[COMMAND] Screenshot saved: {}", path_str);
+    println!("[COMMAND] Screenshot saved: {}", filename);
 
-    Ok(path_str)
+    Ok(format!("screenshots/{}", filename))
 }

@@ -51,3 +51,9 @@ pub fn get_by_id(id: &str) -> Result<Option<Conversation>> {
         Ok(None)
     }
 }
+
+pub fn delete(id: &str) -> Result<()> {
+    let conn = get_connection()?;
+    conn.execute("DELETE FROM conversations WHERE id = ?1", params![id])?;
+    Ok(())
+}

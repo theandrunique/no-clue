@@ -230,3 +230,13 @@ pub async fn get_transcripts(conversation_id: String) -> Result<Vec<Transcript>,
         .map_err(|e| e.to_string())?;
     Ok(transcripts)
 }
+
+#[tauri::command]
+pub async fn delete_conversation(id: String) -> Result<(), String> {
+    println!("[COMMAND] delete_conversation called: id={}", id);
+    tokio::task::spawn_blocking(move || conv_repo::delete(&id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}

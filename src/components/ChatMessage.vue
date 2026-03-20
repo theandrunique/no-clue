@@ -1,16 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { marked } from "marked";
 import { convertFileSrc } from "@tauri-apps/api/core";
-
-interface Message {
-  id: string;
-  conversationId: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  screenshotPath?: string;
-  timestamp: number;
-}
+import { appDataDir, join } from "@tauri-apps/api/path";
+import { Message } from "@/types";
 
 interface Props {
   message: Message;
@@ -22,17 +15,22 @@ const renderedContent = computed(() => {
   return marked.parse(props.message.content, { async: false }) as string;
 });
 
-const screenshotSrc = computed(() => {
+const screenshotSrc = ref<string | null>(null);
+
+watchEffect(async () => {
   if (props.message.screenshotPath) {
-    return convertFileSrc(props.message.screenshotPath);
+    const dataDir = await appDataDir();
+    const absolutePath = await join(dataDir, props.message.screenshotPath);
+    screenshotSrc.value = convertFileSrc(absolutePath);
+  } else {
+    screenshotSrc.value = null;
   }
-  return null;
 });
 </script>
 
 <template>
   <div
-    class="max-w-[85%] px-3 py-2 rounded-lg text-sm break-words"
+    class="max-w-[85%] px-3 py-2 rounded-lg text-sm wrap-break-words"
     :class="message.role === 'user' ? 'self-end bg-primary/80' : 'self-start bg-muted/80'"
   >
     <img
