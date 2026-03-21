@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useConversationStore } from "@/stores/conversation";
 import { Send, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/input/Input.vue";
 import ChatMessage from "@/components/ChatMessage.vue";
-import StreamingMessage from "./StreamingMessage.vue";
 import QuickActions from "./QuickActions.vue";
+import type { Message } from "@/types";
 
 const conversationStore = useConversationStore();
+
+const streamingMessage = computed<Message>(() => ({
+  id: "streaming",
+  conversationId: "",
+  role: "assistant",
+  content: conversationStore.streamingMessage?.content ?? "",
+  timestamp: 0,
+}));
 
 const inputMessage = ref("");
 
@@ -58,9 +66,10 @@ function handleKeydown(e: KeyboardEvent) {
         :key="message.id"
         :message="message"
       />
-      <StreamingMessage
+      <ChatMessage
         v-if="conversationStore.isStreamingResponse"
-        :content="conversationStore.streamingMessage?.content ?? ''"
+        :message="streamingMessage"
+        :is-streaming="true"
       />
     </div>
 

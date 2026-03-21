@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from "vue";
+import { computed, ref, watch, watchEffect } from "vue";
 import { marked } from "marked";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { appDataDir, join } from "@tauri-apps/api/path";
@@ -7,18 +7,31 @@ import { Message } from "@/types";
 
 interface Props {
   message: Message;
+  isStreaming?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  isStreaming: false,
+});
 
-const renderedContent = computed(() => {
+const renderedContent = ref("");
+
+const finalRenderedContent = computed(() => {
   return marked.parse(props.message.content, { async: false }) as string;
 });
+
+watch(
+  () => props.message.content,
+  (newContent) => {
+    renderedContent.value = marked.parse(newContent, { async: false }) as string;
+  },
+  { immediate: true },
+);
 
 const screenshotSrc = ref<string | null>(null);
 
 watchEffect(async () => {
-  if (props.message.screenshotPath) {
+  if (props.message.screenshotPath && !props.isStreaming) {
     const dataDir = await appDataDir();
     const absolutePath = await join(dataDir, props.message.screenshotPath);
     screenshotSrc.value = convertFileSrc(absolutePath);
@@ -39,11 +52,29 @@ watchEffect(async () => {
       alt="Screenshot"
       class="mb-2 rounded-md max-w-full cursor-pointer hover:opacity-90"
     />
-    <div class="markdown-content" v-html="renderedContent" />
+    <div
+      class="markdown-content"
+      :class="{ 'typing-animation': isStreaming }"
+      v-html="isStreaming ? renderedContent : finalRenderedContent"
+    />
   </div>
 </template>
 
 <style scoped>
+.typing-animation {
+  overflow: hidden;
+  animation: typing-fade 0.3s ease-out forwards;
+}
+
+@keyframes typing-fade {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .markdown-content :deep(pre) {
   background-color: rgb(0 0 0 / 0.3);
   border-radius: 0.375rem;
