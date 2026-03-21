@@ -12,13 +12,13 @@ const conversationStore = useConversationStore();
         <p>No transcripts yet</p>
         <p class="text-xs mt-1">Enable microphone to start transcription</p>
       </div>
-      
+
       <TranscriptionCard
         v-for="transcript in conversationStore.transcripts"
         :key="transcript.id"
         :transcript="transcript"
       />
-      
+
       <TranscriptionCard
         v-if="conversationStore.currentTranscript"
         :transcript="conversationStore.currentTranscript"
