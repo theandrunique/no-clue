@@ -18,9 +18,28 @@ const routes: RouteRecordRaw[] = [
       {
         path: "conversations",
         name: "conversations",
-        component: () => import("../views/dashboard/tabs/conversations/ConversationsTab.vue"),
+        component: () => import("../views/dashboard/tabs/ConversationsTab"),
       },
-
+      {
+        path: "system-prompts",
+        name: "system-prompts",
+        component: () => import("../views/dashboard/tabs/SystemPromptsTab.vue"),
+      },
+      {
+        path: "shortcuts",
+        name: "shortcuts",
+        component: () => import("../views/dashboard/tabs/ShortcutsTab.vue"),
+      },
+      {
+        path: "audio",
+        name: "audio",
+        component: () => import("../views/dashboard/tabs/AudioTab.vue"),
+      },
+      {
+        path: "providers",
+        name: "providers",
+        component: () => import("../views/dashboard/tabs/ProvidersTab.vue"),
+      },
       {
         path: "settings",
         name: "settings",

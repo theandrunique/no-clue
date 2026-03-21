@@ -4,13 +4,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "./chat";
 import { useTranscriptionStore } from "./transcription";
 
-export interface Conversation {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
 export const useConversationStore = defineStore("conversation", () => {
   const currentConversationId = ref<string | null>(null);
 
