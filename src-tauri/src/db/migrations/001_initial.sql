@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS transcripts (
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS system_prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')) NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now')) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL

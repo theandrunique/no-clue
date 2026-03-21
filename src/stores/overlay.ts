@@ -7,7 +7,6 @@ const COLLAPSED_HEIGHT = 54;
 
 export const useOverlayStore = defineStore("overlay", () => {
   const isExpanded = ref(false);
-  const currentConversationId = ref<string | null>(null);
 
   async function toggleExpanded() {
     isExpanded.value = !isExpanded.value;
@@ -27,16 +26,9 @@ export const useOverlayStore = defineStore("overlay", () => {
     await window.setSize(new LogicalSize(width, height));
   }
 
-  function setCurrentConversationId(id: string | null) {
-    currentConversationId.value = id;
-  }
-
   return {
     isExpanded,
-    currentConversationId,
     toggleExpanded,
     setExpanded,
-    resizeWindow,
-    setCurrentConversationId,
   };
 });

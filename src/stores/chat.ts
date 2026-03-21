@@ -74,7 +74,7 @@ export const useChatStore = defineStore("chat", () => {
 
   async function sendMessage(conversationId: string, content: string, provider: string) {
     console.log("[ChatStore] sendMessage called:", { conversationId, content, provider });
-    
+
     currentStreamingConversationId.value = conversationId;
     await setupListeners();
 

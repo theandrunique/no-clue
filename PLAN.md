@@ -8,7 +8,7 @@
 | Frontend | Vue 3 + TypeScript |
 | UI | shadcn-vue (Button, Popover, etc.) + TailwindCSS |
 | State | Pinia |
-| Markdown | streamdown (streaming + анимация) |
+| Markdown | marked |
 | Storage | @tauri-apps/plugin-sql (SQLite) |
 | Screen Capture | xcap (Rust) |
 
@@ -24,7 +24,7 @@
 - **URL**: `/` (корень)
 - **Параметры**:
   - `label`: "overlay"
-  - `width`: 600, `height`: 54
+  - `width`: 900, `height`: 54
   - `decorations`: false
   - `transparent`: true
   - `alwaysOnTop`: true
@@ -60,6 +60,8 @@
 **Компоненты Overlay**:
 - **Chevron кнопка** - раскрывает/скрывает popover
 - **Mic toggle** - включение/выключение прослушки
+- **Screenshot capture toggle** - включение/выключения захвата снимка экрана
+- **Clear кнопка** - очищает текущий диалог
 - **Dashboard кнопка** - открыть dashboard
 - **Draggable handle** - область для перемещения окна
 
@@ -70,59 +72,47 @@
 ```
 no-clue/
 ├── src/
-│   ├── main.ts                    # Vue app entry
-│   ├── App.vue                    # Root component
+│   ├── main.ts
+│   ├── App.vue
 │   ├── router/
-│   │   └── index.ts               # Vue Router config
+│   │   ├── index.ts               # Vue Router config
+│   │   └── tabs.ts                # Dashboard tabs
 │   ├── views/
 │   │   ├── overlay/
 │   │   │   ├── OverlayView.vue    # Main overlay window
-│   │   │   └── components/        # Components only for overlay
-│   │   │       ├── OverlayToolbar.vue
+│   │   │   └── components/
 │   │   │       ├── OverlayPopover.vue
 │   │   │       ├── ChatTab.vue
 │   │   │       ├── TranscriptTab.vue
-│   │   │       ├── QuickActions.vue
-│   │   │       └── ClearButton.vue  # Очистка / начать новую сессию
+│   │   │       └── QuickActions.vue
 │   │   └── dashboard/
-│   │       ├── DashboardView.vue  # Dashboard container
-│   │       └── components/        # Components only for dashboard
-│   │           ├── DashboardSidebar.vue
-│   │           ├── ChatsPanel.vue
-│   │           ├── PromptsPanel.vue
-│   │           ├── SettingsPanel.vue
-│   │           ├── AudioPanel.vue
-│   │           ├── ShortcutsPanel.vue
-│   │           └── ProvidersPanel.vue
+│   │       ├── DashboardLayout.vue
+│   │       └── tabs/        # Dashboard tabs
+│   │           ├── ConversationsTab # View old conversations
+│   │           ├── ProvidersTab # Select and configure AI and STT providers
+│   │           ├── SettingsTab
+│   │           ├── ShortcutsTab
+│   │           └── SystemPromptsTab
 │   ├── components/
 │   │   └── ui/                    # Radix UI + Tailwind components
 │   ├── composables/               # Shared Vue composables 
-│   │   ├── useTranscription.ts    # start/stop listening, transcripts, currentTranscript
-│   │   ├── useChat.ts             # send message, streaming response
-│   │   ├── useMediaRecorder.ts    # audio recording
-│   │   ├── useSpeechRecognition.ts # speech to text
 │   │   └── useShortcuts.ts        # global shortcuts
 │   ├── stores/
-│   │   ├── overlay.ts             # Overlay state: expanded, mic on, capture_screenshot, currentConversationId
+│   │   ├── overlay.ts             # Overlay state: expanded
 │   │   ├── chat.ts                # Chat messages, history
 │   │   ├── settings.ts            # User settings
-│   │   ├── providers.ts           # AI providers config
-│   │   └── audio.ts               # Audio devices, transcription state
+│   │   ├── transcription.ts           # AI providers config
+│   │   └── conversation.ts               # chat, transcription orchestrator
 │   ├── lib/
-│   │   ├── ai.ts                  # AI request logic
-│   │   ├── transcription.ts       # Deepgram integration
-│   │   ├── screenshot.ts          # Screen capture
-│   │   └── markdown.ts            # Marked streaming renderer
-│   └── styles/
-│       └── main.css               # Tailwind + custom styles
+│   └── style.css               # Tailwind + custom styles
 ├── src-tauri/
 │   ├── src/
-│   │   ├── main.rs                # Tauri entry point
-│   │   ├── lib.rs                 # Commands
+│   │   ├── main.rs
+│   │   ├── lib.rs
 │   │   └── windows.rs             # Window management
-│   ├── tauri.conf.json            # Tauri config
+│   ├── tauri.conf.json
 │   └── capabilities/
-│       └── default.json           # Permissions
+│       └── default.json
 └── package.json
 ```
 
@@ -130,35 +120,32 @@ no-clue/
 
 ## 6. Dashboard Вкладки
 
-### 6.1 Chats (История чатов)
-- Список всех чатов с датами
-- Просмотр отдельного чата
-- Удаление чатов
-- Экспорт чатов
+### 6.1 Conversations (История диалогов)
+- Список всех диалогов
+- Просмотр отдельных
+- Удаление
 
 ### 6.2 System Prompts
 - CRUD операции для system prompts
 - Выбор активного prompt
-- Поля: name, content (текст)
 
-### 6.3 Settings
-- **Прозрачность** (opacity): 0-100%
-- **Always On Top**: true/false
-- **Stealth Mode**: (всегда включен, через contentProtected)
+### 6.3 Providers (AI + Transcription)
+Выбор и настройка провайдеров AI и STT
 
-### 6.4 Audio
-- Выбор **input device** (микрофон)
-- Выбор **system audio** (виртуальный кабель)
-- Тест аудио
-
-### 6.5 Shortcuts
+### 6.4 Shortcuts
 - Управление глобальными шорткатами
 - Список по умолчанию:
   - `Ctrl+Enter` - Спросить об экране
   - `Ctrl+Shift+Up` - Скролл чата вверх
   - `Ctrl+Shift+Down` - Скролл чата вниз
 
-### 6.6 Providers (AI + Transcription)
+### 6.5 Settings
+- **Прозрачность** (opacity): 0-100%
+- **Always On Top**: true/false
+- Выбор **input device** (микрофон)
+- Выбор **system audio** (виртуальный кабель)
+- Тест аудио
+
 
 #### AI Providers
 ```typescript
@@ -197,15 +184,6 @@ export const AI_PROVIDERS = [
    - Если транскрипция ВКЛ → создается новый conversation, currentConversationId = newId
    - Если транскрипция ВЫКЛ → currentConversationId = null (просто очищаем UI)
 6. В Dashboard → можно просмотреть всю историю любых conversation
-
-### Синхронизация (overlay.ts store):
-```typescript
-interface OverlayState {
-  currentConversationId: string | null  // null = нет активной сессии
-  isTranscriptionEnabled: boolean
-  captureScreenshot: boolean
-}
-```
 
 **Включение транскрипции:**
 - If `currentConversationId == null` → `create_conversation()` → сохраняем id в store
@@ -355,30 +333,28 @@ fn get_stt_settings() -> Result<SttSettings, String>
 ```sql
 -- Conversations table
 CREATE TABLE IF NOT EXISTS conversations (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     title TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
 
--- Messages table (LLM чат)
 CREATE TABLE IF NOT EXISTS messages (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
+    screenshot_path TEXT,
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
--- Transcripts table (транскрипции)
 CREATE TABLE IF NOT EXISTS transcripts (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
-    speaker TEXT NOT NULL CHECK(speaker IN ('user', 'system')),  -- user = микрофон, system = системное аудио
+    speaker TEXT NOT NULL CHECK (speaker IN ('user', 'system')),
     text TEXT NOT NULL,
-    is_final INTEGER NOT NULL DEFAULT 1,  -- 1 = final, 0 = interim (не сохраняем)
-    confidence REAL,
+    confidence REAL NOT NULL,
     timestamp INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
@@ -411,12 +387,6 @@ CREATE TABLE IF NOT EXISTS stt_settings (
     updated_at INTEGER NOT NULL
 );
 
--- App settings
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
@@ -433,35 +403,7 @@ END;
 
 ---
 
-## 9. Tauri Permissions
-
-```json
-{
-  "permissions": [
-    "core:default",
-    "core:window:default",
-    "core:window:allow-close",
-    "core:window:allow-show",
-    "core:window:allow-hide",
-    "core:window:allow-set-position",
-    "core:window:allow-set-size",
-    "core:window:allow-set-always-on-top",
-    "core:window:allow-set-skip-taskbar",
-    "core:window:allow-set-decorations",
-    "core:window:allow-set-focus",
-    "core:window:allow-start-dragging",
-    "core:window:allow-is-visible",
-    "core:tray:default",
-    "global-shortcut:default",
-    "sql:default",
-    "shell:default"
-  ]
-}
-```
-
----
-
-## 10. Глобальные шорткаты (план)
+## 9. Глобальные шорткаты (план)
 
 | Шорткат | Действие |
 |---------|----------|
@@ -469,67 +411,3 @@ END;
 | `Ctrl+Up/Down/Left/Right` | Двигать overlay |
 | `Ctrl+Shift+Up` | Скролл чата вверх |
 | `Ctrl+Shift+Down` | Скролл чата вниз |
-
----
-
-## 11. Этапы реализации
-
-### Этап 1: Базовая структура
-- [x] Tauri + Vue 3 проект
-- [ ] Обновить tauri.conf.json
-- [ ] Настроить capabilities
-- [ ] Vue Router
-- [ ] Pinia stores
-
-### Этап 2: Overlay окно
-- [ ] OverlayView.vue - базовая структура
-- [ ] Draggable handle
-- [ ] Кнопки (chevron, mic, dashboard)
-- [ ] Popover с табами
-
-### Этап 3: Dashboard окно
-- [ ] Rust команда open_dashboard
-- [ ] DashboardView.vue
-- [ ] Sidebar навигация
-
-### Этап 4: AI Providers
-- [ ] UI для выбора провайдера
-- [ ] Форма настроек API
-- [ ] AI request логика
-
-### Этап 5: Chat
-- [ ] ChatStore
-- [ ] ChatTab.vue
-- [ ] Markdown рендеринг
-- [ ] Quick actions
-- [ ] Screenshot capture
-
-### Этап 6: Transcription
-- [ ] Интеграция Deepgram
-- [ ] TranscriptTab.vue
-- [ ] Audio device selection
-
-### Этап 7: Shortcuts
-- [ ] Global shortcuts plugin
-- [ ] ShortcutsPanel.vue
-- [ ] Реализация перемещения overlay
-
-### Этап 8: Persistence
-- [ ] SQLite database
-- [ ] Сохранение чатов
-- [ ] Сохранение настроек
-
----
-
-## 12. Вопросы/Уточнения
-
-1. **Транскрипция** - будет импортирована из другого проекта
-2. **Stealth Mode** - реализован через `contentProtected: true`
-3. **Identifier** - `com.theandru.noclue`
-4. **LLM архитектура**:
-   - Frontend → Rust (только conversation_id, message, image_base64)
-   - Rust сам читает из SQLite: active provider, api_key, model, system_prompt
-   - Rust формирует запрос → LLM API → стрим обратно во Frontend
-   - API ключи НИКОГДА не передаются во Frontend
-5. **Скриншоты** - Rust (xcap) → base64 → отправка в LLM
-6. **Streamdown** - для рендеринга markdown со стримингом
