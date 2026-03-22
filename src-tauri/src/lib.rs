@@ -1,9 +1,7 @@
 use crate::{
-    conversations::{
+    ai_providers::get_providers, conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
-    },
-    transcriptions::{start_transcription, stop_transcription, update_transcription_session},
-    utils::{move_overlay, open_dashboard, set_overlay_visible},
+    }, transcriptions::{start_transcription, stop_transcription, update_transcription_session}, utils::{move_overlay, open_dashboard, set_overlay_visible}
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -14,52 +12,13 @@ mod models;
 mod screenshot;
 mod transcriptions;
 mod utils;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ProviderSettings {
-    pub provider: String,
-    pub api_key: String,
-    pub model: String,
-}
+mod ai_providers;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SttSettings {
     pub api_key: String,
     pub model: String,
     pub language: String,
-}
-
-// Provider Settings
-#[tauri::command]
-async fn save_provider_settings(
-    provider: String,
-    _api_key: String,
-    model: String,
-) -> Result<(), String> {
-    println!(
-        "[COMMAND] save_provider_settings called: provider={}, model={}",
-        provider, model
-    );
-    Ok(())
-}
-
-#[tauri::command]
-async fn get_provider_settings(provider: String) -> Result<ProviderSettings, String> {
-    println!(
-        "[COMMAND] get_provider_settings called: provider={}",
-        provider
-    );
-    Err("Not implemented".to_string())
-}
-
-#[tauri::command]
-async fn get_all_providers() -> Result<Vec<String>, String> {
-    println!("[COMMAND] get_all_providers called");
-    Ok(vec![
-        "openrouter".to_string(),
-        "openai".to_string(),
-        "anthropic".to_string(),
-    ])
 }
 
 // STT Settings
@@ -115,11 +74,9 @@ pub fn run() {
             stop_stream,
             start_transcription,
             stop_transcription,
-            save_provider_settings,
-            get_provider_settings,
-            get_all_providers,
             save_stt_settings,
             get_stt_settings,
+            get_providers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -38,5 +38,10 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ai_providers (
+    id TEXT PRIMARY KEY NOT NULL,
+    config TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_transcripts_conversation ON transcripts(conversation_id);

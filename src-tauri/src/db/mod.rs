@@ -37,3 +37,4 @@ pub mod conversation;
 pub mod message;
 pub mod settings;
 pub mod transcript;
+pub mod ai_provider;
