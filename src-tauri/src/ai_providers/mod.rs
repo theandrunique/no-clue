@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
-use crate::{ai_providers::{ai_tunnel::ai_tunnel_descriptor, ollama::ollama_descriptor}, models::ChatStreamEvent};
+use crate::{ai_providers::{ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor}};
 
 mod ai_tunnel;
+mod fake;
 mod ollama;
 
 #[async_trait]
@@ -11,16 +12,49 @@ pub trait AiProvider: Send + Sync {
     async fn stream(
         &self,
         prompt: String,
-    ) -> Result<Box<dyn Stream<Item = ChatStreamEvent> + Send + Unpin>, String>;
+    ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String>;
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+pub enum AiStreamEvent {
+    Chunk { content: String, is_finish: bool },
+    Error { code: String, message: String },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProviderConfig {
+    pub provider: String,
+    #[serde(flatten)]
+    pub settings: ProviderSettings,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum ProviderConfig {
+pub enum ProviderSettings {
+    Fake,
     Ollama {
         base_url: Option<String>,
         model: String,
     },
+    AiTunnel {
+        api_key: String,
+        model: String,
+    },
+}
+
+impl ProviderConfig {
+    pub fn fake() -> Self {
+        Self {
+            provider: "fake".into(),
+            settings: ProviderSettings::Fake,
+        }
+    }
+
+    pub fn ollama(base_url: Option<String>, model: String) -> Self {
+        Self {
+            provider: "ollama".into(),
+            settings: ProviderSettings::Ollama { base_url, model },
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -49,10 +83,17 @@ pub enum FieldType {
     Select { options: Vec<String> },
 }
 
-pub fn create_provider(config: ProviderConfig) -> Box<dyn AiProvider> {
-    match config {
-        ProviderConfig::Ollama { base_url, model } => {
-            Box::new(OllamaProvider { base_url ?? "http://localhost:11434", model })
+pub fn create_provider(config: &ProviderConfig) -> Box<dyn AiProvider> {
+    match &config.settings {
+        ProviderSettings::Fake => Box::new(fake::FakeProvider),
+        ProviderSettings::Ollama { base_url, model } => {
+            Box::new(ollama::OllamaProvider {
+                base_url: base_url.clone().unwrap_or_else(|| "http://localhost:11434".into()),
+                model: model.clone()
+            })
+        }
+        ProviderSettings::AiTunnel { .. } => {
+            Box::new(fake::FakeProvider)
         }
     }
 }
@@ -60,8 +101,9 @@ pub fn create_provider(config: ProviderConfig) -> Box<dyn AiProvider> {
 #[tauri::command]
 pub fn get_providers() -> Vec<ProviderDescriptor> {
     vec![
-        ai_tunnel_descriptor(),
+        fake_provider_descriptor(),
         ollama_descriptor(),
+        ai_tunnel_descriptor(),
     ]
 }
 
@@ -79,7 +121,7 @@ async fn save_provider_settings(
 }
 
 #[tauri::command]
-async fn get_provider_settings(provider: String) -> Result<ProviderSettings, String> {
+async fn get_provider_settings(provider: String) -> Result<ProviderConfig, String> {
     println!(
         "[COMMAND] get_provider_settings called: provider={}",
         provider

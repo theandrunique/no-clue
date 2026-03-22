@@ -1,6 +1,9 @@
+use crate::ai_providers::AiStreamEvent;
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
+use crate::db::ai_provider as provider_repo;
+use crate::ai_providers::{create_provider};
 use crate::models::{ChatStreamEvent, Conversation, Message, Transcript, MessageRole};
 use crate::screenshot::capture_screenshot as do_capture_screenshot;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -111,84 +114,70 @@ pub async fn send_message(
         println!("[DB] Error saving user message: {}", e);
     }
 
+    // Get provider config and create provider instance
+    let provider_clone = provider.clone();
+    let provider_config = tokio::task::spawn_blocking(move || {
+        provider_repo::get_provider_config(&provider_clone)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?
+    .ok_or_else(|| format!("Provider '{}' not configured", provider))?;
+
+    let ai_provider = create_provider(&provider_config);
+
     STREAMING.store(true, Ordering::SeqCst);
 
-    // Poem with markdown to stream over ~15 seconds
-    let poem = r#"Here's a poem for you:
-
-## The Code
-
-In digital realms we write our fate,
-With keyboard strokes we contemplate,
-**Algorithms** dance and play,
-*Variables* along the way.
-
-```rust
-fn main() {
-    println!("Hello, World!");
-}
-```
-
-- First we dream
-- Then we code
-- Finally we deploy
-
-That's the way the *poem* goes..."#;
-
-    let chars: Vec<char> = poem.chars().collect();
-    let total_chars = chars.len();
-    let duration_ms = 15000u64;
-    let delay_per_char = duration_ms / total_chars as u64;
-
     let mut assistant_response = String::new();
-    let completed = loop {
-        if !STREAMING.load(Ordering::SeqCst) {
-            println!("[COMMAND] Stream stopped by user");
-            break false;
+
+    // Stream from provider
+    let stream_result = ai_provider.stream(user_message).await;
+
+    match stream_result {
+        Ok(mut stream) => {
+            use futures_util::StreamExt;
+            while let Some(event) = stream.next().await {
+                if !STREAMING.load(Ordering::SeqCst) {
+                    println!("[COMMAND] Stream stopped by user");
+                    break;
+                }
+
+                match event {
+                    AiStreamEvent::Chunk { content, is_finish } => {
+                        assistant_response.push_str(&content);
+
+                        let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
+                            conversation_id: conversation_id.clone(),
+                            content: content,
+                            is_finish: is_finish,
+                            timestamp: Utc::now().timestamp(),
+                        });
+
+                        if is_finish {
+                            break;
+                        }
+                    }
+                    AiStreamEvent::Error { code, message } => {
+                        println!("[COMMAND] Stream error: {} - {}", code, message);
+                    }
+                }
+            }
         }
-
-        let chunk: String = chars
-            .iter()
-            .skip(assistant_response.len())
-            .take(3)
-            .collect();
-
-        if chunk.is_empty() {
-            break true;
+        Err(e) => {
+            println!("[COMMAND] Provider error: {}", e);
         }
-
-        assistant_response.push_str(&chunk);
-        let timestamp = Utc::now().timestamp();
-        let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
-            conversation_id: conversation_id.clone(),
-            content: chunk,
-            is_finish: false,
-            timestamp,
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(delay_per_char * 3)).await;
-    };
-
-    let conv_id_for_final = conversation_id.clone();
-    let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
-        conversation_id,
-        content: String::new(),
-        is_finish: true,
-        timestamp: Utc::now().timestamp(),
-    });
-    STREAMING.store(false, Ordering::SeqCst);
-
-    if completed {
-        println!("[COMMAND] Stream completed");
-    } else {
-        println!("[COMMAND] Stream stopped - saving partial response");
     }
 
-    // Save assistant response (full or partial)
+    STREAMING.store(false, Ordering::SeqCst);
+
+    println!("[COMMAND] Stream completed");
+
+    // Save assistant response
+    let conv_id_for_save = conversation_id.clone();
     let assistant_final = assistant_response.clone();
     if let Err(e) = tokio::task::spawn_blocking(move || {
         msg_repo::create(
-            conv_id_for_final,
+            conv_id_for_save,
             Uuid::new_v4().to_string(),
             MessageRole::Assistant,
             assistant_final,
