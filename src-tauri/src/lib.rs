@@ -57,16 +57,14 @@ async fn save_provider_settings(provider: String, settings: ProviderSettings) ->
 }
 
 #[tauri::command]
-async fn get_provider_settings(provider: String) -> Result<ProviderSettings, String> {
-    let provider_for_error = provider.clone();
+async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
     println!("[COMMAND] get_provider_settings called: provider={}", provider);
     tokio::task::spawn_blocking(move || {
         provider_repo::get_provider_settings(&provider)
     })
     .await
     .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())?
-    .ok_or_else(|| format!("Provider '{}' not configured", provider_for_error))
+    .map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

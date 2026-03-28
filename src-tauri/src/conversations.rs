@@ -4,8 +4,7 @@ use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
 use crate::db::ai_provider as provider_repo;
 use crate::models::{ChatStreamEvent, Conversation, Message, Transcript, MessageRole};
-use crate::screenshot::capture_screenshot as do_capture_screenshot;
-use base64::Engine;
+use crate::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult};
 use std::sync::atomic::{AtomicBool, Ordering};
 use chrono::Utc;
 use tauri::{AppHandle, Emitter};
@@ -80,11 +79,11 @@ pub async fn send_message(
         return Err("Already streaming".to_string());
     }
 
-    let screenshot_path = if capture_screenshot {
+    let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
         match do_capture_screenshot(app.clone()) {
-            Ok(path) => {
-                println!("[COMMAND] Screenshot captured: {}", path);
-                Some(path)
+            Ok(result) => {
+                println!("[COMMAND] Screenshot captured: {}", result.relative_path);
+                Some(result)
             }
             Err(e) => {
                 println!("[COMMAND] Failed to capture screenshot: {}", e);
@@ -94,6 +93,9 @@ pub async fn send_message(
     } else {
         None
     };
+
+    let screenshot_path = screenshot_result.as_ref().map(|r| r.relative_path.clone());
+    let screenshot_base64 = screenshot_result.map(|r| r.base64);
 
     // Save user message immediately
     let conv_id_clone = conversation_id.clone();
@@ -139,11 +141,11 @@ pub async fn send_message(
     let mut request = AiRequest::new(history);
     
     // Add screenshot if captured (as base64)
-    if let Some(screenshot_path) = screenshot_path {
-        if let Ok(bytes) = std::fs::read(&screenshot_path) {
-            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            request = request.with_screenshot(b64);
-        }
+    if let Some(b64) = screenshot_base64 {
+        println!("[COMMAND] Using screenshot base64, length: {}", b64.len());
+        request = request.with_screenshot(b64);
+    } else if capture_screenshot {
+        println!("[COMMAND] capture_screenshot=true but no base64 available");
     }
 
     STREAMING.store(true, Ordering::SeqCst);

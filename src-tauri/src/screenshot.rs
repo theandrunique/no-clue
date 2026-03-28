@@ -1,7 +1,13 @@
+use base64::Engine;
 use tauri::Manager;
 use xcap::Monitor;
 
-pub fn capture_screenshot(app: tauri::AppHandle) -> Result<String, String> {
+pub struct ScreenshotResult {
+    pub relative_path: String,
+    pub base64: String,
+}
+
+pub fn capture_screenshot(app: tauri::AppHandle) -> Result<ScreenshotResult, String> {
     println!("[COMMAND] capture_screenshot called");
 
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
@@ -22,7 +28,23 @@ pub fn capture_screenshot(app: tauri::AppHandle) -> Result<String, String> {
 
     image.save(&path).map_err(|e| e.to_string())?;
 
-    println!("[COMMAND] Screenshot saved: {}", filename);
+    println!("[COMMAND] Screenshot saved: {}", path.to_string_lossy());
 
-    Ok(format!("screenshots/{}", filename))
+    let mut buffer = Vec::new();
+    use image::ImageEncoder;
+    image::codecs::png::PngEncoder::new(&mut buffer)
+        .write_image(
+            image.as_raw(),
+            image.width(),
+            image.height(),
+            image::ExtendedColorType::Rgba8,
+        )
+        .map_err(|e| e.to_string())?;
+
+    let base64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+
+    Ok(ScreenshotResult {
+        relative_path: format!("screenshots/{}", filename),
+        base64,
+    })
 }

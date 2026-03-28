@@ -3,12 +3,14 @@ import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "./chat";
 import { useTranscriptionStore } from "./transcription";
+import { useProvidersStore } from "./providers";
 
 export const useConversationStore = defineStore("conversation", () => {
   const currentConversationId = ref<string | null>(null);
 
   const chatStore = useChatStore();
   const transcriptionStore = useTranscriptionStore();
+  const providersStore = useProvidersStore();
 
   const messages = computed(() => chatStore.messages);
   const isStreamingResponse = computed(() => chatStore.isStreamingResponse);
@@ -38,7 +40,10 @@ export const useConversationStore = defineStore("conversation", () => {
     console.log("[ConversationStore] sendMessage called:", content);
     await ensureConversation();
     console.log("[ConversationStore] After ensureConversation, id:", currentConversationId.value);
-    await chatStore.sendMessage(currentConversationId.value!, content, "fake");
+    
+    const provider = providersStore.getSelectedProviderId() || "fake";
+    console.log("[ConversationStore] Using provider:", provider);
+    await chatStore.sendMessage(currentConversationId.value!, content, provider);
   }
 
   async function toggleTranscription() {
