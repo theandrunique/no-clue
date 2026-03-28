@@ -42,8 +42,10 @@ export const useProvidersStore = defineStore("providers", () => {
   }
 
   function setSelectedProvider(providerId: string) {
+    console.log("[ProvidersStore] setSelectedProvider called:", providerId);
     selectedProviderId.value = providerId;
     localStorage.setItem(SELECTED_PROVIDER_KEY, providerId);
+    console.log("[ProvidersStore] selectedProviderId.value is now:", selectedProviderId.value);
   }
 
   function loadSelectedProvider() {

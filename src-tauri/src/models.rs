@@ -134,9 +134,3 @@ impl std::str::FromStr for Speaker {
         }
     }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
-    pub key: String,
-    pub value: String,
-}

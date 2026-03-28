@@ -4,8 +4,8 @@ use rusqlite::{params, Result};
 
 pub fn create(title: String) -> Result<String> {
     let conn = get_connection()?;
-    let id = crate::db::create_uuid();
-    let timestamp = crate::db::now_timestamp();
+    let timestamp = chrono::Utc::now().timestamp();
+    let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
         "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",

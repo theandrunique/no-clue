@@ -3,14 +3,12 @@ import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useChatStore } from "./chat";
 import { useTranscriptionStore } from "./transcription";
-import { useProvidersStore } from "./providers";
 
 export const useConversationStore = defineStore("conversation", () => {
   const currentConversationId = ref<string | null>(null);
 
   const chatStore = useChatStore();
   const transcriptionStore = useTranscriptionStore();
-  const providersStore = useProvidersStore();
 
   const messages = computed(() => chatStore.messages);
   const isStreamingResponse = computed(() => chatStore.isStreamingResponse);
@@ -41,8 +39,10 @@ export const useConversationStore = defineStore("conversation", () => {
     await ensureConversation();
     console.log("[ConversationStore] After ensureConversation, id:", currentConversationId.value);
     
-    const provider = providersStore.getSelectedProviderId() || "fake";
-    console.log("[ConversationStore] Using provider:", provider);
+    // Read from localStorage directly - this works across windows
+    const savedProvider = localStorage.getItem("selected_provider");
+    const provider = savedProvider || "fake";
+    console.log("[ConversationStore] Using provider from localStorage:", provider);
     await chatStore.sendMessage(currentConversationId.value!, content, provider);
   }
 

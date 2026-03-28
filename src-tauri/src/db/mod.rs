@@ -2,6 +2,11 @@ use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+pub mod ai_provider;
+pub mod conversation;
+pub mod message;
+pub mod transcript;
+
 static DB_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 pub fn get_connection() -> Result<Connection> {
@@ -24,17 +29,3 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Result<()> {
     tracing::info!(db_path = %db_path.display(), "Database initialized");
     Ok(())
 }
-
-pub fn create_uuid() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
-
-pub fn now_timestamp() -> i64 {
-    chrono::Utc::now().timestamp()
-}
-
-pub mod ai_provider;
-pub mod conversation;
-pub mod message;
-pub mod settings;
-pub mod transcript;

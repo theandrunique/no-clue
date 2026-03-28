@@ -1,8 +1,36 @@
 use crate::db::transcript as transcript_repo;
 use crate::models::{Speaker, TranscriptionResult};
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SttSettings {
+    pub api_key: String,
+    pub model: String,
+    pub language: String,
+}
+
+#[tauri::command]
+pub async fn save_stt_settings(
+    _api_key: String,
+    model: String,
+    language: String,
+) -> Result<(), String> {
+    tracing::info!(model, language, "save_stt_settings called");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_stt_settings() -> Result<SttSettings, String> {
+    tracing::info!("get_stt_settings called");
+    Ok(SttSettings {
+        api_key: "".to_string(),
+        model: "nova-3".to_string(),
+        language: "ru".to_string(),
+    })
+}
 
 static TRANSCRIPTION_RUNNING: AtomicBool = AtomicBool::new(false);
 static TRANSCRIPTION_HANDLE: AtomicBool = AtomicBool::new(false);

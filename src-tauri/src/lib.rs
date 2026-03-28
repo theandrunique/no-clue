@@ -1,78 +1,32 @@
 use crate::{
-    ai_providers::{get_providers, ProviderSettings},
+    ai_providers::{get_provider_settings, get_providers, save_provider_settings},
+    chat::{send_message, stop_stream},
     conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations,
-        get_messages, get_transcripts, send_message, stop_stream,
+        get_messages, get_transcripts,
     },
-    db::ai_provider as provider_repo,
-    transcriptions::{start_transcription, stop_transcription, update_transcription_session},
+    transcriptions::{
+        get_stt_settings, save_stt_settings, start_transcription, stop_transcription,
+        update_transcription_session,
+    },
     utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
-use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tauri::Manager;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 mod ai_providers;
+mod chat;
 mod conversations;
 mod db;
 mod models;
 mod screenshot;
 mod transcriptions;
 mod utils;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SttSettings {
-    pub api_key: String,
-    pub model: String,
-    pub language: String,
-}
-
-// STT Settings
-#[tauri::command]
-async fn save_stt_settings(
-    _api_key: String,
-    model: String,
-    language: String,
-) -> Result<(), String> {
-    tracing::info!(model, language, "save_stt_settings called");
-    Ok(())
-}
-
-#[tauri::command]
-async fn get_stt_settings() -> Result<SttSettings, String> {
-    tracing::info!("get_stt_settings called");
-    Ok(SttSettings {
-        api_key: "".to_string(),
-        model: "nova-3".to_string(),
-        language: "ru".to_string(),
-    })
-}
-
-#[tauri::command]
-async fn save_provider_settings(
-    provider: String,
-    settings: ProviderSettings,
-) -> Result<(), String> {
-    tracing::info!(provider, "save_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
-    tracing::info!(provider, "get_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -110,7 +64,8 @@ pub fn run() {
             tracing_subscriber::registry()
                 .with(env_filter)
                 .with(file_layer)
-                .with(stdout_layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO))
+                .with(stdout_layer)
+                // .with(stdout_layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO))
                 .init();
 
             tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
@@ -128,11 +83,11 @@ pub fn run() {
             get_conversation,
             get_messages,
             get_transcripts,
-            update_transcription_session,
             send_message,
             stop_stream,
             start_transcription,
             stop_transcription,
+            update_transcription_session,
             save_stt_settings,
             get_stt_settings,
             get_providers,

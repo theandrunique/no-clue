@@ -33,11 +33,6 @@ CREATE TABLE IF NOT EXISTS system_prompts (
     updated_at TEXT DEFAULT (datetime('now')) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY NOT NULL,
-    value TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS ai_providers (
     id TEXT PRIMARY KEY NOT NULL,
     config TEXT NOT NULL
