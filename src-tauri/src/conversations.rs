@@ -1,11 +1,11 @@
-use crate::ai_providers::AiStreamEvent;
+use crate::ai_providers::{AiRequest, AiStreamEvent, create_provider};
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
 use crate::db::ai_provider as provider_repo;
-use crate::ai_providers::{create_provider};
 use crate::models::{ChatStreamEvent, Conversation, Message, Transcript, MessageRole};
 use crate::screenshot::capture_screenshot as do_capture_screenshot;
+use base64::Engine;
 use std::sync::atomic::{AtomicBool, Ordering};
 use chrono::Utc;
 use tauri::{AppHandle, Emitter};
@@ -114,24 +114,44 @@ pub async fn send_message(
         println!("[DB] Error saving user message: {}", e);
     }
 
-    // Get provider config and create provider instance
+    // Get provider settings and create provider instance
     let provider_clone = provider.clone();
-    let provider_config = tokio::task::spawn_blocking(move || {
-        provider_repo::get_provider_config(&provider_clone)
+    let provider_settings = tokio::task::spawn_blocking(move || {
+        provider_repo::get_provider_settings(&provider_clone)
     })
     .await
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?
     .ok_or_else(|| format!("Provider '{}' not configured", provider))?;
 
-    let ai_provider = create_provider(&provider_config);
+    let ai_provider = create_provider(&provider_settings);
+
+    // Get chat history for context
+    let conv_id_for_history = conversation_id.clone();
+    let history = tokio::task::spawn_blocking(move || {
+        msg_repo::get_by_conversation(&conv_id_for_history)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+
+    // Build AI request
+    let mut request = AiRequest::new(history);
+    
+    // Add screenshot if captured (as base64)
+    if let Some(screenshot_path) = screenshot_path {
+        if let Ok(bytes) = std::fs::read(&screenshot_path) {
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            request = request.with_screenshot(b64);
+        }
+    }
 
     STREAMING.store(true, Ordering::SeqCst);
 
     let mut assistant_response = String::new();
 
     // Stream from provider
-    let stream_result = ai_provider.stream(user_message).await;
+    let stream_result = ai_provider.stream(request).await;
 
     match stream_result {
         Ok(mut stream) => {

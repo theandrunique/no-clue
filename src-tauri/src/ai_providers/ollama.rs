@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
-use crate::ai_providers::{AiProvider, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor};
+use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor};
 use reqwest::Client;
 
 pub fn ollama_descriptor() -> ProviderDescriptor {
@@ -31,19 +31,61 @@ pub struct OllamaProvider {
     pub model: String,
 }
 
+fn build_ollama_messages(request: &AiRequest) -> Vec<serde_json::Value> {
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+
+    if let Some(ref system_prompt) = request.system_prompt {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": system_prompt
+        }));
+    }
+
+    for msg in &request.messages {
+        let role: &str = match msg.role {
+            crate::models::MessageRole::User => "user",
+            crate::models::MessageRole::Assistant => "assistant",
+            crate::models::MessageRole::System => "system",
+        };
+
+        if let Some(ref screenshot_b64) = request.screenshot_base64 {
+            messages.push(serde_json::json!({
+                "role": role,
+                "content": [
+                    {"type": "text", "text": msg.content.clone()},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": format!("data:image/png;base64,{}", screenshot_b64)
+                        }
+                    }
+                ]
+            }));
+        } else {
+            messages.push(serde_json::json!({
+                "role": role,
+                "content": msg.content.clone()
+            }));
+        }
+    }
+
+    messages
+}
+
 #[async_trait]
 impl AiProvider for OllamaProvider {
     async fn stream(
         &self,
-        prompt: String,
+        request: AiRequest,
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String> {
         let client = Client::new();
+        let messages = build_ollama_messages(&request);
 
         let res = client
             .post(format!("{}/v1/chat/completions", self.base_url))
             .json(&serde_json::json!({
                 "model": self.model,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": messages,
                 "stream": true
             }))
             .send()

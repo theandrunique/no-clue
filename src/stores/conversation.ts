@@ -38,7 +38,7 @@ export const useConversationStore = defineStore("conversation", () => {
     console.log("[ConversationStore] sendMessage called:", content);
     await ensureConversation();
     console.log("[ConversationStore] After ensureConversation, id:", currentConversationId.value);
-    await chatStore.sendMessage(currentConversationId.value!, content, "openrouter");
+    await chatStore.sendMessage(currentConversationId.value!, content, "fake");
   }
 
   async function toggleTranscription() {

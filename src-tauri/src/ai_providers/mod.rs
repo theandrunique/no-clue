@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
-use crate::{ai_providers::{ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor}};
+use crate::{ai_providers::{fake::fake_provider_descriptor, ollama::ollama_descriptor, ai_tunnel::ai_tunnel_descriptor}, models::Message};
 
 mod ai_tunnel;
 mod fake;
@@ -11,20 +11,39 @@ mod ollama;
 pub trait AiProvider: Send + Sync {
     async fn stream(
         &self,
-        prompt: String,
+        request: AiRequest,
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String>;
+}
+
+pub struct AiRequest {
+    pub messages: Vec<Message>,
+    pub system_prompt: Option<String>,
+    pub screenshot_base64: Option<String>,
+}
+
+impl AiRequest {
+    pub fn new(messages: Vec<Message>) -> Self {
+        Self {
+            messages,
+            system_prompt: None,
+            screenshot_base64: None,
+        }
+    }
+
+    pub fn with_system_prompt(mut self, prompt: String) -> Self {
+        self.system_prompt = Some(prompt);
+        self
+    }
+
+    pub fn with_screenshot(mut self, screenshot_base64: String) -> Self {
+        self.screenshot_base64 = Some(screenshot_base64);
+        self
+    }
 }
 
 pub enum AiStreamEvent {
     Chunk { content: String, is_finish: bool },
     Error { code: String, message: String },
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ProviderConfig {
-    pub provider: String,
-    #[serde(flatten)]
-    pub settings: ProviderSettings,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,22 +58,6 @@ pub enum ProviderSettings {
         api_key: String,
         model: String,
     },
-}
-
-impl ProviderConfig {
-    pub fn fake() -> Self {
-        Self {
-            provider: "fake".into(),
-            settings: ProviderSettings::Fake,
-        }
-    }
-
-    pub fn ollama(base_url: Option<String>, model: String) -> Self {
-        Self {
-            provider: "ollama".into(),
-            settings: ProviderSettings::Ollama { base_url, model },
-        }
-    }
 }
 
 #[derive(Serialize)]
@@ -75,21 +78,21 @@ pub struct FieldDescriptor {
 
 #[derive(Serialize)]
 pub enum FieldType {
-    #[serde(rename="text")]
+    #[serde(rename = "text")]
     Text,
-    #[serde(rename="password")]
+    #[serde(rename = "password")]
     Password,
-    #[serde(rename="select")]
+    #[serde(rename = "select")]
     Select { options: Vec<String> },
 }
 
-pub fn create_provider(config: &ProviderConfig) -> Box<dyn AiProvider> {
-    match &config.settings {
+pub fn create_provider(settings: &ProviderSettings) -> Box<dyn AiProvider> {
+    match settings {
         ProviderSettings::Fake => Box::new(fake::FakeProvider),
         ProviderSettings::Ollama { base_url, model } => {
             Box::new(ollama::OllamaProvider {
                 base_url: base_url.clone().unwrap_or_else(|| "http://localhost:11434".into()),
-                model: model.clone()
+                model: model.clone(),
             })
         }
         ProviderSettings::AiTunnel { .. } => {
@@ -105,26 +108,4 @@ pub fn get_providers() -> Vec<ProviderDescriptor> {
         ollama_descriptor(),
         ai_tunnel_descriptor(),
     ]
-}
-
-#[tauri::command]
-async fn save_provider_settings(
-    provider: String,
-    _api_key: String,
-    model: String,
-) -> Result<(), String> {
-    println!(
-        "[COMMAND] save_provider_settings called: provider={}, model={}",
-        provider, model
-    );
-    Ok(())
-}
-
-#[tauri::command]
-async fn get_provider_settings(provider: String) -> Result<ProviderConfig, String> {
-    println!(
-        "[COMMAND] get_provider_settings called: provider={}",
-        provider
-    );
-    Err("Not implemented".to_string())
 }

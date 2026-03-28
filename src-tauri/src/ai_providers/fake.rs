@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures_util::Stream;
 use std::time::Instant;
-use crate::ai_providers::{AiProvider, AiStreamEvent, ProviderDescriptor};
+use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, ProviderDescriptor};
 
 pub fn fake_provider_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -36,21 +36,21 @@ impl Stream for FakeStream {
 
     fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
-        
+
         let now = Instant::now();
-        
+
         if this.next_time.is_none() {
             this.next_time = Some(now + std::time::Duration::from_millis(this.delay_ms));
         }
-        
+
         if let Some(next) = this.next_time {
             if now < next {
                 cx.waker().wake_by_ref();
                 return std::task::Poll::Pending;
             }
-            
+
             this.next_time = Some(now + std::time::Duration::from_millis(this.delay_ms));
-            
+
             if this.pos >= this.chars.len() {
                 return std::task::Poll::Ready(None);
             }
@@ -71,7 +71,7 @@ impl Stream for FakeStream {
 impl AiProvider for FakeProvider {
     async fn stream(
         &self,
-        _prompt: String,
+        _request: AiRequest,
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String> {
         let poem = r#"Here's a poem for you:
 

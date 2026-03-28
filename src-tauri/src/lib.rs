@@ -1,7 +1,7 @@
 use crate::{
-    ai_providers::get_providers, conversations::{
+    ai_providers::{get_providers, ProviderSettings}, conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
-    }, transcriptions::{start_transcription, stop_transcription, update_transcription_session}, utils::{move_overlay, open_dashboard, set_overlay_visible}
+    }, db::ai_provider as provider_repo, transcriptions::{start_transcription, stop_transcription, update_transcription_session}, utils::{move_overlay, open_dashboard, set_overlay_visible}
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -45,6 +45,30 @@ async fn get_stt_settings() -> Result<SttSettings, String> {
     })
 }
 
+#[tauri::command]
+async fn save_provider_settings(provider: String, settings: ProviderSettings) -> Result<(), String> {
+    println!("[COMMAND] save_provider_settings called: provider={}", provider);
+    tokio::task::spawn_blocking(move || {
+        provider_repo::upsert_provider(&provider, &settings)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_provider_settings(provider: String) -> Result<ProviderSettings, String> {
+    let provider_for_error = provider.clone();
+    println!("[COMMAND] get_provider_settings called: provider={}", provider);
+    tokio::task::spawn_blocking(move || {
+        provider_repo::get_provider_settings(&provider)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?
+    .ok_or_else(|| format!("Provider '{}' not configured", provider_for_error))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -77,6 +101,8 @@ pub fn run() {
             save_stt_settings,
             get_stt_settings,
             get_providers,
+            save_provider_settings,
+            get_provider_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
