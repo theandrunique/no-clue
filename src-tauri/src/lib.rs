@@ -1,18 +1,29 @@
 use crate::{
-    ai_providers::{get_providers, ProviderSettings}, conversations::{
-        create_conversation, delete_conversation, get_conversation, get_conversations, get_messages, get_transcripts, send_message, stop_stream,
-    }, db::ai_provider as provider_repo, transcriptions::{start_transcription, stop_transcription, update_transcription_session}, utils::{move_overlay, open_dashboard, set_overlay_visible}
+    ai_providers::{get_providers, ProviderSettings},
+    conversations::{
+        create_conversation, delete_conversation, get_conversation, get_conversations,
+        get_messages, get_transcripts, send_message, stop_stream,
+    },
+    db::ai_provider as provider_repo,
+    transcriptions::{start_transcription, stop_transcription, update_transcription_session},
+    utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 use tauri::Manager;
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
+static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
+
+mod ai_providers;
 mod conversations;
 mod db;
 mod models;
 mod screenshot;
 mod transcriptions;
 mod utils;
-mod ai_providers;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SttSettings {
@@ -28,16 +39,13 @@ async fn save_stt_settings(
     model: String,
     language: String,
 ) -> Result<(), String> {
-    println!(
-        "[COMMAND] save_stt_settings called: model={}, language={}",
-        model, language
-    );
+    tracing::info!(model, language, "save_stt_settings called");
     Ok(())
 }
 
 #[tauri::command]
 async fn get_stt_settings() -> Result<SttSettings, String> {
-    println!("[COMMAND] get_stt_settings called");
+    tracing::info!("get_stt_settings called");
     Ok(SttSettings {
         api_key: "".to_string(),
         model: "nova-3".to_string(),
@@ -46,25 +54,24 @@ async fn get_stt_settings() -> Result<SttSettings, String> {
 }
 
 #[tauri::command]
-async fn save_provider_settings(provider: String, settings: ProviderSettings) -> Result<(), String> {
-    println!("[COMMAND] save_provider_settings called: provider={}", provider);
-    tokio::task::spawn_blocking(move || {
-        provider_repo::upsert_provider(&provider, &settings)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
+async fn save_provider_settings(
+    provider: String,
+    settings: ProviderSettings,
+) -> Result<(), String> {
+    tracing::info!(provider, "save_provider_settings called");
+    tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
-    println!("[COMMAND] get_provider_settings called: provider={}", provider);
-    tokio::task::spawn_blocking(move || {
-        provider_repo::get_provider_settings(&provider)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
+    tracing::info!(provider, "get_provider_settings called");
+    tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -78,6 +85,36 @@ pub fn run() {
                 .app_data_dir()
                 .expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data_dir).ok();
+
+            let logs_dir = app_data_dir.join("logs");
+            std::fs::create_dir_all(&logs_dir).ok();
+
+            let file_appender = RollingFileAppender::new(Rotation::DAILY, &logs_dir, "no-clue");
+            let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+            LOG_GUARD.set(guard).ok();
+
+            let file_layer = fmt::layer()
+                .with_writer(non_blocking)
+                .with_ansi(false)
+                .with_target(true);
+
+            let stdout_layer = fmt::layer()
+                .with_writer(std::io::stdout)
+                .with_ansi(true)
+                .with_target(true);
+
+            let env_filter =
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace"));
+
+            tracing_subscriber::registry()
+                .with(env_filter)
+                .with(file_layer)
+                .with(stdout_layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO))
+                .init();
+
+            tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
+
             db::init_db(&app_data_dir).expect("Failed to initialize database");
             Ok(())
         })

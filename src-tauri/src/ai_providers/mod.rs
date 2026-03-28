@@ -1,7 +1,12 @@
+use crate::{
+    ai_providers::{
+        ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor,
+    },
+    models::Message,
+};
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
-use crate::{ai_providers::{fake::fake_provider_descriptor, ollama::ollama_descriptor, ai_tunnel::ai_tunnel_descriptor}, models::Message};
 
 mod ai_tunnel;
 mod fake;
@@ -89,15 +94,13 @@ pub enum FieldType {
 pub fn create_provider(settings: &ProviderSettings) -> Box<dyn AiProvider> {
     match settings {
         ProviderSettings::Fake => Box::new(fake::FakeProvider),
-        ProviderSettings::Ollama { base_url, model } => {
-            Box::new(ollama::OllamaProvider {
-                base_url: base_url.clone().unwrap_or_else(|| "http://localhost:11434".into()),
-                model: model.clone(),
-            })
-        }
-        ProviderSettings::AiTunnel { .. } => {
-            Box::new(fake::FakeProvider)
-        }
+        ProviderSettings::Ollama { base_url, model } => Box::new(ollama::OllamaProvider {
+            base_url: base_url
+                .clone()
+                .unwrap_or_else(|| "http://localhost:11434".into()),
+            model: model.clone(),
+        }),
+        ProviderSettings::AiTunnel { .. } => Box::new(fake::FakeProvider),
     }
 }
 

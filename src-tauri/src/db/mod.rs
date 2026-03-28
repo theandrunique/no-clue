@@ -21,7 +21,7 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Result<()> {
     let migration = include_str!("migrations/001_initial.sql");
     conn.execute_batch(migration)?;
 
-    println!("[DB] Database initialized at {:?}", db_path);
+    tracing::info!(db_path = %db_path.display(), "Database initialized");
     Ok(())
 }
 
@@ -33,8 +33,8 @@ pub fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+pub mod ai_provider;
 pub mod conversation;
 pub mod message;
 pub mod settings;
 pub mod transcript;
-pub mod ai_provider;

@@ -7,10 +7,7 @@ pub async fn move_overlay(
     direction: String,
     step: i32,
 ) -> Result<(), String> {
-    println!(
-        "[COMMAND] move_overlay called: direction={}, step={}",
-        direction, step
-    );
+    tracing::debug!(direction = %direction, step, "move_overlay called");
 
     let (delta_x, delta_y) = match direction.as_str() {
         "up" => (0, -step),
@@ -36,7 +33,7 @@ pub async fn move_overlay(
 
 #[tauri::command]
 pub async fn set_overlay_visible(window: WebviewWindow, visible: bool) -> Result<(), String> {
-    println!("[COMMAND] set_overlay_visible called: visible={}", visible);
+    tracing::info!(visible, "set_overlay_visible called");
     if visible {
         window.show().map_err(|e| e.to_string())?;
     } else {
@@ -48,21 +45,26 @@ pub async fn set_overlay_visible(window: WebviewWindow, visible: bool) -> Result
 // Dashboard
 #[tauri::command]
 pub async fn open_dashboard(app: AppHandle) -> Result<(), String> {
+    tracing::info!("open_dashboard called");
     if let Some(window) = app.get_webview_window("dashboard") {
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(&app, "dashboard", WebviewUrl::App("/dashboard/conversations".into()))
-        .title("No-Clue Dashboard")
-        .inner_size(900.0, 700.0)
-        .center()
-        .decorations(true)
-        .resizable(true)
-        .content_protected(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+    WebviewWindowBuilder::new(
+        &app,
+        "dashboard",
+        WebviewUrl::App("/dashboard/conversations".into()),
+    )
+    .title("No-Clue Dashboard")
+    .inner_size(900.0, 700.0)
+    .center()
+    .decorations(true)
+    .resizable(true)
+    .content_protected(true)
+    .build()
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }

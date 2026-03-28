@@ -1,7 +1,7 @@
+use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, ProviderDescriptor};
 use async_trait::async_trait;
 use futures_util::Stream;
 use std::time::Instant;
-use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, ProviderDescriptor};
 
 pub fn fake_provider_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -34,7 +34,10 @@ impl FakeStream {
 impl Stream for FakeStream {
     type Item = AiStreamEvent;
 
-    fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
 
         let now = Instant::now();
@@ -97,7 +100,11 @@ That's the way the *poem* goes."#;
         let chars: Vec<char> = poem.chars().collect();
         let total_chars = chars.len();
         let duration_ms = 15000u64;
-        let delay_ms = if total_chars > 0 { duration_ms / (total_chars as u64 / 3) } else { 100 };
+        let delay_ms = if total_chars > 0 {
+            duration_ms / (total_chars as u64 / 3)
+        } else {
+            100
+        };
 
         Ok(Box::new(FakeStream::new(chars, delay_ms)))
     }

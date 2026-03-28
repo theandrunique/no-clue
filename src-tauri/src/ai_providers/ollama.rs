@@ -1,6 +1,8 @@
+use crate::ai_providers::{
+    AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor,
+};
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
-use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor};
 use reqwest::Client;
 
 pub fn ollama_descriptor() -> ProviderDescriptor {
@@ -34,10 +36,11 @@ pub struct OllamaProvider {
 fn build_ollama_messages(request: &AiRequest) -> Vec<serde_json::Value> {
     let mut messages: Vec<serde_json::Value> = Vec::new();
 
-    println!("[Ollama] Building messages - has screenshot: {}, has system_prompt: {}, message_count: {}", 
-        request.screenshot_base64.is_some(), 
-        request.system_prompt.is_some(),
-        request.messages.len()
+    tracing::debug!(
+        has_screenshot = request.screenshot_base64.is_some(),
+        has_system_prompt = request.system_prompt.is_some(),
+        message_count = request.messages.len(),
+        "Building messages"
     );
 
     if let Some(ref system_prompt) = request.system_prompt {
@@ -58,7 +61,7 @@ fn build_ollama_messages(request: &AiRequest) -> Vec<serde_json::Value> {
 
         if let Some(ref ss) = screenshot_b64 {
             let ss_short = &ss[..50.min(ss.len())];
-            println!("[Ollama] Adding screenshot: {}..., length: {}", ss_short, ss.len());
+            tracing::trace!(screenshot = %format!("{}...", ss_short), length = ss.len(), "Adding screenshot to message");
             messages.push(serde_json::json!({
                 "role": role,
                 "content": msg.content.clone(),
@@ -91,8 +94,8 @@ impl AiProvider for OllamaProvider {
             "stream": true
         });
 
-        println!("[Ollama] Request URL: {}", url);
-        
+        tracing::debug!(url = %url, "Sending request to Ollama");
+
         fn truncate_log(value: &serde_json::Value, max_len: usize) -> serde_json::Value {
             match value {
                 serde_json::Value::String(s) if s.len() > max_len => {
@@ -101,17 +104,17 @@ impl AiProvider for OllamaProvider {
                 serde_json::Value::Array(arr) => {
                     serde_json::Value::Array(arr.iter().map(|v| truncate_log(v, max_len)).collect())
                 }
-                serde_json::Value::Object(obj) => {
-                    serde_json::Value::Object(obj.iter()
+                serde_json::Value::Object(obj) => serde_json::Value::Object(
+                    obj.iter()
                         .map(|(k, v)| (k.clone(), truncate_log(v, max_len)))
-                        .collect())
-                }
-                _ => value.clone()
+                        .collect(),
+                ),
+                _ => value.clone(),
             }
         }
-        
+
         let body_truncated = truncate_log(&body, 50);
-        println!("[Ollama] Request body: {}", body_truncated);
+        tracing::trace!(body = %body_truncated, "Request body");
 
         let res = client
             .post(&url)
@@ -120,18 +123,21 @@ impl AiProvider for OllamaProvider {
             .await
             .map_err(|e| e.to_string())?;
 
-        println!("[Ollama] Response status: {}", res.status());
+        tracing::debug!(status = %res.status(), "Response status");
 
         let stream = res.bytes_stream().map(|chunk| {
             let chunk = match chunk {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("[Ollama] Chunk error: {}", e);
-                    return AiStreamEvent::Error { code: "reqwest".into(), message: e.to_string() };
+                    tracing::error!(error = %e, "Chunk error");
+                    return AiStreamEvent::Error {
+                        code: "reqwest".into(),
+                        message: e.to_string(),
+                    };
                 }
             };
             let text = String::from_utf8_lossy(&chunk);
-            println!("[Ollama] Raw chunk: {:?}", text);
+            tracing::trace!(chunk = %text, "Raw chunk");
 
             let mut result = String::new();
             for line in text.lines() {
@@ -139,14 +145,14 @@ impl AiProvider for OllamaProvider {
                     continue;
                 }
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                    println!("[Ollama] Parsed JSON: {:?}", json);
-                    
+                    tracing::trace!(json = %json, "Parsed JSON");
+
                     if let Some(content) = json["message"]["content"].as_str() {
                         result.push_str(content);
                     }
-                    
+
                     if json["done"].as_bool() == Some(true) {
-                        println!("[Ollama] Stream finished");
+                        tracing::debug!("Stream finished");
                         return AiStreamEvent::Chunk {
                             content: String::new(),
                             is_finish: true,
@@ -162,7 +168,10 @@ impl AiProvider for OllamaProvider {
                 };
             }
 
-            AiStreamEvent::Chunk { content: result, is_finish: false }
+            AiStreamEvent::Chunk {
+                content: result,
+                is_finish: false,
+            }
         });
 
         Ok(Box::new(stream))

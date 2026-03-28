@@ -1,12 +1,12 @@
-use crate::ai_providers::{AiRequest, AiStreamEvent, create_provider};
+use crate::ai_providers::{create_provider, AiRequest, AiStreamEvent};
+use crate::db::ai_provider as provider_repo;
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
-use crate::db::ai_provider as provider_repo;
-use crate::models::{ChatStreamEvent, Conversation, Message, Transcript, MessageRole};
+use crate::models::{ChatStreamEvent, Conversation, Message, MessageRole, Transcript};
 use crate::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult};
-use std::sync::atomic::{AtomicBool, Ordering};
 use chrono::Utc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
@@ -15,7 +15,7 @@ static STREAMING: AtomicBool = AtomicBool::new(false);
 // Conversation management
 #[tauri::command]
 pub async fn create_conversation() -> Result<Conversation, String> {
-    println!("[COMMAND] create_conversation called");
+    tracing::info!("create_conversation called");
 
     let title = "New conversation".to_string();
     let id = tokio::task::spawn_blocking(move || conv_repo::create(title))
@@ -30,7 +30,7 @@ pub async fn create_conversation() -> Result<Conversation, String> {
 
     match conversation {
         Some(c) => {
-            println!("[COMMAND] Created conversation: {}", c.id);
+            tracing::info!(conversation_id = %c.id, "Conversation created");
             Ok(c)
         }
         None => Err("Failed to get conversation".to_string()),
@@ -39,7 +39,7 @@ pub async fn create_conversation() -> Result<Conversation, String> {
 
 #[tauri::command]
 pub async fn get_conversations() -> Result<Vec<Conversation>, String> {
-    println!("[COMMAND] get_conversations called");
+    tracing::debug!("get_conversations called");
     let conversations = tokio::task::spawn_blocking(|| conv_repo::get_all())
         .await
         .map_err(|e| e.to_string())?
@@ -49,7 +49,7 @@ pub async fn get_conversations() -> Result<Vec<Conversation>, String> {
 
 #[tauri::command]
 pub async fn get_conversation(id: String) -> Result<Conversation, String> {
-    println!("[COMMAND] get_conversation called: id={}", id);
+    tracing::debug!(conversation_id = %id, "get_conversation called");
     let id_clone = id.clone();
     let result = tokio::task::spawn_blocking(move || conv_repo::get_by_id(&id_clone))
         .await
@@ -68,25 +68,27 @@ pub async fn send_message(
     user_message: String,
     capture_screenshot: bool,
 ) -> Result<(), String> {
-    println!(
-        "[COMMAND] send_message called: provider={}, conversation_id={}, capture_screenshot={}",
-        provider, conversation_id, capture_screenshot
+    tracing::info!(
+        provider = %provider,
+        conversation_id = %conversation_id,
+        capture_screenshot,
+        user_message = %user_message,
+        "send_message called"
     );
-    println!("[COMMAND] user_message: {}", user_message);
 
     if STREAMING.load(Ordering::SeqCst) {
-        println!("[COMMAND] Already streaming, ignoring");
+        tracing::warn!("Already streaming, ignoring request");
         return Err("Already streaming".to_string());
     }
 
     let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
         match do_capture_screenshot(app.clone()) {
             Ok(result) => {
-                println!("[COMMAND] Screenshot captured: {}", result.relative_path);
+                tracing::debug!(path = %result.relative_path, "Screenshot captured");
                 Some(result)
             }
             Err(e) => {
-                println!("[COMMAND] Failed to capture screenshot: {}", e);
+                tracing::error!(error = %e, "Failed to capture screenshot");
                 None
             }
         }
@@ -113,39 +115,37 @@ pub async fn send_message(
     })
     .await
     {
-        println!("[DB] Error saving user message: {}", e);
+        tracing::error!(error = %e, "Error saving user message");
     }
 
     // Get provider settings and create provider instance
     let provider_clone = provider.clone();
-    let provider_settings = tokio::task::spawn_blocking(move || {
-        provider_repo::get_provider_settings(&provider_clone)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())?
-    .ok_or_else(|| format!("Provider '{}' not configured", provider))?;
+    let provider_settings =
+        tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider_clone))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Provider '{}' not configured", provider))?;
 
     let ai_provider = create_provider(&provider_settings);
 
     // Get chat history for context
     let conv_id_for_history = conversation_id.clone();
-    let history = tokio::task::spawn_blocking(move || {
-        msg_repo::get_by_conversation(&conv_id_for_history)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())?;
+    let history =
+        tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conv_id_for_history))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
 
     // Build AI request
     let mut request = AiRequest::new(history);
-    
+
     // Add screenshot if captured (as base64)
     if let Some(b64) = screenshot_base64 {
-        println!("[COMMAND] Using screenshot base64, length: {}", b64.len());
+        tracing::debug!(base64_length = %b64.len(), "Using screenshot base64");
         request = request.with_screenshot(b64);
     } else if capture_screenshot {
-        println!("[COMMAND] capture_screenshot=true but no base64 available");
+        tracing::warn!("capture_screenshot=true but no base64 available");
     }
 
     STREAMING.store(true, Ordering::SeqCst);
@@ -160,7 +160,7 @@ pub async fn send_message(
             use futures_util::StreamExt;
             while let Some(event) = stream.next().await {
                 if !STREAMING.load(Ordering::SeqCst) {
-                    println!("[COMMAND] Stream stopped by user");
+                    tracing::info!("Stream stopped by user");
                     break;
                 }
 
@@ -168,31 +168,34 @@ pub async fn send_message(
                     AiStreamEvent::Chunk { content, is_finish } => {
                         assistant_response.push_str(&content);
 
-                        let _ = app.emit("chat-stream", ChatStreamEvent::Chunk {
-                            conversation_id: conversation_id.clone(),
-                            content: content,
-                            is_finish: is_finish,
-                            timestamp: Utc::now().timestamp(),
-                        });
+                        let _ = app.emit(
+                            "chat-stream",
+                            ChatStreamEvent::Chunk {
+                                conversation_id: conversation_id.clone(),
+                                content: content,
+                                is_finish: is_finish,
+                                timestamp: Utc::now().timestamp(),
+                            },
+                        );
 
                         if is_finish {
                             break;
                         }
                     }
                     AiStreamEvent::Error { code, message } => {
-                        println!("[COMMAND] Stream error: {} - {}", code, message);
+                        tracing::error!(code = %code, message = %message, "Stream error");
                     }
                 }
             }
         }
         Err(e) => {
-            println!("[COMMAND] Provider error: {}", e);
+            tracing::error!(error = %e, "Provider error");
         }
     }
 
     STREAMING.store(false, Ordering::SeqCst);
 
-    println!("[COMMAND] Stream completed");
+    tracing::info!("Stream completed");
 
     // Save assistant response
     let conv_id_for_save = conversation_id.clone();
@@ -209,7 +212,7 @@ pub async fn send_message(
     })
     .await
     {
-        println!("[DB] Error saving assistant message: {}", e);
+        tracing::error!(error = %e, "Error saving assistant message");
     }
 
     Ok(())
@@ -217,34 +220,36 @@ pub async fn send_message(
 
 #[tauri::command]
 pub async fn stop_stream() -> Result<(), String> {
-    println!("[COMMAND] stop_stream called");
+    tracing::info!("stop_stream called");
     STREAMING.store(false, Ordering::SeqCst);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn get_messages(conversation_id: String) -> Result<Vec<Message>, String> {
-    println!("[COMMAND] get_messages called: conversation_id={}", conversation_id);
-    let messages = tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conversation_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
+    tracing::debug!(conversation_id = %conversation_id, "get_messages called");
+    let messages =
+        tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conversation_id))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
     Ok(messages)
 }
 
 #[tauri::command]
 pub async fn get_transcripts(conversation_id: String) -> Result<Vec<Transcript>, String> {
-    println!("[COMMAND] get_transcripts called: conversation_id={}", conversation_id);
-    let transcripts = tokio::task::spawn_blocking(move || transcript_repo::get_by_conversation(&conversation_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
+    tracing::debug!(conversation_id = %conversation_id, "get_transcripts called");
+    let transcripts =
+        tokio::task::spawn_blocking(move || transcript_repo::get_by_conversation(&conversation_id))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
     Ok(transcripts)
 }
 
 #[tauri::command]
 pub async fn delete_conversation(id: String) -> Result<(), String> {
-    println!("[COMMAND] delete_conversation called: id={}", id);
+    tracing::info!(conversation_id = %id, "delete_conversation called");
     tokio::task::spawn_blocking(move || conv_repo::delete(&id))
         .await
         .map_err(|e| e.to_string())?

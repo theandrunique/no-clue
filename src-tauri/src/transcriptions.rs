@@ -10,10 +10,7 @@ static CURRENT_CONVERSATION_ID: Mutex<Option<String>> = Mutex::new(None);
 
 #[tauri::command]
 pub async fn update_transcription_session(conversation_id: String) -> Result<(), String> {
-    println!(
-        "[COMMAND] update_transcription_session called: conversation_id={}",
-        conversation_id
-    );
+    tracing::debug!(conversation_id = %conversation_id, "update_transcription_session called");
     let mut current = CURRENT_CONVERSATION_ID.lock().map_err(|e| e.to_string())?;
     *current = Some(conversation_id);
     Ok(())
@@ -27,23 +24,18 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
         current.clone().ok_or("No conversation ID set")?
     };
 
-    println!(
-        "[COMMAND] start_transcription called for conversation: {}",
-        conversation_id
-    );
+    tracing::info!(conversation_id = %conversation_id, "start_transcription called");
 
     if TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
-        println!("[COMMAND] Transcription already running, returning error");
+        tracing::warn!("Transcription already running");
         return Err("Transcription already running".to_string());
     }
 
     TRANSCRIPTION_RUNNING.store(true, Ordering::SeqCst);
     TRANSCRIPTION_HANDLE.store(true, Ordering::SeqCst);
-    println!("[COMMAND] Emitting transcription-started event");
     let _ = app.emit("transcription-started", ());
-    println!("[COMMAND] transcription-started event emitted");
 
-    println!("[COMMAND] Transcription started - simulating...");
+    tracing::info!("Transcription started - simulating...");
 
     // Random phrases for transcription simulation
     let user_phrases = vec![
@@ -93,7 +85,7 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
             };
             let _ = app_clone.emit("transcription-result", interim_result);
 
-            println!("[TRANSCRIPTION] {}: {} (interim)", speaker, interim_text);
+            tracing::trace!(speaker, text = %interim_text, "Interim transcription");
 
             // Wait a bit, then emit final
             tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
@@ -115,7 +107,14 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
                 } else {
                     Speaker::System
                 };
-                transcript_repo::create(final_id, conv_id_clone, speaker, phrase_clone, 0.95, final_timestamp)
+                transcript_repo::create(
+                    final_id,
+                    conv_id_clone,
+                    speaker,
+                    phrase_clone,
+                    0.95,
+                    final_timestamp,
+                )
             })
             .await
             .ok()
@@ -135,7 +134,7 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
             };
             let _ = app_clone.emit("transcription-result", final_result);
 
-            println!("[TRANSCRIPTION] {}: {} (final)", speaker, phrase);
+            tracing::trace!(speaker, text = %phrase, "Final transcription");
 
             phrase_index += 1;
 
@@ -149,12 +148,12 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn stop_transcription(app: AppHandle) -> Result<(), String> {
-    println!("[COMMAND] stop_transcription called");
+    tracing::info!("stop_transcription called");
 
     TRANSCRIPTION_RUNNING.store(false, Ordering::SeqCst);
     TRANSCRIPTION_HANDLE.store(false, Ordering::SeqCst);
     let _ = app.emit("transcription-stopped", ());
 
-    println!("[COMMAND] Transcription stopped");
+    tracing::info!("Transcription stopped");
     Ok(())
 }
