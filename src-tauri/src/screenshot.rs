@@ -8,8 +8,6 @@ pub struct ScreenshotResult {
 }
 
 pub fn capture_screenshot(app: tauri::AppHandle) -> Result<ScreenshotResult, String> {
-    tracing::info!("capture_screenshot called");
-
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
 
     if monitors.is_empty() {
@@ -28,7 +26,7 @@ pub fn capture_screenshot(app: tauri::AppHandle) -> Result<ScreenshotResult, Str
 
     image.save(&path).map_err(|e| e.to_string())?;
 
-    tracing::debug!("Screenshot saved: {}", path.display());
+    tracing::trace!("Screenshot saved: {}", path.display());
 
     let mut buffer = Vec::new();
     use image::ImageEncoder;

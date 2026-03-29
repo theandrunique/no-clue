@@ -2,17 +2,15 @@ use crate::db::get_connection;
 use crate::models::Conversation;
 use rusqlite::{params, Result};
 
-pub fn create(title: String) -> Result<String> {
+pub fn create(conversation: &Conversation) -> Result<()> {
     let conn = get_connection()?;
-    let timestamp = chrono::Utc::now().timestamp();
-    let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
         "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-        params![id, title, timestamp, timestamp],
+        params![conversation.id, conversation.title, conversation.created_at, conversation.updated_at],
     )?;
 
-    Ok(id)
+    Ok(())
 }
 
 pub fn get_all() -> Result<Vec<Conversation>> {

@@ -19,30 +19,24 @@ export const useConversationStore = defineStore("conversation", () => {
   const isTranscriptionEnabled = computed(() => transcriptionStore.isEnabled);
 
   async function createConversation() {
-    console.log("[ConversationStore] createConversation called");
     const conversation = await invoke<{ id: string }>("create_conversation");
-    console.log("[ConversationStore] Got conversation:", conversation);
     currentConversationId.value = conversation.id;
 
     await transcriptionStore.updateSession(conversation.id);
   }
 
   async function ensureConversation() {
-    console.log("[ConversationStore] ensureConversation called, current:", currentConversationId.value);
     if (!currentConversationId.value) {
       await createConversation();
     }
   }
 
   async function sendMessage(content: string) {
-    console.log("[ConversationStore] sendMessage called:", content);
     await ensureConversation();
-    console.log("[ConversationStore] After ensureConversation, id:", currentConversationId.value);
     
     // Read from localStorage directly - this works across windows
     const savedProvider = localStorage.getItem("selected_provider");
     const provider = savedProvider || "fake";
-    console.log("[ConversationStore] Using provider from localStorage:", provider);
     await chatStore.sendMessage(currentConversationId.value!, content, provider);
   }
 

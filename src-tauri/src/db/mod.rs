@@ -23,6 +23,9 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Result<()> {
     }
 
     let conn = Connection::open(&db_path)?;
+
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+
     let migration = include_str!("migrations/001_initial.sql");
     conn.execute_batch(migration)?;
 

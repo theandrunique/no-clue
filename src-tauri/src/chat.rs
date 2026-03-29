@@ -1,6 +1,7 @@
 use crate::ai_providers::{create_provider, AiRequest, AiStreamEvent};
 use crate::db::ai_provider as provider_repo;
 use crate::db::message as msg_repo;
+use crate::error::log_err;
 use crate::models::{ChatStreamEvent, MessageRole};
 use crate::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult};
 use chrono::Utc;
@@ -9,11 +10,6 @@ use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 static STREAMING: AtomicBool = AtomicBool::new(false);
-
-fn log_err<E: std::fmt::Display>(e: E, context: &str) -> String {
-    tracing::error!(error = %e, context);
-    e.to_string()
-}
 
 // AI Chat
 #[tauri::command]
@@ -24,7 +20,7 @@ pub async fn send_message(
     user_message: String,
     capture_screenshot: bool,
 ) -> Result<(), String> {
-    tracing::info!(
+    tracing::trace!(
         provider = %provider,
         conversation_id = %conversation_id,
         capture_screenshot,
@@ -40,7 +36,6 @@ pub async fn send_message(
     let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
         match do_capture_screenshot(app.clone()) {
             Ok(result) => {
-                tracing::debug!(path = %result.relative_path, "Screenshot captured");
                 Some(result)
             }
             Err(e) => {
@@ -83,7 +78,8 @@ pub async fn send_message(
             .map_err(|e| log_err(e, "get_provider_settings"))?
             .ok_or_else(|| log_err(format!("Provider '{}' not configured", provider), "get_provider_settings"))?;
 
-    let ai_provider = create_provider(&provider_settings);
+    let ai_provider = create_provider(&provider_settings)
+        .map_err(|e| log_err(e, "create_provider"))?;
 
     // Get chat history for context
     let conv_id_for_history = conversation_id.clone();
@@ -98,10 +94,9 @@ pub async fn send_message(
 
     // Add screenshot if captured (as base64)
     if let Some(b64) = screenshot_base64 {
-        tracing::debug!(base64_length = %b64.len(), "Using screenshot base64");
         request = request.with_screenshot(b64);
     } else if capture_screenshot {
-        tracing::warn!("capture_screenshot=true but no base64 available");
+        tracing::error!("capture_screenshot=true but no base64 available");
     }
 
     STREAMING.store(true, Ordering::SeqCst);
@@ -151,7 +146,7 @@ pub async fn send_message(
 
     STREAMING.store(false, Ordering::SeqCst);
 
-    tracing::info!("Stream completed");
+    tracing::trace!("Stream completed");
 
     // Save assistant response
     let conv_id_for_save = conversation_id.clone();
@@ -176,7 +171,7 @@ pub async fn send_message(
 
 #[tauri::command]
 pub async fn stop_stream() -> Result<(), String> {
-    tracing::info!("stop_stream called");
+    tracing::trace!("stop_stream called");
     STREAMING.store(false, Ordering::SeqCst);
     Ok(())
 }

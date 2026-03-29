@@ -1,5 +1,5 @@
 use crate::ai_providers::{
-    AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor,
+    AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor, utils::{build_json_messages, truncate_json_body},
 };
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
@@ -33,51 +33,6 @@ pub struct OllamaProvider {
     pub model: String,
 }
 
-fn build_ollama_messages(request: &AiRequest) -> Vec<serde_json::Value> {
-    let mut messages: Vec<serde_json::Value> = Vec::new();
-
-    tracing::debug!(
-        has_screenshot = request.screenshot_base64.is_some(),
-        has_system_prompt = request.system_prompt.is_some(),
-        message_count = request.messages.len(),
-        "Building messages"
-    );
-
-    if let Some(ref system_prompt) = request.system_prompt {
-        messages.push(serde_json::json!({
-            "role": "system",
-            "content": system_prompt
-        }));
-    }
-
-    let screenshot_b64 = request.screenshot_base64.clone();
-
-    for msg in &request.messages {
-        let role: &str = match msg.role {
-            crate::models::MessageRole::User => "user",
-            crate::models::MessageRole::Assistant => "assistant",
-            crate::models::MessageRole::System => "system",
-        };
-
-        if let Some(ref ss) = screenshot_b64 {
-            let ss_short = &ss[..50.min(ss.len())];
-            tracing::trace!(screenshot = %format!("{}...", ss_short), length = ss.len(), "Adding screenshot to message");
-            messages.push(serde_json::json!({
-                "role": role,
-                "content": msg.content.clone(),
-                "images": [ss]
-            }));
-        } else {
-            messages.push(serde_json::json!({
-                "role": role,
-                "content": msg.content.clone()
-            }));
-        }
-    }
-
-    messages
-}
-
 #[async_trait]
 impl AiProvider for OllamaProvider {
     async fn stream(
@@ -85,7 +40,7 @@ impl AiProvider for OllamaProvider {
         request: AiRequest,
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String> {
         let client = Client::new();
-        let messages = build_ollama_messages(&request);
+        let messages = build_json_messages(&request);
 
         let url = format!("{}/api/chat", self.base_url);
         let body = serde_json::json!({
@@ -94,26 +49,9 @@ impl AiProvider for OllamaProvider {
             "stream": true
         });
 
-        tracing::debug!(url = %url, "Sending request to Ollama");
+        tracing::trace!(url = %url, "Sending request to Ollama");
 
-        fn truncate_log(value: &serde_json::Value, max_len: usize) -> serde_json::Value {
-            match value {
-                serde_json::Value::String(s) if s.len() > max_len => {
-                    serde_json::Value::String(format!("{}...[{} chars]", &s[..max_len], s.len()))
-                }
-                serde_json::Value::Array(arr) => {
-                    serde_json::Value::Array(arr.iter().map(|v| truncate_log(v, max_len)).collect())
-                }
-                serde_json::Value::Object(obj) => serde_json::Value::Object(
-                    obj.iter()
-                        .map(|(k, v)| (k.clone(), truncate_log(v, max_len)))
-                        .collect(),
-                ),
-                _ => value.clone(),
-            }
-        }
-
-        let body_truncated = truncate_log(&body, 50);
+        let body_truncated = truncate_json_body(&body, 50);
         tracing::trace!(body = %body_truncated, "Request body");
 
         let res = client
@@ -123,7 +61,7 @@ impl AiProvider for OllamaProvider {
             .await
             .map_err(|e| e.to_string())?;
 
-        tracing::debug!(status = %res.status(), "Response status");
+        tracing::trace!(status = %res.status(), "Response status");
 
         let stream = res.bytes_stream().map(|chunk| {
             let chunk = match chunk {
@@ -152,7 +90,7 @@ impl AiProvider for OllamaProvider {
                     }
 
                     if json["done"].as_bool() == Some(true) {
-                        tracing::debug!("Stream finished");
+                        tracing::trace!("Stream finished");
                         return AiStreamEvent::Chunk {
                             content: String::new(),
                             is_finish: true,

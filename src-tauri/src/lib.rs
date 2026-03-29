@@ -20,9 +20,11 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 mod ai_providers;
+mod stt_providers;
 mod chat;
 mod conversations;
 mod db;
+mod error;
 mod models;
 mod screenshot;
 mod transcriptions;

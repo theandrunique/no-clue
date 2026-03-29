@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 mod ai_tunnel;
 mod fake;
 mod ollama;
+mod utils;
 
 #[async_trait]
 pub trait AiProvider: Send + Sync {
@@ -92,16 +93,16 @@ pub enum FieldType {
     Select { options: Vec<String> },
 }
 
-pub fn create_provider(settings: &ProviderSettings) -> Box<dyn AiProvider> {
+pub fn create_provider(settings: &ProviderSettings) -> Result<Box<dyn AiProvider>, String> {
     match settings {
-        ProviderSettings::Fake => Box::new(fake::FakeProvider),
-        ProviderSettings::Ollama { base_url, model } => Box::new(ollama::OllamaProvider {
+        ProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
+        ProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {
             base_url: base_url
                 .clone()
                 .unwrap_or_else(|| "http://localhost:11434".into()),
             model: model.clone(),
-        }),
-        ProviderSettings::AiTunnel { .. } => Box::new(fake::FakeProvider),
+        })),
+        ProviderSettings::AiTunnel { .. } => Err("AiTunnel provider is not implemented yet".to_string()),
     }
 }
 
@@ -119,7 +120,7 @@ pub async fn save_provider_settings(
     provider: String,
     settings: ProviderSettings,
 ) -> Result<(), String> {
-    tracing::info!(provider, "save_provider_settings called");
+    tracing::trace!(provider, "save_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
         .await
         .map_err(|e| e.to_string())?
@@ -128,7 +129,7 @@ pub async fn save_provider_settings(
 
 #[tauri::command]
 pub async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
-    tracing::info!(provider, "get_provider_settings called");
+    tracing::trace!(provider, "get_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
         .await
         .map_err(|e| e.to_string())?

@@ -61,7 +61,6 @@ function initForm() {
 }
 
 async function selectProvider(providerId: string | null) {
-  console.log("[ProvidersTab] selectProvider called with:", providerId);
   if (providerId) {
     providersStore.setSelectedProvider(providerId);
   }
@@ -129,7 +128,7 @@ function getFieldType(field: FieldType): string {
           <CardContent>
             <Select
               :model-value="providersStore.selectedProviderId"
-              @update:model-value="(val: unknown) => { console.log('[Select] update:model-value:', val); selectProvider(val as string | null); }"
+              @update:model-value="(val: unknown) => selectProvider(val as string | null)"
             >
               <SelectTrigger class="w-full">
                 <SelectValue placeholder="Select a provider" />
