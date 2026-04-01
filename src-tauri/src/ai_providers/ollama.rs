@@ -1,5 +1,6 @@
 use crate::ai_providers::{
-    AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor, utils::{build_json_messages, truncate_json_body},
+    utils::{build_json_messages, truncate_json_body},
+    AiProvider, AiRequest, AiStreamEvent, FieldDescriptor, FieldType, ProviderDescriptor,
 };
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};

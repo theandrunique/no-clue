@@ -1,5 +1,6 @@
 use crate::db::transcript as transcript_repo;
 use crate::models::{Speaker, TranscriptionResult};
+use crate::stt_providers::get_stt_descriptors;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -14,11 +15,16 @@ pub struct SttSettings {
 
 #[tauri::command]
 pub async fn save_stt_settings(
-    _api_key: String,
+    api_key: String,
     model: String,
     language: String,
 ) -> Result<(), String> {
-    tracing::info!(model, language, "save_stt_settings called");
+    tracing::info!(
+        model,
+        language,
+        api_key = !api_key.is_empty(),
+        "save_stt_settings called"
+    );
     Ok(())
 }
 
@@ -32,8 +38,12 @@ pub async fn get_stt_settings() -> Result<SttSettings, String> {
     })
 }
 
+#[tauri::command]
+pub fn get_stt_providers() -> Vec<crate::stt_providers::SttProviderDescriptor> {
+    get_stt_descriptors()
+}
+
 static TRANSCRIPTION_RUNNING: AtomicBool = AtomicBool::new(false);
-static TRANSCRIPTION_HANDLE: AtomicBool = AtomicBool::new(false);
 static CURRENT_CONVERSATION_ID: Mutex<Option<String>> = Mutex::new(None);
 
 #[tauri::command]
@@ -44,7 +54,6 @@ pub async fn update_transcription_session(conversation_id: String) -> Result<(),
     Ok(())
 }
 
-// Transcription - emits random phrases every 10 seconds
 #[tauri::command]
 pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
     let conversation_id = {
@@ -60,12 +69,10 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
     }
 
     TRANSCRIPTION_RUNNING.store(true, Ordering::SeqCst);
-    TRANSCRIPTION_HANDLE.store(true, Ordering::SeqCst);
     let _ = app.emit("transcription-started", ());
 
-    tracing::info!("Transcription started - simulating...");
+    tracing::info!("Transcription started - using fake provider");
 
-    // Random phrases for transcription simulation
     let user_phrases = vec![
         "Can you help me with this code",
         "Let me explain what I mean",
@@ -85,10 +92,9 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
     let mut phrase_index = 0;
     let conv_id = conversation_id.clone();
 
-    // Spawn a task to emit transcription results every 10 seconds
     let app_clone = app.clone();
     tokio::spawn(async move {
-        while TRANSCRIPTION_HANDLE.load(Ordering::SeqCst) {
+        while TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
             let is_user = phrase_index % 2 == 0;
             let speaker = if is_user { "user" } else { "system" };
             let phrases = if is_user {
@@ -100,7 +106,6 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
             let interim_id = uuid::Uuid::new_v4().to_string();
             let timestamp = chrono::Utc::now().timestamp();
 
-            // First, emit interim (non-final) transcription
             let interim_text = &phrase[..phrase.len() / 2];
             let interim_result = TranscriptionResult {
                 id: interim_id,
@@ -115,14 +120,12 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
 
             tracing::trace!(speaker, text = %interim_text, "Interim transcription");
 
-            // Wait a bit, then emit final
             tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
-            if !TRANSCRIPTION_HANDLE.load(Ordering::SeqCst) {
+            if !TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
                 break;
             }
 
-            // Emit final transcription with ID from DB
             let conv_id_clone = conv_id.clone();
             let speaker_clone = speaker.to_string();
             let phrase_clone = phrase.to_string();
@@ -166,7 +169,6 @@ pub async fn start_transcription(app: AppHandle) -> Result<(), String> {
 
             phrase_index += 1;
 
-            // Wait 10 seconds before next phrase
             tokio::time::sleep(tokio::time::Duration::from_millis(10000)).await;
         }
     });
@@ -179,7 +181,6 @@ pub async fn stop_transcription(app: AppHandle) -> Result<(), String> {
     tracing::info!("stop_transcription called");
 
     TRANSCRIPTION_RUNNING.store(false, Ordering::SeqCst);
-    TRANSCRIPTION_HANDLE.store(false, Ordering::SeqCst);
     let _ = app.emit("transcription-stopped", ());
 
     tracing::info!("Transcription stopped");

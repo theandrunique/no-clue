@@ -7,7 +7,12 @@ pub fn create(conversation: &Conversation) -> Result<()> {
 
     conn.execute(
         "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-        params![conversation.id, conversation.title, conversation.created_at, conversation.updated_at],
+        params![
+            conversation.id,
+            conversation.title,
+            conversation.created_at,
+            conversation.updated_at
+        ],
     )?;
 
     Ok(())

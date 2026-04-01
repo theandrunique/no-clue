@@ -20,7 +20,6 @@ use linux::{SpeakerInput as PlatformSpeakerInput, SpeakerStream as PlatformSpeak
 
 mod commands;
 
-// Re-export commands for tauri handler
 pub use commands::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +63,6 @@ pub(crate) fn list_output_devices() -> Result<Vec<AudioDevice>> {
     Ok(vec![])
 }
 
-// Pluely speaker input and stream
 pub struct SpeakerInput {
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     inner: PlatformSpeakerInput,

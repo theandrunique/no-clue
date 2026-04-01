@@ -1,4 +1,3 @@
-// Pluely windows speaker input and stream
 use super::AudioDevice;
 use anyhow::Result;
 use futures_util::Stream;
@@ -8,17 +7,19 @@ use std::task::{Poll, Waker};
 use std::thread;
 use std::time::Duration;
 use tracing::error;
-use wasapi::{get_default_device, DeviceCollection, Direction, SampleType, StreamMode, WaveFormat};
+use wasapi::{DeviceEnumerator, Direction, SampleType, StreamMode, WaveFormat};
 
 pub fn get_input_devices() -> Result<Vec<AudioDevice>> {
-    let mut devices = Vec::new();
+    let enumerator = DeviceEnumerator::new()?;
+    let default_id = enumerator
+        .get_default_device(&Direction::Capture)
+        .ok()
+        .and_then(|d| d.get_id().ok());
 
-    let default_device = get_default_device(&Direction::Capture).ok();
-    let default_id = default_device.as_ref().and_then(|d| d.get_id().ok());
-
-    let collection = DeviceCollection::new(&Direction::Capture)?;
+    let collection = enumerator.get_device_collection(&Direction::Capture)?;
     let count = collection.get_nbr_devices()?;
 
+    let mut devices = Vec::new();
     for i in 0..count {
         if let Ok(device) = collection.get_device_at_index(i) {
             let name = device
@@ -41,14 +42,16 @@ pub fn get_input_devices() -> Result<Vec<AudioDevice>> {
 }
 
 pub fn get_output_devices() -> Result<Vec<AudioDevice>> {
-    let mut devices = Vec::new();
+    let enumerator = DeviceEnumerator::new()?;
+    let default_id = enumerator
+        .get_default_device(&Direction::Render)
+        .ok()
+        .and_then(|d| d.get_id().ok());
 
-    let default_device = get_default_device(&Direction::Render).ok();
-    let default_id = default_device.as_ref().and_then(|d| d.get_id().ok());
-
-    let collection = DeviceCollection::new(&Direction::Render)?;
+    let collection = enumerator.get_device_collection(&Direction::Render)?;
     let count = collection.get_nbr_devices()?;
 
+    let mut devices = Vec::new();
     for i in 0..count {
         if let Ok(device) = collection.get_device_at_index(i) {
             let name = device
@@ -71,7 +74,15 @@ pub fn get_output_devices() -> Result<Vec<AudioDevice>> {
 }
 
 fn find_device_by_id(direction: &Direction, device_id: &str) -> Option<wasapi::Device> {
-    let collection = match DeviceCollection::new(direction) {
+    let enumerator = match DeviceEnumerator::new() {
+        Ok(e) => e,
+        Err(e) => {
+            error!("[find_device_by_id] Failed to create enumerator: {}", e);
+            return None;
+        }
+    };
+
+    let collection = match enumerator.get_device_collection(direction) {
         Ok(c) => c,
         Err(e) => {
             error!(
@@ -94,19 +105,12 @@ fn find_device_by_id(direction: &Direction, device_id: &str) -> Option<wasapi::D
         if let Ok(device) = collection.get_device_at_index(i) {
             if let Ok(id) = device.get_id() {
                 if id == device_id {
-                    let name = device
-                        .get_friendlyname()
-                        .unwrap_or_else(|_| "Unknown".to_string());
                     return Some(device);
                 }
             }
         }
     }
 
-    error!(
-        "[find_device_by_id] No matching device found for ID: {}",
-        device_id
-    );
     None
 }
 
@@ -116,12 +120,10 @@ pub struct SpeakerInput {
 
 impl SpeakerInput {
     pub fn new(device_id: Option<String>) -> Result<Self> {
-        // Store the device_id for later use in stream()
         let device_id = device_id.filter(|id| !id.is_empty() && id != "default");
         Ok(Self { device_id })
     }
 
-    // Starts the audio stream
     pub fn stream(self) -> SpeakerStream {
         let sample_queue = Arc::new(Mutex::new(VecDeque::new()));
         let waker_state = Arc::new(Mutex::new(WakerState {
@@ -139,18 +141,18 @@ impl SpeakerInput {
             if let Err(e) =
                 SpeakerStream::capture_audio_loop(queue_clone, waker_clone, init_tx, device_id)
             {
-                error!("Pluely Audio capture loop failed: {}", e);
+                error!("Audio capture loop failed: {}", e);
             }
         });
 
         let actual_sample_rate = match init_rx.recv_timeout(Duration::from_secs(5)) {
             Ok(Ok(rate)) => rate,
             Ok(Err(e)) => {
-                error!("Pluely Audio initialization failed: {}", e);
+                error!("Audio initialization failed: {}", e);
                 44100
             }
             Err(_) => {
-                error!("Pluely Audio initialization timeout");
+                error!("Audio initialization timeout");
                 44100
             }
         };
@@ -188,25 +190,22 @@ impl SpeakerStream {
         init_tx: mpsc::Sender<Result<u32>>,
         device_id: Option<String>,
     ) -> Result<()> {
-        let init_result = (|| -> Result<_> {
-            let device = match device_id {
-                Some(ref id) => match find_device_by_id(&Direction::Render, id) {
-                    Some(d) => {
-                        let name = d
-                            .get_friendlyname()
-                            .unwrap_or_else(|_| "Unknown".to_string());
-                        d
-                    }
-                    None => {
-                        get_default_device(&Direction::Render).expect("No default render device")
-                    }
-                },
-                None => get_default_device(&Direction::Render)?,
-            };
+        // Initialize COM for this thread (required for WASAPI)
+        if !wasapi::initialize_mta().is_ok() {
+            let _ = init_tx.send(Err(anyhow::anyhow!("Failed to initialize COM")));
+            return Ok(());
+        }
 
-            let device_name = device
-                .get_friendlyname()
-                .unwrap_or_else(|_| "Unknown".to_string());
+        let init_result = (|| -> Result<_> {
+            let enumerator = DeviceEnumerator::new()?;
+
+            let device = match device_id.as_ref() {
+                Some(id) => match find_device_by_id(&Direction::Render, id) {
+                    Some(d) => d,
+                    None => enumerator.get_default_device(&Direction::Render)?,
+                },
+                None => enumerator.get_default_device(&Direction::Render)?,
+            };
 
             let mut audio_client = device.get_iaudioclient()?;
 
@@ -246,13 +245,13 @@ impl SpeakerStream {
                     }
 
                     if h_event.wait_for_event(3000).is_err() {
-                        error!("Pluely timeout error, stopping capture");
+                        error!("timeout error, stopping capture");
                         break;
                     }
 
-                    let mut temp_queue = VecDeque::new();
+                    let mut temp_queue: VecDeque<u8> = VecDeque::new();
                     if let Err(e) = render_client.read_from_device_to_deque(&mut temp_queue) {
-                        error!("Pluely Failed to read audio data: {}", e);
+                        error!("Failed to read audio data: {}", e);
                         continue;
                     }
 
@@ -273,14 +272,12 @@ impl SpeakerStream {
                     }
 
                     if !samples.is_empty() {
-                        // Consistent buffer overflow handling
                         let dropped = {
                             let mut queue = sample_queue.lock().unwrap();
-                            let max_buffer_size = 131072; // 128KB buffer (matching macOS)
+                            let max_buffer_size = 131072;
 
                             queue.extend(samples.iter());
 
-                            // If buffer exceeds maximum, drop oldest samples
                             let dropped_count = if queue.len() > max_buffer_size {
                                 let to_drop = queue.len() - max_buffer_size;
                                 queue.drain(0..to_drop);
@@ -296,7 +293,6 @@ impl SpeakerStream {
                             error!("Windows buffer overflow - dropped {} samples", dropped);
                         }
 
-                        // Wake up consumer
                         {
                             let mut state = waker_state.lock().unwrap();
                             if !state.has_data {
@@ -320,7 +316,6 @@ impl SpeakerStream {
     }
 }
 
-// Drops the audio stream
 impl Drop for SpeakerStream {
     fn drop(&mut self) {
         {
@@ -336,11 +331,9 @@ impl Drop for SpeakerStream {
     }
 }
 
-// Stream of f32 audio samples from the speaker
 impl Stream for SpeakerStream {
     type Item = f32;
 
-    // Polls the audio stream
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

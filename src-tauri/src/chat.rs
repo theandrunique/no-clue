@@ -35,9 +35,7 @@ pub async fn send_message(
 
     let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
         match do_capture_screenshot(app.clone()) {
-            Ok(result) => {
-                Some(result)
-            }
+            Ok(result) => Some(result),
             Err(e) => {
                 tracing::error!(error = %e, "Failed to capture screenshot");
                 None
@@ -76,10 +74,15 @@ pub async fn send_message(
             .await
             .map_err(|e| log_err(e, "get_provider_settings"))?
             .map_err(|e| log_err(e, "get_provider_settings"))?
-            .ok_or_else(|| log_err(format!("Provider '{}' not configured", provider), "get_provider_settings"))?;
+            .ok_or_else(|| {
+                log_err(
+                    format!("Provider '{}' not configured", provider),
+                    "get_provider_settings",
+                )
+            })?;
 
-    let ai_provider = create_provider(&provider_settings)
-        .map_err(|e| log_err(e, "create_provider"))?;
+    let ai_provider =
+        create_provider(&provider_settings).map_err(|e| log_err(e, "create_provider"))?;
 
     // Get chat history for context
     let conv_id_for_history = conversation_id.clone();

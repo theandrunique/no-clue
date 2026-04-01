@@ -1,13 +1,14 @@
 use crate::{
     ai_providers::{get_provider_settings, get_providers, save_provider_settings},
+    audio_capture::{get_input_devices, get_output_devices, test_stream_audio},
     chat::{send_message, stop_stream},
     conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations,
         get_messages, get_transcripts,
     },
     transcriptions::{
-        get_stt_settings, save_stt_settings, start_transcription, stop_transcription,
-        update_transcription_session,
+        get_stt_providers, get_stt_settings, save_stt_settings, start_transcription,
+        stop_transcription, update_transcription_session,
     },
     utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
@@ -20,13 +21,14 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 mod ai_providers;
-mod stt_providers;
+mod audio_capture;
 mod chat;
 mod conversations;
 mod db;
 mod error;
 mod models;
 mod screenshot;
+mod stt_providers;
 mod transcriptions;
 mod utils;
 
@@ -60,14 +62,13 @@ pub fn run() {
                 .with_ansi(true)
                 .with_target(true);
 
-            let env_filter =
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace"));
+            let env_filter = EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn"));
 
             tracing_subscriber::registry()
                 .with(env_filter)
                 .with(file_layer)
                 .with(stdout_layer)
-                // .with(stdout_layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO))
                 .init();
 
             tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
@@ -92,9 +93,13 @@ pub fn run() {
             update_transcription_session,
             save_stt_settings,
             get_stt_settings,
+            get_stt_providers,
             get_providers,
             save_provider_settings,
             get_provider_settings,
+            get_input_devices,
+            get_output_devices,
+            test_stream_audio,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

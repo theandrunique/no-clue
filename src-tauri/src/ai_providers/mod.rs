@@ -1,18 +1,15 @@
-use crate::{
-    ai_providers::{
-        ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor,
-    },
-    db::ai_provider as provider_repo,
-    models::Message,
-};
+use crate::models::Message;
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 
 mod ai_tunnel;
+mod commands;
 mod fake;
 mod ollama;
 mod utils;
+
+pub use commands::*;
 
 #[async_trait]
 pub trait AiProvider: Send + Sync {
@@ -102,36 +99,8 @@ pub fn create_provider(settings: &ProviderSettings) -> Result<Box<dyn AiProvider
                 .unwrap_or_else(|| "http://localhost:11434".into()),
             model: model.clone(),
         })),
-        ProviderSettings::AiTunnel { .. } => Err("AiTunnel provider is not implemented yet".to_string()),
+        ProviderSettings::AiTunnel { .. } => {
+            Err("AiTunnel provider is not implemented yet".to_string())
+        }
     }
-}
-
-#[tauri::command]
-pub fn get_providers() -> Vec<ProviderDescriptor> {
-    vec![
-        fake_provider_descriptor(),
-        ollama_descriptor(),
-        ai_tunnel_descriptor(),
-    ]
-}
-
-#[tauri::command]
-pub async fn save_provider_settings(
-    provider: String,
-    settings: ProviderSettings,
-) -> Result<(), String> {
-    tracing::trace!(provider, "save_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
-    tracing::trace!(provider, "get_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
 }
