@@ -1,4 +1,4 @@
-use super::AudioDevice;
+use super::{AudioDevice, AudioSource};
 use anyhow::Result;
 use futures_util::Stream;
 use std::collections::VecDeque;
@@ -114,17 +114,18 @@ fn find_device_by_id(direction: &Direction, device_id: &str) -> Option<wasapi::D
     None
 }
 
-pub struct SpeakerInput {
+pub struct AudioInput {
     device_id: Option<String>,
+    source: AudioSource,
 }
 
-impl SpeakerInput {
-    pub fn new(device_id: Option<String>) -> Result<Self> {
+impl AudioInput {
+    pub fn new(device_id: Option<String>, source: AudioSource) -> Result<Self> {
         let device_id = device_id.filter(|id| !id.is_empty() && id != "default");
-        Ok(Self { device_id })
+        Ok(Self { device_id, source })
     }
 
-    pub fn stream(self) -> SpeakerStream {
+    pub fn stream(self) -> AudioStream {
         let sample_queue = Arc::new(Mutex::new(VecDeque::new()));
         let waker_state = Arc::new(Mutex::new(WakerState {
             waker: None,
@@ -136,11 +137,16 @@ impl SpeakerInput {
         let queue_clone = sample_queue.clone();
         let waker_clone = waker_state.clone();
         let device_id = self.device_id;
+        let source = self.source;
 
         let capture_thread = thread::spawn(move || {
-            if let Err(e) =
-                SpeakerStream::capture_audio_loop(queue_clone, waker_clone, init_tx, device_id)
-            {
+            if let Err(e) = AudioStream::capture_audio_loop(
+                queue_clone,
+                waker_clone,
+                init_tx,
+                device_id,
+                source,
+            ) {
                 error!("Audio capture loop failed: {}", e);
             }
         });
@@ -157,7 +163,7 @@ impl SpeakerInput {
             }
         };
 
-        SpeakerStream {
+        AudioStream {
             sample_queue,
             waker_state,
             capture_thread: Some(capture_thread),
@@ -172,14 +178,14 @@ struct WakerState {
     shutdown: bool,
 }
 
-pub struct SpeakerStream {
+pub struct AudioStream {
     sample_queue: Arc<Mutex<VecDeque<f32>>>,
     waker_state: Arc<Mutex<WakerState>>,
     capture_thread: Option<thread::JoinHandle<()>>,
     actual_sample_rate: u32,
 }
 
-impl SpeakerStream {
+impl AudioStream {
     pub fn sample_rate(&self) -> u32 {
         self.actual_sample_rate
     }
@@ -189,6 +195,7 @@ impl SpeakerStream {
         waker_state: Arc<Mutex<WakerState>>,
         init_tx: mpsc::Sender<Result<u32>>,
         device_id: Option<String>,
+        source: AudioSource,
     ) -> Result<()> {
         // Initialize COM for this thread (required for WASAPI)
         if !wasapi::initialize_mta().is_ok() {
@@ -196,15 +203,20 @@ impl SpeakerStream {
             return Ok(());
         }
 
+        let (direction, direction_for_init) = match source {
+            AudioSource::System => (Direction::Render, Direction::Capture),
+            AudioSource::Microphone => (Direction::Capture, Direction::Capture),
+        };
+
         let init_result = (|| -> Result<_> {
             let enumerator = DeviceEnumerator::new()?;
 
             let device = match device_id.as_ref() {
-                Some(id) => match find_device_by_id(&Direction::Render, id) {
+                Some(id) => match find_device_by_id(&direction, id) {
                     Some(d) => d,
-                    None => enumerator.get_default_device(&Direction::Render)?,
+                    None => enumerator.get_default_device(&direction)?,
                 },
-                None => enumerator.get_default_device(&Direction::Render)?,
+                None => enumerator.get_default_device(&direction)?,
             };
 
             let mut audio_client = device.get_iaudioclient()?;
@@ -222,18 +234,18 @@ impl SpeakerStream {
                 buffer_duration_hns: min_time,
             };
 
-            audio_client.initialize_client(&desired_format, &Direction::Capture, &mode)?;
+            audio_client.initialize_client(&desired_format, &direction_for_init, &mode)?;
 
             let h_event = audio_client.set_get_eventhandle()?;
-            let render_client = audio_client.get_audiocaptureclient()?;
+            let capture_client = audio_client.get_audiocaptureclient()?;
 
             audio_client.start_stream()?;
 
-            Ok((h_event, render_client, actual_rate))
+            Ok((h_event, capture_client, actual_rate))
         })();
 
         match init_result {
-            Ok((h_event, render_client, sample_rate)) => {
+            Ok((h_event, capture_client, sample_rate)) => {
                 let _ = init_tx.send(Ok(sample_rate));
 
                 loop {
@@ -250,7 +262,7 @@ impl SpeakerStream {
                     }
 
                     let mut temp_queue: VecDeque<u8> = VecDeque::new();
-                    if let Err(e) = render_client.read_from_device_to_deque(&mut temp_queue) {
+                    if let Err(e) = capture_client.read_from_device_to_deque(&mut temp_queue) {
                         error!("Failed to read audio data: {}", e);
                         continue;
                     }
@@ -316,7 +328,7 @@ impl SpeakerStream {
     }
 }
 
-impl Drop for SpeakerStream {
+impl Drop for AudioStream {
     fn drop(&mut self) {
         {
             let mut state = self.waker_state.lock().unwrap();
@@ -331,7 +343,7 @@ impl Drop for SpeakerStream {
     }
 }
 
-impl Stream for SpeakerStream {
+impl Stream for AudioStream {
     type Item = f32;
 
     fn poll_next(

@@ -6,17 +6,17 @@ use std::pin::Pin;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "macos")]
-use macos::{SpeakerInput as PlatformSpeakerInput, SpeakerStream as PlatformSpeakerStream};
+use macos::{AudioInput as PlatformAudioInput, AudioStream as PlatformAudioStream};
 
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
-use windows::{SpeakerInput as PlatformSpeakerInput, SpeakerStream as PlatformSpeakerStream};
+use windows::{AudioInput as PlatformAudioInput, AudioStream as PlatformAudioStream};
 
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "linux")]
-use linux::{SpeakerInput as PlatformSpeakerInput, SpeakerStream as PlatformSpeakerStream};
+use linux::{AudioInput as PlatformAudioInput, AudioStream as PlatformAudioStream};
 
 mod commands;
 
@@ -63,59 +63,56 @@ pub(crate) fn list_output_devices() -> Result<Vec<AudioDevice>> {
     Ok(vec![])
 }
 
-pub struct SpeakerInput {
-    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-    inner: PlatformSpeakerInput,
+pub enum AudioSource {
+    System,
+    Microphone,
 }
 
-impl SpeakerInput {
-    // Creates a new speaker input. Fails on unsupported platforms.
+pub struct AudioInput {
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-    pub fn new() -> Result<Self> {
-        let inner = PlatformSpeakerInput::new(None)?;
+    inner: PlatformAudioInput,
+}
+
+impl AudioInput {
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    pub fn system(device_id: Option<String>) -> Result<Self> {
+        let inner = PlatformAudioInput::new(device_id, AudioSource::System)?;
         Ok(Self { inner })
     }
 
-    // Creates a new speaker input with a specific device ID
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-    pub fn new_with_device(device_id: Option<String>) -> Result<Self> {
-        let inner = PlatformSpeakerInput::new(device_id)?;
+    pub fn microphone(device_id: Option<String>) -> Result<Self> {
+        let inner = PlatformAudioInput::new(device_id, AudioSource::Microphone)?;
         Ok(Self { inner })
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    pub fn new() -> Result<Self> {
-        Err(anyhow::anyhow!(
-            "SpeakerInput::new is not supported on this platform"
-        ))
+    pub fn system(_device_id: Option<String>) -> Result<Self> {
+        Err(anyhow::anyhow!("AudioInput::system is not supported on this platform"))
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    pub fn new_with_device(_device_id: Option<String>) -> Result<Self> {
-        Err(anyhow::anyhow!(
-            "SpeakerInput::new_with_device is not supported on this platform"
-        ))
+    pub fn microphone(_device_id: Option<String>) -> Result<Self> {
+        Err(anyhow::anyhow!("AudioInput::microphone is not supported on this platform"))
     }
 
-    // Starts the audio stream.
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-    pub fn stream(self) -> SpeakerStream {
+    pub fn stream(self) -> AudioStream {
         let inner = self.inner.stream();
-        SpeakerStream { inner }
+        AudioStream { inner }
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    pub fn stream(self) -> SpeakerStream {
-        unimplemented!("SpeakerInput::stream is not supported on this platform")
+    pub fn stream(self) -> AudioStream {
+        unimplemented!("AudioInput::stream is not supported on this platform")
     }
 }
 
-// Stream of f32 audio samples from the speaker.
-pub struct SpeakerStream {
-    inner: PlatformSpeakerStream,
+pub struct AudioStream {
+    inner: PlatformAudioStream,
 }
 
-impl Stream for SpeakerStream {
+impl Stream for AudioStream {
     type Item = f32;
 
     fn poll_next(
@@ -134,8 +131,7 @@ impl Stream for SpeakerStream {
     }
 }
 
-impl SpeakerStream {
-    // Gets the sample rate (e.g., 16000 Hz on stub, variable on real impls).
+impl AudioStream {
     pub fn sample_rate(&self) -> u32 {
         #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
         return self.inner.sample_rate();

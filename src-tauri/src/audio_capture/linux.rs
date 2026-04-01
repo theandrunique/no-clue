@@ -1,4 +1,4 @@
-use super::AudioDevice;
+use super::{AudioDevice, AudioSource};
 use anyhow::{anyhow, Result};
 use futures_util::Stream;
 use libpulse_binding as pulse;
@@ -148,7 +148,6 @@ pub fn get_output_devices() -> Result<Vec<AudioDevice>> {
         }
     }
 
-    // Get default sink for comparison
     let default_sink: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let default_sink_clone = default_sink.clone();
     let done_clone = done.clone();
@@ -218,24 +217,41 @@ pub fn get_output_devices() -> Result<Vec<AudioDevice>> {
     Ok(Rc::try_unwrap(devices).unwrap().into_inner())
 }
 
-pub struct SpeakerInput {
+pub struct AudioInput {
     source_name: Option<String>,
+    source: AudioSource,
 }
 
-impl SpeakerInput {
-    pub fn new(device_id: Option<String>) -> Result<Self> {
-        // For Linux, device_id is the PulseAudio sink name for output devices
-        let source_name = match device_id {
-            Some(ref id) if !id.is_empty() && id != "default" => {
-                let monitor = format!("{}.monitor", id);
-                Some(monitor)
+impl AudioInput {
+    pub fn new(device_id: Option<String>, source: AudioSource) -> Result<Self> {
+        match source {
+            AudioSource::System => {
+                let source_name = match device_id {
+                    Some(ref id) if !id.is_empty() && id != "default" => {
+                        let monitor = format!("{}.monitor", id);
+                        Some(monitor)
+                    }
+                    _ => None,
+                };
+                Ok(Self {
+                    source_name,
+                    source,
+                })
             }
-            _ => None,
-        };
-        Ok(Self { source_name })
+            AudioSource::Microphone => {
+                let source_name = match device_id {
+                    Some(ref id) if !id.is_empty() && id != "default" => Some(id.clone()),
+                    _ => None,
+                };
+                Ok(Self {
+                    source_name,
+                    source,
+                })
+            }
+        }
     }
 
-    pub fn stream(self) -> SpeakerStream {
+    pub fn stream(self) -> AudioStream {
         let sample_queue = Arc::new(Mutex::new(VecDeque::new()));
         let waker_state = Arc::new(Mutex::new(WakerState {
             waker: None,
@@ -247,13 +263,15 @@ impl SpeakerInput {
         let queue_clone = sample_queue.clone();
         let waker_clone = waker_state.clone();
         let source_name = self.source_name;
+        let source = self.source;
 
-        let mut capture_thread = Some(thread::spawn(move || {
-            if let Err(e) = SpeakerStream::capture_audio_loop(
+        let capture_thread = Some(thread::spawn(move || {
+            if let Err(e) = AudioStream::capture_audio_loop(
                 queue_clone,
                 waker_clone,
                 source_name.as_deref(),
                 init_tx,
+                source,
             ) {
                 eprintln!("Audio capture loop failed: {}", e);
             }
@@ -286,7 +304,7 @@ impl SpeakerInput {
             }
         }
 
-        SpeakerStream {
+        AudioStream {
             sample_queue,
             waker_state,
             capture_thread,
@@ -301,14 +319,14 @@ struct WakerState {
     shutdown: bool,
 }
 
-pub struct SpeakerStream {
+pub struct AudioStream {
     sample_queue: Arc<Mutex<VecDeque<f32>>>,
     waker_state: Arc<Mutex<WakerState>>,
     capture_thread: Option<thread::JoinHandle<()>>,
     sample_rate: u32,
 }
 
-impl SpeakerStream {
+impl AudioStream {
     pub fn sample_rate(&self) -> u32 {
         self.sample_rate
     }
@@ -318,11 +336,12 @@ impl SpeakerStream {
         waker_state: Arc<Mutex<WakerState>>,
         source_name: Option<&str>,
         init_tx: std::sync::mpsc::Sender<Result<u32>>,
+        source: AudioSource,
     ) -> Result<()> {
         let spec = Spec {
             format: Format::F32le,
             channels: 1,
-            rate: 44100, // Fixed: Use 44100 Hz to match macOS/Windows
+            rate: 44100,
         };
 
         if !spec.is_valid() {
@@ -330,20 +349,25 @@ impl SpeakerStream {
             return Err(anyhow!("Invalid audio specification"));
         }
 
-        let final_source = source_name
-            .map(|s| s.to_string())
-            .or_else(get_default_monitor_source);
+        let final_source = match source {
+            AudioSource::System => source_name
+                .map(|s| s.to_string())
+                .or_else(get_default_monitor_source),
+            AudioSource::Microphone => source_name
+                .map(|s| s.to_string())
+                .or_else(get_default_input_source),
+        };
 
         let init_result: Result<(Simple, u32)> = (|| {
             let simple = Simple::new(
-                None,                    // Use default server
-                "no-clue",               // Application name
-                Direction::Record,       // Record direction
-                final_source.as_deref(), // Source name (monitor)
-                "System Audio Capture",  // Stream description
-                &spec,                   // Sample specification
-                None,                    // Channel map (use default)
-                None,                    // Buffer attributes (use default)
+                None,
+                "no-clue",
+                Direction::Record,
+                final_source.as_deref(),
+                "Audio Capture",
+                &spec,
+                None,
+                None,
             )
             .map_err(|e| {
                 error!(
@@ -360,7 +384,6 @@ impl SpeakerStream {
             Ok((simple, sample_rate)) => {
                 let _ = init_tx.send(Ok(sample_rate));
 
-                // Buffer for reading audio data (1024 samples * 4 bytes/sample)
                 let mut buffer = vec![0u8; 4096];
 
                 loop {
@@ -370,7 +393,6 @@ impl SpeakerStream {
 
                     match simple.read(&mut buffer) {
                         Ok(_) => {
-                            // Convert byte buffer to f32 samples
                             let samples: Vec<f32> = buffer
                                 .chunks_exact(4)
                                 .map(|chunk| {
@@ -379,14 +401,12 @@ impl SpeakerStream {
                                 .collect();
 
                             if !samples.is_empty() {
-                                // Consistent buffer overflow handling
                                 let dropped = {
                                     let mut queue = sample_queue.lock().unwrap();
-                                    let max_buffer_size = 131072; // 128KB buffer (matching macOS/Windows)
+                                    let max_buffer_size = 131072;
 
                                     queue.extend(samples.iter());
 
-                                    // If buffer exceeds maximum, drop oldest samples
                                     if queue.len() > max_buffer_size {
                                         let to_drop = queue.len() - max_buffer_size;
                                         queue.drain(0..to_drop);
@@ -400,7 +420,6 @@ impl SpeakerStream {
                                     warn!("[capture_audio_loop] Linux buffer overflow - dropped {} samples", dropped);
                                 }
 
-                                // Wake up consumer
                                 {
                                     let mut state = waker_state.lock().unwrap();
                                     if !state.has_data {
@@ -433,7 +452,11 @@ fn get_default_monitor_source() -> Option<String> {
     Some("@DEFAULT_MONITOR@".to_string())
 }
 
-impl Drop for SpeakerStream {
+fn get_default_input_source() -> Option<String> {
+    Some("@DEFAULT_SOURCE@".to_string())
+}
+
+impl Drop for AudioStream {
     fn drop(&mut self) {
         {
             let mut state = self.waker_state.lock().unwrap();
@@ -448,7 +471,7 @@ impl Drop for SpeakerStream {
     }
 }
 
-impl Stream for SpeakerStream {
+impl Stream for AudioStream {
     type Item = f32;
 
     fn poll_next(

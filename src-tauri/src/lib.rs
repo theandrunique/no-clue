@@ -1,6 +1,6 @@
 use crate::{
     ai_providers::{get_provider_settings, get_providers, save_provider_settings},
-    audio_capture::{get_input_devices, get_output_devices, test_stream_audio},
+    audio_capture::{get_input_devices, get_output_devices, test_system_audio, test_microphone_audio},
     chat::{send_message, stop_stream},
     conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations,
@@ -99,7 +99,8 @@ pub fn run() {
             get_provider_settings,
             get_input_devices,
             get_output_devices,
-            test_stream_audio,
+            test_system_audio,
+            test_microphone_audio,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

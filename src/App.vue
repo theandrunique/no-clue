@@ -12,10 +12,10 @@ const startTest = async () => {
   const inputs = await invoke("get_input_devices");
   console.log(inputs);
 
-  await invoke("test_stream_audio", {
-    deviceId: null,
-    durationSecs: 5,
-  });
+  // Системный звук
+  await invoke("test_system_audio", { deviceId: null, durationSecs: 5 });
+  // Микрофон
+  await invoke("test_microphone_audio", { deviceId: null, durationSecs: 5 });
 
   listen("test-stream-started", (e) => console.log("started:", e.payload));
   listen("test-stream-progress", (e) => console.log("progress:", e.payload));
