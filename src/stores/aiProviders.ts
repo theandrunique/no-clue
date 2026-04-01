@@ -3,9 +3,9 @@ import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { ProviderDescriptor, ProviderSettings } from "@/types/providers";
 
-const SELECTED_PROVIDER_KEY = "selected_provider";
+const SELECTED_PROVIDER_KEY = "selected_ai_provider";
 
-export const useProvidersStore = defineStore("providers", () => {
+export const useAiProvidersStore = defineStore("aiProviders", () => {
   const providers = ref<ProviderDescriptor[]>([]);
   const selectedProviderId = ref<string | null>(null);
   const selectedProviderSettings = ref<ProviderSettings | null>(null);
@@ -16,7 +16,7 @@ export const useProvidersStore = defineStore("providers", () => {
     try {
       providers.value = await invoke<ProviderDescriptor[]>("get_providers");
     } catch (e) {
-      console.error("[ProvidersStore] Failed to load providers:", e);
+      console.error("[AiProvidersStore] Failed to load providers:", e);
     } finally {
       loading.value = false;
     }
@@ -26,7 +26,7 @@ export const useProvidersStore = defineStore("providers", () => {
     try {
       selectedProviderSettings.value = await invoke<ProviderSettings>("get_provider_settings", { provider: providerId });
     } catch (e) {
-      console.error("[ProvidersStore] Failed to load provider settings:", e);
+      console.error("[AiProvidersStore] Failed to load provider settings:", e);
       selectedProviderSettings.value = null;
     }
   }
@@ -36,7 +36,7 @@ export const useProvidersStore = defineStore("providers", () => {
       await invoke("save_provider_settings", { provider: providerId, settings });
       selectedProviderSettings.value = settings;
     } catch (e) {
-      console.error("[ProvidersStore] Failed to save provider settings:", e);
+      console.error("[AiProvidersStore] Failed to save provider settings:", e);
       throw e;
     }
   }
