@@ -4,8 +4,7 @@ use crate::db::transcript as transcript_repo;
 use crate::error::log_err;
 use crate::models::TranscriptionResult;
 use crate::stt_providers::{
-    create_stt_provider, AudioCaptureConfig, SttResultCallback,
-    SttTranscriptResult,
+    create_stt_provider, AudioCaptureConfig, SttResultCallback, SttTranscriptResult,
 };
 use futures_util::StreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -39,18 +38,17 @@ pub async fn start_transcription(
 
     let stt_provider_for_error = stt_provider.clone();
 
-    let stt_settings = tokio::task::spawn_blocking(move || {
-        stt_provider_repo::get_stt_settings(&stt_provider)
-    })
-    .await
-    .map_err(|e| log_err(e, "get_stt_settings"))?
-    .map_err(|e| log_err(e, "get_stt_settings"))?
-    .ok_or_else(|| {
-        log_err(
-            format!("STT provider '{}' not configured", stt_provider_for_error),
-            "get_stt_settings",
-        )
-    })?;
+    let stt_settings =
+        tokio::task::spawn_blocking(move || stt_provider_repo::get_stt_settings(&stt_provider))
+            .await
+            .map_err(|e| log_err(e, "get_stt_settings"))?
+            .map_err(|e| log_err(e, "get_stt_settings"))?
+            .ok_or_else(|| {
+                log_err(
+                    format!("STT provider '{}' not configured", stt_provider_for_error),
+                    "get_stt_settings",
+                )
+            })?;
 
     tracing::info!(
         conversation_id,
@@ -87,20 +85,21 @@ pub async fn start_transcription(
             text: result.text.clone(),
             is_final: result.is_final,
             confidence: result.confidence,
-            speaker: result.speaker.clone(),
+            source: result.source.clone(),
             timestamp,
         };
 
         tracing::trace!(
             text = %result.text,
             is_final = result.is_final,
+            source = ?result.source,
             "STT result received"
         );
 
         let _ = app_for_callback.emit("transcription-result", &result_with_metadata);
 
         if result.is_final {
-            let speaker_enum = result.speaker.clone();
+            let source_enum = result.source.clone();
 
             let text = result.text.clone();
             let confidence = result.confidence;
@@ -109,7 +108,7 @@ pub async fn start_transcription(
 
             tokio::spawn(async move {
                 let _ = tokio::task::spawn_blocking(move || {
-                    transcript_repo::create(id, conv_id, speaker_enum, text, confidence, timestamp)
+                    transcript_repo::create(id, conv_id, source_enum, text, confidence, timestamp)
                 })
                 .await;
             });

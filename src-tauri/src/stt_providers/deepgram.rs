@@ -1,15 +1,15 @@
-use crate::models::{FieldDescriptor, FieldType, ProviderDescriptor};
+use crate::models::{AudioSource, FieldDescriptor, FieldType, ProviderDescriptor};
+use async_channel::Sender;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
-use async_channel::Sender;
 
 use super::{SttProvider, SttResultCallback, SttTranscriptResult};
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::connect_async;
 
 pub fn deepgram_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -81,12 +81,14 @@ impl SttProvider for DeepgramProvider {
             language, model
         );
 
-        let mut request = url.into_client_request()
+        let mut request = url
+            .into_client_request()
             .map_err(|e| format!("Failed to create request: {}", e))?;
         request.headers_mut().insert(
             "Authorization",
-            format!("Token {}", api_key).parse()
-                .map_err(|e| format!("Failed to parse header: {}", e))?
+            format!("Token {}", api_key)
+                .parse()
+                .map_err(|e| format!("Failed to parse header: {}", e))?,
         );
 
         let (ws_stream, _) = connect_async(request)
@@ -253,7 +255,7 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
                 text: transcript.to_string(),
                 is_final: is_final_result,
                 confidence: alt.confidence.unwrap_or(0.0),
-                speaker: crate::audio_capture::AudioSource::System,
+                source: AudioSource::Microphone,
             });
         }
     }

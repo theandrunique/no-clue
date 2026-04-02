@@ -255,7 +255,7 @@ impl AudioInput {
                     source,
                 })
             }
-            AudioSource::Microphone => {
+            AudioSource::User => {
                 let input_device = match device_id {
                     Some(ref uid) if !uid.is_empty() && uid != "default" => {
                         match find_input_device_by_uid(uid) {
@@ -371,7 +371,7 @@ impl AudioInput {
                     is_microphone: false,
                 }
             }
-            AudioSource::Microphone => {
+            AudioSource::User => {
                 // Microphone capture not yet implemented for macOS
                 let waker_state = Arc::new(Mutex::new(WakerState {
                     waker: None,

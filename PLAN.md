@@ -352,7 +352,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS transcripts (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
-    speaker TEXT NOT NULL CHECK (speaker IN ('user', 'system')),
+    source TEXT NOT NULL CHECK (source IN ('microphone', 'system')),
     text TEXT NOT NULL,
     confidence REAL NOT NULL,
     timestamp INTEGER NOT NULL,

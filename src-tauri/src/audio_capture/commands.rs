@@ -1,10 +1,9 @@
 use crate::{
-    audio_capture::{AudioDevice, AudioInput, AudioSource},
+    audio_capture::{AudioDevice, AudioInput},
     error::log_err,
 };
 use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter};
-use tracing::{error, info};
 
 #[tauri::command]
 pub fn get_input_devices() -> Result<Vec<AudioDevice>, String> {

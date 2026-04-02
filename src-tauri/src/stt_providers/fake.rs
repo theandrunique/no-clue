@@ -1,9 +1,11 @@
-use crate::models::ProviderDescriptor;
+use crate::models::{AudioSource, ProviderDescriptor};
 
 use super::{SttProvider, SttResultCallback, SttTranscriptResult};
 use async_trait::async_trait;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
 pub fn fake_stt_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -16,6 +18,7 @@ pub fn fake_stt_descriptor() -> ProviderDescriptor {
 pub struct FakeSttProvider {
     running: Arc<AtomicBool>,
     callback: Option<SttResultCallback>,
+    call_count: Arc<AtomicUsize>,
 }
 
 impl FakeSttProvider {
@@ -23,6 +26,7 @@ impl FakeSttProvider {
         Self {
             running: Arc::new(AtomicBool::new(false)),
             callback: None,
+            call_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -59,6 +63,12 @@ impl SttProvider for FakeSttProvider {
             return Err("Not running".to_string());
         }
 
+        let call_count = self.call_count.fetch_add(1, Ordering::SeqCst);
+
+        if call_count % 5 != 0 {
+            return Ok(());
+        }
+
         let Some(callback) = &self.callback else {
             return Ok(());
         };
@@ -76,22 +86,30 @@ impl SttProvider for FakeSttProvider {
             "New message in Slack",
         ];
 
-        let phrase_index = _audio_data.len() % mock_phrases.len();
+        let phrase_index = (call_count / 5) % mock_phrases.len();
         let text = &mock_phrases[phrase_index];
+
+        let source = if phrase_index % 2 == 0 {
+            AudioSource::System
+        } else {
+            AudioSource::Microphone
+        };
 
         let interim_result = SttTranscriptResult {
             text: text[..text.len() / 2].to_string(),
             is_final: false,
             confidence: 0.7,
-            speaker: crate::audio_capture::AudioSource::System,
+            source: source.clone(),
         };
         callback(interim_result);
+
+        sleep(Duration::from_millis(500)).await;
 
         let final_result = SttTranscriptResult {
             text: text.to_string(),
             is_final: true,
             confidence: 0.95,
-            speaker: crate::audio_capture::AudioSource::System,
+            source,
         };
         callback(final_result);
 

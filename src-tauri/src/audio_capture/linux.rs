@@ -238,7 +238,7 @@ impl AudioInput {
                     source,
                 })
             }
-            AudioSource::Microphone => {
+            AudioSource::User => {
                 let source_name = match device_id {
                     Some(ref id) if !id.is_empty() && id != "default" => Some(id.clone()),
                     _ => None,
@@ -353,7 +353,7 @@ impl AudioStream {
             AudioSource::System => source_name
                 .map(|s| s.to_string())
                 .or_else(get_default_monitor_source),
-            AudioSource::Microphone => source_name
+            AudioSource::User => source_name
                 .map(|s| s.to_string())
                 .or_else(get_default_input_source),
         };

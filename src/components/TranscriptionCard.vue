@@ -8,12 +8,12 @@ interface Props {
 
 const props = defineProps<Props>();
 
-function getSpeakerIcon(speaker: "user" | "system") {
-  return speaker === "user" ? User : Monitor;
+function getSourceIcon(source: "microphone" | "system") {
+  return source === "microphone" ? User : Monitor;
 }
 
-function getSpeakerLabel(speaker: "user" | "system") {
-  return speaker === "user" ? "You" : "System";
+function getSourceLabel(source: "microphone" | "system") {
+  return source === "microphone" ? "You" : "System";
 }
 
 function getIsFinal(): boolean {
@@ -36,8 +36,8 @@ const isFinal = getIsFinal();
     ]"
   >
     <div class="flex items-center gap-1.5 text-xs text-white/50 mb-1">
-      <component :is="getSpeakerIcon(transcript.speaker)" :size="12" />
-      <span>{{ getSpeakerLabel(transcript.speaker) }}</span>
+      <component :is="getSourceIcon(transcript.source)" :size="12" />
+      <span>{{ getSourceLabel(transcript.source) }}</span>
       <span v-if="!isFinal" class="text-yellow-500">(interim)</span>
     </div>
     <div class="break-words">{{ transcript.text }}</div>

@@ -8,7 +8,7 @@ pub mod fake;
 
 pub use commands::*;
 
-use crate::audio_capture::AudioSource;
+use crate::models::AudioSource;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
@@ -32,7 +32,7 @@ pub struct AudioCaptureConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SttTranscriptResult {
     pub text: String,
-    pub speaker: AudioSource,
+    pub source: AudioSource,
     pub is_final: bool,
     pub confidence: f64,
 }

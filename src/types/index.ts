@@ -1,7 +1,7 @@
 export interface Transcript {
   id: string;
   conversationId: string;
-  speaker: "user" | "system";
+  source: "microphone" | "system";
   text: string;
   confidence: number;
   timestamp: number;
@@ -10,7 +10,7 @@ export interface Transcript {
 export interface TranscriptionResult {
   id: string;
   conversationId: string;
-  speaker: "user" | "system";
+  source: "microphone" | "system";
   text: string;
   isFinal: boolean;
   confidence: number;
