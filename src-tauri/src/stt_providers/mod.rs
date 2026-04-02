@@ -2,12 +2,15 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-pub mod fake;
+pub mod commands;
 pub mod deepgram;
+pub mod fake;
+
+pub use commands::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum SttProviderConfig {
+pub enum SttProviderSettings {
     Fake,
     Deepgram {
         api_key: Option<String>,
@@ -16,7 +19,7 @@ pub enum SttProviderConfig {
     },
 }
 
-impl Default for SttProviderConfig {
+impl Default for SttProviderSettings {
     fn default() -> Self {
         Self::Fake
     }
@@ -93,10 +96,10 @@ pub trait SttProvider: Send + Sync {
     fn set_result_callback(&mut self, callback: SttResultCallback);
 }
 
-pub fn create_stt_provider(config: &SttProviderConfig) -> Result<Box<dyn SttProvider>, String> {
+pub fn create_stt_provider(config: &SttProviderSettings) -> Result<Box<dyn SttProvider>, String> {
     match config {
-        SttProviderConfig::Fake => Ok(Box::new(fake::FakeSttProvider::new())),
-        SttProviderConfig::Deepgram {
+        SttProviderSettings::Fake => Ok(Box::new(fake::FakeSttProvider::new())),
+        SttProviderSettings::Deepgram {
             api_key,
             language,
             model,

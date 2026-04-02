@@ -52,7 +52,7 @@ pub enum AiStreamEvent {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum ProviderSettings {
+pub enum AiProviderSettings {
     Fake,
     Ollama {
         base_url: Option<String>,
@@ -65,7 +65,7 @@ pub enum ProviderSettings {
 }
 
 #[derive(Serialize)]
-pub struct ProviderDescriptor {
+pub struct AiProviderDescriptor {
     pub id: String,
     pub label: String,
     pub fields: Vec<FieldDescriptor>,
@@ -90,16 +90,16 @@ pub enum FieldType {
     Select { options: Vec<String> },
 }
 
-pub fn create_provider(settings: &ProviderSettings) -> Result<Box<dyn AiProvider>, String> {
+pub fn create_provider(settings: &AiProviderSettings) -> Result<Box<dyn AiProvider>, String> {
     match settings {
-        ProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
-        ProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {
+        AiProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
+        AiProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {
             base_url: base_url
                 .clone()
                 .unwrap_or_else(|| "http://localhost:11434".into()),
             model: model.clone(),
         })),
-        ProviderSettings::AiTunnel { .. } => {
+        AiProviderSettings::AiTunnel { .. } => {
             Err("AiTunnel provider is not implemented yet".to_string())
         }
     }

@@ -1,4 +1,7 @@
-use super::{FieldDescriptor, FieldType, SttProvider, SttProviderDescriptor, SttResultCallback, SttTranscriptResult};
+use super::{
+    FieldDescriptor, FieldType, SttProvider, SttProviderDescriptor, SttResultCallback,
+    SttTranscriptResult,
+};
 use async_trait::async_trait;
 use chrono::Utc;
 use std::sync::atomic::{AtomicBool, Ordering};

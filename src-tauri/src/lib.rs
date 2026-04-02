@@ -1,15 +1,15 @@
 use crate::{
-    ai_providers::{get_provider_settings, get_providers, save_provider_settings},
-    audio_capture::{get_input_devices, get_output_devices, test_system_audio, test_microphone_audio},
+    ai_providers::{get_ai_provider_settings, get_ai_providers, save_ai_provider_settings},
+    audio_capture::{
+        get_input_devices, get_output_devices, test_microphone_audio, test_system_audio,
+    },
     chat::{send_message, stop_stream},
     conversations::{
         create_conversation, delete_conversation, get_conversation, get_conversations,
         get_messages, get_transcripts,
     },
-    transcriptions::{
-        get_stt_providers, get_stt_settings, save_stt_settings, start_transcription,
-        stop_transcription, update_transcription_session,
-    },
+    stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings},
+    transcriptions::{start_transcription, stop_transcription, update_transcription_session},
     utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
 use std::sync::OnceLock;
@@ -91,12 +91,12 @@ pub fn run() {
             start_transcription,
             stop_transcription,
             update_transcription_session,
-            save_stt_settings,
-            get_stt_settings,
+            save_stt_provider_settings,
+            get_stt_provider_settings,
             get_stt_providers,
-            get_providers,
-            save_provider_settings,
-            get_provider_settings,
+            get_ai_providers,
+            save_ai_provider_settings,
+            get_ai_provider_settings,
             get_input_devices,
             get_output_devices,
             test_system_audio,

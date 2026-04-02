@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getFieldTypeString, type ProviderSettings, type FieldType } from "@/types/providers";
-import { getSttFieldTypeString, type SttProviderConfig, type SttFieldType } from "@/types/sttProviders";
+import { getFieldTypeString, type AiProviderSettings, type SttProviderSettings } from "@/types/providers";
 
 const aiProvidersStore = useAiProvidersStore();
 const sttProvidersStore = useSttProvidersStore();
@@ -36,6 +35,8 @@ const selectedSttProvider = computed(() => {
 
 const sttCurrentFields = computed(() => selectedSttProvider.value?.fields || []);
 
+const sttInitialized = ref(false);
+
 onMounted(async () => {
   await aiProvidersStore.loadProviders();
   aiProvidersStore.loadSelectedProvider();
@@ -48,6 +49,7 @@ onMounted(async () => {
   sttProvidersStore.loadSelectedProvider();
   await sttProvidersStore.loadProviderSettings();
   initSttForm();
+  sttInitialized.value = true;
 });
 
 watch(() => aiProvidersStore.selectedProviderId, async (newId) => {
@@ -57,9 +59,12 @@ watch(() => aiProvidersStore.selectedProviderId, async (newId) => {
   }
 });
 
-watch(() => sttProvidersStore.selectedProviderId, async () => {
-  await sttProvidersStore.loadProviderSettings();
-  initSttForm();
+watch(() => sttProvidersStore.selectedProviderId, async (newId, oldId) => {
+  // Only reload when provider actually changes and we've finished initial load
+  if (sttInitialized.value && newId && newId !== oldId) {
+    await sttProvidersStore.loadProviderSettings();
+    initSttForm();
+  }
 });
 
 function initAiForm() {
@@ -132,7 +137,7 @@ async function saveSttSettings() {
   }
 }
 
-function buildAiSettings(): ProviderSettings {
+function buildAiSettings(): AiProviderSettings {
   const providerId = aiProvidersStore.selectedProviderId;
 
   if (providerId === "fake") {
@@ -158,7 +163,7 @@ function buildAiSettings(): ProviderSettings {
   return { type: "Fake" };
 }
 
-function buildSttSettings(): SttProviderConfig {
+function buildSttSettings(): SttProviderSettings {
   const providerId = sttProvidersStore.selectedProviderId;
 
   if (providerId === "fake") {
@@ -176,14 +181,6 @@ function buildSttSettings(): SttProviderConfig {
 
   return { type: "Fake" };
 }
-
-function getAiFieldType(field: FieldType): string {
-  return getFieldTypeString(field);
-}
-
-function getSttFieldType(field: SttFieldType): string {
-  return getSttFieldTypeString(field);
-}
 </script>
 
 <template>
@@ -194,7 +191,7 @@ function getSttFieldType(field: SttFieldType): string {
       <!-- AI Providers -->
       <div>
         <h3 class="text-md font-medium text-foreground mb-4">AI Provider</h3>
-        
+
         <div v-if="aiProvidersStore.loading" class="text-muted-foreground">
           Loading AI providers...
         </div>
@@ -242,7 +239,7 @@ function getSttFieldType(field: SttFieldType): string {
                 <Input
                   :id="field.key"
                   v-model="aiSettingsForm[field.key]"
-                  :type="getAiFieldType(field.field_type)"
+                  :type="getFieldTypeString(field.field_type)"
                   :placeholder="field.placeholder"
                   :required="field.required"
                 />
@@ -269,7 +266,7 @@ function getSttFieldType(field: SttFieldType): string {
       <!-- STT Providers -->
       <div>
         <h3 class="text-md font-medium text-foreground mb-4">STT Provider</h3>
-        
+
         <div v-if="sttProvidersStore.loading" class="text-muted-foreground">
           Loading STT providers...
         </div>
@@ -317,7 +314,7 @@ function getSttFieldType(field: SttFieldType): string {
                 <Input
                   :id="field.key"
                   v-model="sttSettingsForm[field.key]"
-                  :type="getSttFieldType(field.field_type)"
+                  :type="getFieldTypeString(field.field_type)"
                   :placeholder="field.placeholder"
                   :required="field.required"
                 />

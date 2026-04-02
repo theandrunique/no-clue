@@ -88,12 +88,16 @@ impl AudioInput {
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     pub fn system(_device_id: Option<String>) -> Result<Self> {
-        Err(anyhow::anyhow!("AudioInput::system is not supported on this platform"))
+        Err(anyhow::anyhow!(
+            "AudioInput::system is not supported on this platform"
+        ))
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     pub fn microphone(_device_id: Option<String>) -> Result<Self> {
-        Err(anyhow::anyhow!("AudioInput::microphone is not supported on this platform"))
+        Err(anyhow::anyhow!(
+            "AudioInput::microphone is not supported on this platform"
+        ))
     }
 
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]

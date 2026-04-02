@@ -101,10 +101,7 @@ impl SttProvider for DeepgramProvider {
         // Deepgram uses WebSocket for real-time transcription
         // This is a simplified implementation - full WebSocket streaming
         // would need to be implemented for actual real-time transcription
-        tracing::debug!(
-            "Received {} bytes of audio for Deepgram",
-            _audio_data.len()
-        );
+        tracing::debug!("Received {} bytes of audio for Deepgram", _audio_data.len());
 
         // For now, just acknowledge receipt
         // Full implementation would:

@@ -38,7 +38,12 @@ CREATE TABLE IF NOT EXISTS ai_providers (
     config TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO ai_providers (id, config) VALUES ('fake', '{"type":"Fake"}');
+CREATE TABLE IF NOT EXISTS stt_providers (
+    id TEXT PRIMARY KEY NOT NULL,
+    config TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO stt_providers (id, config) VALUES ('default', '{"type":"Fake"}');
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_transcripts_conversation ON transcripts(conversation_id);

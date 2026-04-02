@@ -1,20 +1,20 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import type { ProviderDescriptor, ProviderSettings } from "@/types/providers";
+import type { ProviderDescriptor, AiProviderSettings } from "@/types/providers";
 
-const SELECTED_PROVIDER_KEY = "selected_ai_provider";
+const SELECTED_AI_PROVIDER_KEY = "selected_ai_provider";
 
 export const useAiProvidersStore = defineStore("aiProviders", () => {
   const providers = ref<ProviderDescriptor[]>([]);
   const selectedProviderId = ref<string | null>(null);
-  const selectedProviderSettings = ref<ProviderSettings | null>(null);
+  const selectedProviderSettings = ref<AiProviderSettings | null>(null);
   const loading = ref(false);
 
   async function loadProviders() {
     loading.value = true;
     try {
-      providers.value = await invoke<ProviderDescriptor[]>("get_providers");
+      providers.value = await invoke<ProviderDescriptor[]>("get_ai_providers");
     } catch (e) {
       console.error("[AiProvidersStore] Failed to load providers:", e);
     } finally {
@@ -23,17 +23,19 @@ export const useAiProvidersStore = defineStore("aiProviders", () => {
   }
 
   async function loadProviderSettings(providerId: string) {
+    if (!selectedProviderId.value) return;
     try {
-      selectedProviderSettings.value = await invoke<ProviderSettings>("get_provider_settings", { provider: providerId });
+      selectedProviderSettings.value = await invoke<AiProviderSettings>("get_ai_provider_settings", { provider: providerId });
     } catch (e) {
       console.error("[AiProvidersStore] Failed to load provider settings:", e);
       selectedProviderSettings.value = null;
     }
   }
 
-  async function saveProviderSettings(providerId: string, settings: ProviderSettings) {
+  async function saveProviderSettings(providerId: string, settings: AiProviderSettings) {
+    if (!selectedProviderId.value) return;
     try {
-      await invoke("save_provider_settings", { provider: providerId, settings });
+      await invoke("save_ai_provider_settings", { provider: providerId, settings });
       selectedProviderSettings.value = settings;
     } catch (e) {
       console.error("[AiProvidersStore] Failed to save provider settings:", e);
@@ -43,11 +45,11 @@ export const useAiProvidersStore = defineStore("aiProviders", () => {
 
   function setSelectedProvider(providerId: string) {
     selectedProviderId.value = providerId;
-    localStorage.setItem(SELECTED_PROVIDER_KEY, providerId);
+    localStorage.setItem(SELECTED_AI_PROVIDER_KEY, providerId);
   }
 
   function loadSelectedProvider() {
-    const saved = localStorage.getItem(SELECTED_PROVIDER_KEY);
+    const saved = localStorage.getItem(SELECTED_AI_PROVIDER_KEY);
     if (saved) {
       selectedProviderId.value = saved;
     }

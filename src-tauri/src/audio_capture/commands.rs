@@ -4,7 +4,7 @@ use crate::{
 };
 use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter};
-use tracing::{info, error};
+use tracing::{error, info};
 
 #[tauri::command]
 pub fn get_input_devices() -> Result<Vec<AudioDevice>, String> {
@@ -101,7 +101,8 @@ pub async fn test_microphone_audio(
 ) -> Result<(), String> {
     tracing::trace!(
         "test_microphone_audio called, device_id={:?}, duration={}",
-        device_id, duration_secs
+        device_id,
+        duration_secs
     );
 
     let app_clone = app.clone();
@@ -155,7 +156,8 @@ pub async fn test_microphone_audio(
 
         tracing::trace!(
             "microphone stream loop ended, count={}, collected={}",
-            count, collected
+            count,
+            collected
         );
         let _ = app_clone.emit("test-mic-stopped", (count, collected));
     });

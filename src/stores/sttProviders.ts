@@ -1,20 +1,20 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import type { SttProviderDescriptor, SttProviderConfig } from "@/types/sttProviders";
+import type { ProviderDescriptor, SttProviderSettings } from "@/types/providers";
 
 const SELECTED_STT_PROVIDER_KEY = "selected_stt_provider";
 
 export const useSttProvidersStore = defineStore("sttProviders", () => {
-  const providers = ref<SttProviderDescriptor[]>([]);
+  const providers = ref<ProviderDescriptor[]>([]);
   const selectedProviderId = ref<string | null>(null);
-  const selectedProviderSettings = ref<SttProviderConfig | null>(null);
+  const selectedProviderSettings = ref<SttProviderSettings | null>(null);
   const loading = ref(false);
 
   async function loadProviders() {
     loading.value = true;
     try {
-      providers.value = await invoke<SttProviderDescriptor[]>("get_stt_providers");
+      providers.value = await invoke<ProviderDescriptor[]>("get_stt_providers");
     } catch (e) {
       console.error("[SttProvidersStore] Failed to load providers:", e);
     } finally {
@@ -23,18 +23,19 @@ export const useSttProvidersStore = defineStore("sttProviders", () => {
   }
 
   async function loadProviderSettings() {
+    if (!selectedProviderId.value) return;
     try {
-      const result = await invoke<{ stt_type: SttProviderConfig }>("get_stt_settings");
-      selectedProviderSettings.value = result.stt_type;
+      selectedProviderSettings.value = await invoke<SttProviderSettings>("get_stt_provider_settings", { provider: selectedProviderId.value });
     } catch (e) {
       console.error("[SttProvidersStore] Failed to load provider settings:", e);
       selectedProviderSettings.value = null;
     }
   }
 
-  async function saveProviderSettings(settings: SttProviderConfig) {
+  async function saveProviderSettings(settings: SttProviderSettings) {
+    if (!selectedProviderId.value) return;
     try {
-      await invoke("save_stt_settings", { settings: { stt_type: settings } });
+      await invoke("save_stt_provider_settings", { provider: selectedProviderId.value, settings });
       selectedProviderSettings.value = settings;
     } catch (e) {
       console.error("[SttProvidersStore] Failed to save provider settings:", e);

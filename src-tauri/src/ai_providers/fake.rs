@@ -1,10 +1,10 @@
-use crate::ai_providers::{AiProvider, AiRequest, AiStreamEvent, ProviderDescriptor};
+use crate::ai_providers::{AiProvider, AiProviderDescriptor, AiRequest, AiStreamEvent};
 use async_trait::async_trait;
 use futures_util::Stream;
 use std::time::Instant;
 
-pub fn fake_provider_descriptor() -> ProviderDescriptor {
-    ProviderDescriptor {
+pub fn fake_provider_descriptor() -> AiProviderDescriptor {
+    AiProviderDescriptor {
         id: "fake".into(),
         label: "Fake (Testing)".into(),
         fields: vec![],

@@ -1,13 +1,14 @@
 use crate::{
     ai_providers::{
         ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor,
-        ProviderDescriptor, ProviderSettings,
+        AiProviderDescriptor, AiProviderSettings,
     },
     db::ai_provider as provider_repo,
 };
 
 #[tauri::command]
-pub fn get_providers() -> Vec<ProviderDescriptor> {
+pub fn get_ai_providers() -> Vec<AiProviderDescriptor> {
+    tracing::trace!("get_ai_providers called");
     vec![
         fake_provider_descriptor(),
         ollama_descriptor(),
@@ -16,11 +17,11 @@ pub fn get_providers() -> Vec<ProviderDescriptor> {
 }
 
 #[tauri::command]
-pub async fn save_provider_settings(
+pub async fn save_ai_provider_settings(
     provider: String,
-    settings: ProviderSettings,
+    settings: AiProviderSettings,
 ) -> Result<(), String> {
-    tracing::trace!(provider, "save_provider_settings called");
+    tracing::trace!(provider, "save_ai_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
         .await
         .map_err(|e| e.to_string())?
@@ -28,8 +29,10 @@ pub async fn save_provider_settings(
 }
 
 #[tauri::command]
-pub async fn get_provider_settings(provider: String) -> Result<Option<ProviderSettings>, String> {
-    tracing::trace!(provider, "get_provider_settings called");
+pub async fn get_ai_provider_settings(
+    provider: String,
+) -> Result<Option<AiProviderSettings>, String> {
+    tracing::trace!(provider, "get_ai_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
         .await
         .map_err(|e| e.to_string())?
