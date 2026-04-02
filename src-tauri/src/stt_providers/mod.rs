@@ -8,6 +8,8 @@ pub mod fake;
 
 pub use commands::*;
 
+use crate::audio_capture::AudioSource;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum SttProviderSettings {
@@ -29,13 +31,10 @@ pub struct AudioCaptureConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SttTranscriptResult {
-    pub id: String,
-    pub conversation_id: String,
     pub text: String,
+    pub speaker: AudioSource,
     pub is_final: bool,
     pub confidence: f64,
-    pub speaker: String,
-    pub timestamp: i64,
 }
 
 pub type SttResultCallback = Arc<dyn Fn(SttTranscriptResult) + Send + Sync>;

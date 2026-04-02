@@ -2,10 +2,8 @@ use crate::models::ProviderDescriptor;
 
 use super::{SttProvider, SttResultCallback, SttTranscriptResult};
 use async_trait::async_trait;
-use chrono::Utc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub fn fake_stt_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -18,7 +16,6 @@ pub fn fake_stt_descriptor() -> ProviderDescriptor {
 pub struct FakeSttProvider {
     running: Arc<AtomicBool>,
     callback: Option<SttResultCallback>,
-    conversation_id: String,
 }
 
 impl FakeSttProvider {
@@ -26,7 +23,6 @@ impl FakeSttProvider {
         Self {
             running: Arc::new(AtomicBool::new(false)),
             callback: None,
-            conversation_id: String::new(),
         }
     }
 }
@@ -63,51 +59,39 @@ impl SttProvider for FakeSttProvider {
             return Err("Not running".to_string());
         }
 
-        // Simulate receiving transcription results (mock)
-        // In real implementation, this would come from actual STT processing
         let Some(callback) = &self.callback else {
             return Ok(());
         };
 
-        // Generate mock transcription
         let mock_phrases = vec![
-            ("Can you help me with this code", "user"),
-            ("Let me explain what I mean", "user"),
-            ("That's exactly what I wanted", "user"),
-            ("Could you summarize this", "user"),
-            ("Thank you for your help", "user"),
-            ("System notification: Update available", "system"),
-            ("Email received from John", "system"),
-            ("Meeting starts in 5 minutes", "system"),
-            ("File download complete", "system"),
-            ("New message in Slack", "system"),
+            "Can you help me with this code",
+            "Let me explain what I mean",
+            "That's exactly what I wanted",
+            "Could you summarize this",
+            "Thank you for your help",
+            "System notification: Update available",
+            "Email received from John",
+            "Meeting starts in 5 minutes",
+            "File download complete",
+            "New message in Slack",
         ];
 
-        // Use a simple hash of audio data to pick a phrase (deterministic)
         let phrase_index = _audio_data.len() % mock_phrases.len();
-        let (text, speaker) = &mock_phrases[phrase_index];
+        let text = &mock_phrases[phrase_index];
 
-        // Send interim result
         let interim_result = SttTranscriptResult {
-            id: Uuid::new_v4().to_string(),
-            conversation_id: self.conversation_id.clone(),
             text: text[..text.len() / 2].to_string(),
             is_final: false,
             confidence: 0.7,
-            speaker: speaker.to_string(),
-            timestamp: Utc::now().timestamp(),
+            speaker: crate::audio_capture::AudioSource::System,
         };
         callback(interim_result);
 
-        // Send final result after a delay (simulated)
         let final_result = SttTranscriptResult {
-            id: Uuid::new_v4().to_string(),
-            conversation_id: self.conversation_id.clone(),
             text: text.to_string(),
             is_final: true,
             confidence: 0.95,
-            speaker: speaker.to_string(),
-            timestamp: Utc::now().timestamp(),
+            speaker: crate::audio_capture::AudioSource::System,
         };
         callback(final_result);
 
@@ -116,11 +100,5 @@ impl SttProvider for FakeSttProvider {
 
     fn set_result_callback(&mut self, callback: SttResultCallback) {
         self.callback = Some(callback);
-    }
-}
-
-impl FakeSttProvider {
-    pub fn set_conversation_id(&mut self, conversation_id: String) {
-        self.conversation_id = conversation_id;
     }
 }

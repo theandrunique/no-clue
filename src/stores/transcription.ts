@@ -13,10 +13,6 @@ interface AudioCaptureConfig {
   microphone_device_id: string | null;
 }
 
-type SttProviderConfig =
-  | { type: "Fake" }
-  | { type: "Deepgram"; api_key?: string; language?: string; model?: string };
-
 export const useTranscriptionStore = defineStore("transcription", () => {
   const isEnabled = ref(false);
   const transcripts = ref<TranscriptionResult[]>([]);
@@ -29,13 +25,6 @@ export const useTranscriptionStore = defineStore("transcription", () => {
 
   function getSelectedSttProvider(): string {
     return localStorage.getItem(SELECTED_STT_PROVIDER_KEY) || "fake";
-  }
-
-  function buildSttSettings(providerId: string): SttProviderConfig {
-    if (providerId === "deepgram") {
-      return { type: "Deepgram" };
-    }
-    return { type: "Fake" };
   }
 
   function buildAudioConfig(): AudioCaptureConfig {
@@ -83,12 +72,11 @@ export const useTranscriptionStore = defineStore("transcription", () => {
     try {
       if (value) {
         const providerId = getSelectedSttProvider();
-        const sttSettings = buildSttSettings(providerId);
         const audioConfig = buildAudioConfig();
 
         await invoke("start_transcription", {
+          sttProvider: providerId,
           audioConfig,
-          sttSettings,
         });
       } else {
         await invoke("stop_transcription");

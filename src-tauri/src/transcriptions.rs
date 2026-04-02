@@ -1,8 +1,10 @@
 use crate::audio_capture::{AudioInput, AudioStream};
+use crate::db::stt_provider as stt_provider_repo;
 use crate::db::transcript as transcript_repo;
-use crate::models::Speaker;
+use crate::error::log_err;
+use crate::models::TranscriptionResult;
 use crate::stt_providers::{
-    create_stt_provider, AudioCaptureConfig, SttProviderSettings, SttResultCallback,
+    create_stt_provider, AudioCaptureConfig, SttResultCallback,
     SttTranscriptResult,
 };
 use futures_util::StreamExt;
@@ -10,9 +12,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
+use uuid::Uuid;
 
 static TRANSCRIPTION_RUNNING: AtomicBool = AtomicBool::new(false);
 static CURRENT_CONVERSATION_ID: Mutex<Option<String>> = Mutex::new(None);
+static CURRENT_AUDIO_CONFIG: Mutex<Option<AudioCaptureConfig>> = Mutex::new(None);
 
 #[tauri::command]
 pub async fn update_transcription_session(conversation_id: String) -> Result<(), String> {
@@ -25,13 +29,28 @@ pub async fn update_transcription_session(conversation_id: String) -> Result<(),
 #[tauri::command]
 pub async fn start_transcription(
     app: AppHandle,
+    stt_provider: String,
     audio_config: AudioCaptureConfig,
-    stt_settings: SttProviderSettings,
 ) -> Result<(), String> {
     let conversation_id = {
         let current = CURRENT_CONVERSATION_ID.lock().map_err(|e| e.to_string())?;
         current.clone().ok_or("No conversation ID set")?
     };
+
+    let stt_provider_for_error = stt_provider.clone();
+
+    let stt_settings = tokio::task::spawn_blocking(move || {
+        stt_provider_repo::get_stt_settings(&stt_provider)
+    })
+    .await
+    .map_err(|e| log_err(e, "get_stt_settings"))?
+    .map_err(|e| log_err(e, "get_stt_settings"))?
+    .ok_or_else(|| {
+        log_err(
+            format!("STT provider '{}' not configured", stt_provider_for_error),
+            "get_stt_settings",
+        )
+    })?;
 
     tracing::info!(
         conversation_id,
@@ -57,32 +76,40 @@ pub async fn start_transcription(
         .map_err(|e| format!("Failed to create STT provider: {}", e))?;
 
     let app_for_callback = app.clone();
+    let conversation_id_clone = conversation_id.clone();
     let callback: SttResultCallback = Arc::new(move |result: SttTranscriptResult| {
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let id = Uuid::new_v4().to_string();
+
+        let result_with_metadata = TranscriptionResult {
+            id: id.clone(),
+            conversation_id: conversation_id_clone.clone(),
+            text: result.text.clone(),
+            is_final: result.is_final,
+            confidence: result.confidence,
+            speaker: result.speaker.clone(),
+            timestamp,
+        };
+
         tracing::trace!(
             text = %result.text,
             is_final = result.is_final,
-            speaker = %result.speaker,
             "STT result received"
         );
 
-        let _ = app_for_callback.emit("transcription-result", &result);
+        let _ = app_for_callback.emit("transcription-result", &result_with_metadata);
 
         if result.is_final {
-            let speaker = if result.speaker == "user" {
-                Speaker::User
-            } else {
-                Speaker::System
-            };
+            let speaker_enum = result.speaker.clone();
 
-            let conv_id = result.conversation_id.clone();
             let text = result.text.clone();
             let confidence = result.confidence;
-            let timestamp = result.timestamp;
-            let id = result.id.clone();
+            let id = id.clone();
+            let conv_id = conversation_id_clone.clone();
 
             tokio::spawn(async move {
                 let _ = tokio::task::spawn_blocking(move || {
-                    transcript_repo::create(id, conv_id, speaker, text, confidence, timestamp)
+                    transcript_repo::create(id, conv_id, speaker_enum, text, confidence, timestamp)
                 })
                 .await;
             });

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 mod provider;
 pub use provider::*;
 
+use crate::audio_capture::AudioSource;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: String,
@@ -77,7 +79,7 @@ pub struct Transcript {
     pub id: String,
     #[serde(rename = "conversationId")]
     pub conversation_id: String,
-    pub speaker: Speaker,
+    pub speaker: AudioSource,
     pub text: String,
     pub confidence: f64,
     pub timestamp: i64,
@@ -88,7 +90,7 @@ pub struct TranscriptionResult {
     pub id: String,
     #[serde(rename = "conversationId")]
     pub conversation_id: String,
-    pub speaker: String,
+    pub speaker: AudioSource,
     pub text: String,
     #[serde(rename = "isFinal")]
     pub is_final: bool,
@@ -101,39 +103,11 @@ impl From<Transcript> for TranscriptionResult {
         TranscriptionResult {
             id: t.id,
             conversation_id: t.conversation_id,
-            speaker: t.speaker.to_string(),
+            speaker: t.speaker,
             text: t.text,
             is_final: true,
             confidence: t.confidence,
             timestamp: t.timestamp,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum Speaker {
-    User,
-    System,
-}
-
-impl std::fmt::Display for Speaker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Speaker::User => write!(f, "user"),
-            Speaker::System => write!(f, "system"),
-        }
-    }
-}
-
-impl std::str::FromStr for Speaker {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "user" => Ok(Speaker::User),
-            "system" => Ok(Speaker::System),
-            _ => Err(format!("Unknown speaker: {}", s)),
         }
     }
 }
