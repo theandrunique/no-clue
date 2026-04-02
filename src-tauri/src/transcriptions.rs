@@ -6,6 +6,7 @@ use crate::models::TranscriptionResult;
 use crate::stt_providers::{
     create_stt_provider, AudioCaptureConfig, SttProviderSettings, SttResultCallback, SttTranscriptResult,
 };
+use async_channel;
 use futures_util::StreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -159,74 +160,153 @@ pub async fn start_transcription(
             }
         }
 
-        let source_sample_rate = 48000u32;
-        let target_sample_rate = 16000u32;
-        let decimation_ratio = if source_sample_rate != target_sample_rate {
-            Some(source_sample_rate / target_sample_rate)
-        } else {
-            None
-        };
-        let chunk_size = (source_sample_rate / 10) as usize;
+    let source_sample_rate = 48000u32;
+    let target_sample_rate = 16000u32;
+    let decimation_ratio = if source_sample_rate != target_sample_rate {
+        Some(source_sample_rate / target_sample_rate)
+    } else {
+        None
+    };
+    let chunk_size = (source_sample_rate / 10) as usize;
 
-        let mut audio_buffer: Vec<u8> = Vec::new();
-        let mut sample_count = 0usize;
+    let (system_tx, system_rx) = async_channel::bounded(1024);
+    let (mic_tx, mic_rx) = async_channel::bounded(1024);
 
-        loop {
-            if !TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
-                break;
+    let running = Arc::new(AtomicBool::new(true));
+
+    if let Some(input) = system_stream {
+        let running_clone = running.clone();
+        let tx = system_tx.clone();
+        tokio::spawn(async move {
+            let mut stream = input;
+            while let Some(sample) = stream.next().await {
+                if !running_clone.load(Ordering::SeqCst) {
+                    break;
+                }
+                let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                let _ = tx.send(sample_i16).await;
             }
+        });
+    }
 
-            let mut received_audio = false;
+    if let Some(input) = mic_stream {
+        let running_clone = running.clone();
+        let tx = mic_tx.clone();
+        tokio::spawn(async move {
+            let mut stream = input;
+            while let Some(sample) = stream.next().await {
+                if !running_clone.load(Ordering::SeqCst) {
+                    break;
+                }
+                let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                let _ = tx.send(sample_i16).await;
+            }
+        });
+    }
 
-            if let Some(ref mut stream) = system_stream {
-                if let Some(sample) = stream.next().await {
-                    received_audio = true;
-                    tracing::trace!("System audio sample received");
-                    let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                    audio_buffer.extend_from_slice(&sample_i16.to_le_bytes());
-                    sample_count += 1;
+    drop(system_tx);
+    drop(mic_tx);
+
+    let mut system_buffer: Vec<i16> = Vec::new();
+    let mut mic_buffer: Vec<i16> = Vec::new();
+
+    loop {
+        if !TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
+            break;
+        }
+
+        tokio::select! {
+            result = system_rx.recv() => {
+                if let Ok(sample) = result {
+                    system_buffer.push(sample);
                 }
             }
-
-            if let Some(ref mut stream) = mic_stream {
-                if let Some(sample) = stream.next().await {
-                    received_audio = true;
-                    tracing::trace!("Microphone sample received");
-                    let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                    audio_buffer.extend_from_slice(&sample_i16.to_le_bytes());
-                    sample_count += 1;
+            result = mic_rx.recv() => {
+                if let Ok(sample) = result {
+                    mic_buffer.push(sample);
                 }
             }
+            _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
+        }
 
-            if !received_audio {
-                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-                continue;
-            }
+        let min_len = system_buffer.len().min(mic_buffer.len());
+        let has_both = min_len >= chunk_size;
+        let has_system_only = system_buffer.len() >= chunk_size && mic_buffer.len() < chunk_size;
+        let has_mic_only = mic_buffer.len() >= chunk_size && system_buffer.len() < chunk_size;
 
-            if sample_count >= chunk_size {
-                if !audio_buffer.is_empty() {
-                    let audio_to_send: Vec<u8> = if let Some(ratio) = decimation_ratio {
-                        audio_buffer
-                            .chunks_exact((ratio * 2) as usize)
-                            .flat_map(|chunk| {
-                                let sample_i16 = i16::from_le_bytes([chunk[0], chunk[1]]);
-                                sample_i16.to_le_bytes()
-                            })
-                            .collect()
-                    } else {
-                        audio_buffer.clone()
-                    };
+        if has_both || has_system_only || has_mic_only {
+            let mut audio_to_send = Vec::new();
 
-                    tracing::trace!(bytes = audio_to_send.len(), "Sending audio chunk to STT provider");
+            if has_both {
+                let system_chunk: Vec<i16> = system_buffer.drain(..chunk_size).collect();
+                let mic_chunk: Vec<i16> = mic_buffer.drain(..chunk_size).collect();
 
-                    if let Err(e) = stt_provider.send_audio(&audio_to_send).await {
-                        tracing::error!("Failed to send audio to STT provider: {}", e);
+                audio_to_send = if let Some(ratio) = decimation_ratio {
+                    let decimated_system: Vec<i16> = system_chunk.iter().step_by(ratio as usize).copied().collect();
+                    let decimated_mic: Vec<i16> = mic_chunk.iter().step_by(ratio as usize).copied().collect();
+                    let min_dec = decimated_system.len().min(decimated_mic.len());
+                    let mut interleaved = Vec::with_capacity(min_dec * 4);
+                    for i in 0..min_dec {
+                        interleaved.extend_from_slice(&decimated_system[i].to_le_bytes());
+                        interleaved.extend_from_slice(&decimated_mic[i].to_le_bytes());
                     }
-                    audio_buffer.clear();
-                    sample_count = 0;
+                    interleaved
+                } else {
+                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
+                    for i in 0..chunk_size {
+                        interleaved.extend_from_slice(&system_chunk[i].to_le_bytes());
+                        interleaved.extend_from_slice(&mic_chunk[i].to_le_bytes());
+                    }
+                    interleaved
+                };
+            } else if has_system_only {
+                let system_chunk: Vec<i16> = system_buffer.drain(..chunk_size).collect();
+                audio_to_send = if let Some(ratio) = decimation_ratio {
+                    let decimated: Vec<i16> = system_chunk.iter().step_by(ratio as usize).copied().collect();
+                    let mut interleaved = Vec::with_capacity(decimated.len() * 4);
+                    for sample in decimated {
+                        interleaved.extend_from_slice(&sample.to_le_bytes());
+                        interleaved.extend_from_slice(&0i16.to_le_bytes());
+                    }
+                    interleaved
+                } else {
+                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
+                    for sample in system_chunk {
+                        interleaved.extend_from_slice(&sample.to_le_bytes());
+                        interleaved.extend_from_slice(&0i16.to_le_bytes());
+                    }
+                    interleaved
+                };
+            } else if has_mic_only {
+                let mic_chunk: Vec<i16> = mic_buffer.drain(..chunk_size).collect();
+                audio_to_send = if let Some(ratio) = decimation_ratio {
+                    let decimated: Vec<i16> = mic_chunk.iter().step_by(ratio as usize).copied().collect();
+                    let mut interleaved = Vec::with_capacity(decimated.len() * 4);
+                    for sample in decimated {
+                        interleaved.extend_from_slice(&0i16.to_le_bytes());
+                        interleaved.extend_from_slice(&sample.to_le_bytes());
+                    }
+                    interleaved
+                } else {
+                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
+                    for sample in mic_chunk {
+                        interleaved.extend_from_slice(&0i16.to_le_bytes());
+                        interleaved.extend_from_slice(&sample.to_le_bytes());
+                    }
+                    interleaved
+                };
+            }
+
+            if !audio_to_send.is_empty() {
+                tracing::debug!(bytes = audio_to_send.len(), "Sending interleaved audio chunk to STT provider");
+                if let Err(e) = stt_provider.send_audio(&audio_to_send).await {
+                    tracing::error!("Failed to send audio to STT provider: {}", e);
                 }
             }
         }
+    }
+
+    running.store(false, Ordering::SeqCst);
 
         if let Err(e) = stt_provider.stop().await {
             tracing::error!("Failed to stop STT provider: {}", e);

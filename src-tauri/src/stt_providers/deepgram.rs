@@ -90,7 +90,7 @@ impl SttProvider for DeepgramProvider {
         let model = self.model.clone().unwrap_or_else(|| "nova-2".to_string());
 
         let url = format!(
-            "wss://api.deepgram.com/v1/listen?language={}&model={}&encoding=linear16&sample_rate=16000&channels=2&interim_results=true&punctuate=true",
+            "wss://api.deepgram.com/v1/listen?language={}&model={}&encoding=linear16&sample_rate=16000&channels=2&multichannel=true&interim_results=true&punctuate=true",
             language, model
         );
 
@@ -243,7 +243,16 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
         msg_type: Option<String>,
         #[serde(rename = "is_final")]
         is_final: Option<bool>,
+        channel_index: Option<ChannelIndex>,
         channel: Option<Channel>,
+    }
+
+    #[derive(Deserialize)]
+    struct ChannelIndex {
+        #[serde(rename = "0")]
+        channel: usize,
+        #[serde(rename = "1")]
+        total: Option<usize>,
     }
 
     #[derive(Deserialize)]
@@ -268,6 +277,12 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
 
     let is_final_result = response.is_final.unwrap_or(false);
 
+    let source = match response.channel_index {
+        Some(idx) if idx.channel == 0 => AudioSource::System,
+        Some(idx) if idx.channel == 1 => AudioSource::Microphone,
+        _ => AudioSource::System,
+    };
+
     if let Some(channel) = response.channel {
         if let Some(alt) = channel.alternatives.first() {
             let transcript = alt.transcript.trim();
@@ -278,6 +293,7 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
             tracing::trace!(
                 text = transcript,
                 is_final = is_final_result,
+                source = ?source,
                 confidence = alt.confidence,
                 "Deepgram response received"
             );
@@ -286,7 +302,7 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
                 text: transcript.to_string(),
                 is_final: is_final_result,
                 confidence: alt.confidence.unwrap_or(0.0),
-                source: AudioSource::System,
+                source,
             });
         }
     }
