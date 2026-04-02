@@ -4,7 +4,7 @@ use crate::db::transcript as transcript_repo;
 use crate::error::log_err;
 use crate::models::TranscriptionResult;
 use crate::stt_providers::{
-    create_stt_provider, AudioCaptureConfig, SttResultCallback, SttTranscriptResult,
+    create_stt_provider, AudioCaptureConfig, SttProviderSettings, SttResultCallback, SttTranscriptResult,
 };
 use futures_util::StreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,7 +15,6 @@ use uuid::Uuid;
 
 static TRANSCRIPTION_RUNNING: AtomicBool = AtomicBool::new(false);
 static CURRENT_CONVERSATION_ID: Mutex<Option<String>> = Mutex::new(None);
-static CURRENT_AUDIO_CONFIG: Mutex<Option<AudioCaptureConfig>> = Mutex::new(None);
 
 #[tauri::command]
 pub async fn update_transcription_session(conversation_id: String) -> Result<(), String> {
@@ -50,11 +49,19 @@ pub async fn start_transcription(
                 )
             })?;
 
+    let stt_type_log = match &stt_settings {
+        SttProviderSettings::Fake => "Fake".to_string(),
+        SttProviderSettings::Deepgram { api_key, language, model } => {
+            let masked_key = api_key.as_ref().map(|k| format!("{}****", &k[..4.min(k.len())]));
+            format!("Deepgram {{ api_key: {:?}, language: {:?}, model: {:?} }}", masked_key, language, model)
+        }
+    };
+
     tracing::info!(
         conversation_id,
         capture_system = audio_config.capture_system_audio,
         capture_mic = audio_config.capture_microphone,
-        stt_type = ?stt_settings,
+        stt_type = %stt_type_log,
         "start_transcription called"
     );
 
@@ -152,9 +159,16 @@ pub async fn start_transcription(
             }
         }
 
+        let source_sample_rate = 48000u32;
+        let target_sample_rate = 16000u32;
+        let decimation_ratio = if source_sample_rate != target_sample_rate {
+            Some(source_sample_rate / target_sample_rate)
+        } else {
+            None
+        };
+        let chunk_size = (source_sample_rate / 10) as usize;
+
         let mut audio_buffer: Vec<u8> = Vec::new();
-        let sample_rate = 48000u32;
-        let max_samples = sample_rate as usize * 2;
         let mut sample_count = 0usize;
 
         loop {
@@ -167,6 +181,7 @@ pub async fn start_transcription(
             if let Some(ref mut stream) = system_stream {
                 if let Some(sample) = stream.next().await {
                     received_audio = true;
+                    tracing::trace!("System audio sample received");
                     let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                     audio_buffer.extend_from_slice(&sample_i16.to_le_bytes());
                     sample_count += 1;
@@ -176,6 +191,7 @@ pub async fn start_transcription(
             if let Some(ref mut stream) = mic_stream {
                 if let Some(sample) = stream.next().await {
                     received_audio = true;
+                    tracing::trace!("Microphone sample received");
                     let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                     audio_buffer.extend_from_slice(&sample_i16.to_le_bytes());
                     sample_count += 1;
@@ -187,9 +203,23 @@ pub async fn start_transcription(
                 continue;
             }
 
-            if sample_count >= max_samples {
+            if sample_count >= chunk_size {
                 if !audio_buffer.is_empty() {
-                    if let Err(e) = stt_provider.send_audio(&audio_buffer).await {
+                    let audio_to_send: Vec<u8> = if let Some(ratio) = decimation_ratio {
+                        audio_buffer
+                            .chunks_exact((ratio * 2) as usize)
+                            .flat_map(|chunk| {
+                                let sample_i16 = i16::from_le_bytes([chunk[0], chunk[1]]);
+                                sample_i16.to_le_bytes()
+                            })
+                            .collect()
+                    } else {
+                        audio_buffer.clone()
+                    };
+
+                    tracing::trace!(bytes = audio_to_send.len(), "Sending audio chunk to STT provider");
+
+                    if let Err(e) = stt_provider.send_audio(&audio_to_send).await {
                         tracing::error!("Failed to send audio to STT provider: {}", e);
                     }
                     audio_buffer.clear();

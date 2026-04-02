@@ -1,4 +1,5 @@
-use crate::models::{AudioSource, FieldDescriptor, FieldType, ProviderDescriptor};
+use crate::models::AudioSource;
+use crate::models::{FieldDescriptor, FieldType, ProviderDescriptor};
 use async_channel::Sender;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
@@ -10,6 +11,18 @@ use std::sync::{Arc, Mutex};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
+
+const TARGET_SAMPLE_RATE: u32 = 16000;
+
+fn convert_f32_to_i16(samples: &[f32]) -> Vec<u8> {
+    let mut result = Vec::with_capacity(samples.len() * 2);
+    for &sample in samples {
+        let s = sample.max(-1.0).min(1.0);
+        let i16 = (s * 32767.0) as i16;
+        result.extend_from_slice(&i16.to_le_bytes());
+    }
+    result
+}
 
 pub fn deepgram_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {
@@ -77,25 +90,36 @@ impl SttProvider for DeepgramProvider {
         let model = self.model.clone().unwrap_or_else(|| "nova-2".to_string());
 
         let url = format!(
-            "wss://api.deepgram.com/v1/listen?language={}&model={}&encoding=linear16&sample_rate=16000&channels=1&interim_results=true&punctuate=true",
+            "wss://api.deepgram.com/v1/listen?language={}&model={}&encoding=linear16&sample_rate=16000&channels=2&interim_results=true&punctuate=true",
             language, model
         );
 
+        tracing::info!("Connecting to Deepgram WebSocket...");
+
         let mut request = url
             .into_client_request()
-            .map_err(|e| format!("Failed to create request: {}", e))?;
+            .map_err(|e| {
+                tracing::error!("Failed to create request: {}", e);
+                format!("Failed to create request: {}", e)
+            })?;
         request.headers_mut().insert(
             "Authorization",
             format!("Token {}", api_key)
                 .parse()
-                .map_err(|e| format!("Failed to parse header: {}", e))?,
+                .map_err(|e| {
+                    tracing::error!("Failed to parse header: {}", e);
+                    format!("Failed to parse header: {}", e)
+                })?,
         );
 
-        let (ws_stream, _) = connect_async(request)
+        let (ws_stream, response) = connect_async(request)
             .await
-            .map_err(|e| format!("Failed to connect to Deepgram: {}", e))?;
+            .map_err(|e| {
+                tracing::error!("Failed to connect to Deepgram: {}", e);
+                format!("Failed to connect to Deepgram: {}", e)
+            })?;
 
-        tracing::info!("Connected to Deepgram WebSocket");
+        tracing::info!("Connected to Deepgram WebSocket, response: {:?}", response.status());
 
         let (mut write, mut read) = ws_stream.split();
 
@@ -251,11 +275,18 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
                 return None;
             }
 
+            tracing::trace!(
+                text = transcript,
+                is_final = is_final_result,
+                confidence = alt.confidence,
+                "Deepgram response received"
+            );
+
             return Some(SttTranscriptResult {
                 text: transcript.to_string(),
                 is_final: is_final_result,
                 confidence: alt.confidence.unwrap_or(0.0),
-                source: AudioSource::Microphone,
+                source: AudioSource::System,
             });
         }
     }
