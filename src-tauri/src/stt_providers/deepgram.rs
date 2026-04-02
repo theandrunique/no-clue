@@ -1,10 +1,12 @@
-use super::{FieldDescriptor, FieldType, SttProvider, SttProviderDescriptor, SttResultCallback};
+use crate::models::{FieldDescriptor, FieldType, ProviderDescriptor};
+
+use super::{SttProvider, SttResultCallback};
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-pub fn deepgram_descriptor() -> SttProviderDescriptor {
-    SttProviderDescriptor {
+pub fn deepgram_descriptor() -> ProviderDescriptor {
+    ProviderDescriptor {
         id: "deepgram".to_string(),
         label: "Deepgram".to_string(),
         fields: vec![

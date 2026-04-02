@@ -2,7 +2,20 @@ import { defineStore } from "pinia";
 import { ref, onScopeDispose } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { TranscriptionResult } from "@/types";
+import type { TranscriptionResult } from "@/types";
+
+const SELECTED_STT_PROVIDER_KEY = "selected_stt_provider";
+
+interface AudioCaptureConfig {
+  capture_system_audio: boolean;
+  system_audio_device_id: string | null;
+  capture_microphone: boolean;
+  microphone_device_id: string | null;
+}
+
+type SttProviderConfig =
+  | { type: "Fake" }
+  | { type: "Deepgram"; api_key?: string; language?: string; model?: string };
 
 export const useTranscriptionStore = defineStore("transcription", () => {
   const isEnabled = ref(false);
@@ -14,14 +27,31 @@ export const useTranscriptionStore = defineStore("transcription", () => {
   let unlistenStopped: UnlistenFn | null = null;
   let listenersReady = false;
 
+  function getSelectedSttProvider(): string {
+    return localStorage.getItem(SELECTED_STT_PROVIDER_KEY) || "fake";
+  }
+
+  function buildSttSettings(providerId: string): SttProviderConfig {
+    if (providerId === "deepgram") {
+      return { type: "Deepgram" };
+    }
+    return { type: "Fake" };
+  }
+
+  function buildAudioConfig(): AudioCaptureConfig {
+    return {
+      capture_system_audio: true,
+      system_audio_device_id: null,
+      capture_microphone: true,
+      microphone_device_id: null,
+    };
+  }
+
   async function setupListeners() {
     if (listenersReady) return;
     listenersReady = true;
 
-    console.log("[TranscriptionStore] Setting up listeners");
-
     unlistenResult = await listen<TranscriptionResult>("transcription-result", (event) => {
-      console.log("[TranscriptionStore] transcription-result received:", event.payload);
       const payload = event.payload;
 
       if (payload.isFinal) {
@@ -33,12 +63,10 @@ export const useTranscriptionStore = defineStore("transcription", () => {
     });
 
     unlistenStarted = await listen("transcription-started", () => {
-      console.log("[TranscriptionStore] transcription-started received");
       isEnabled.value = true;
     });
 
     unlistenStopped = await listen("transcription-stopped", () => {
-      console.log("[TranscriptionStore] transcription-stopped received");
       isEnabled.value = false;
     });
 
@@ -50,17 +78,19 @@ export const useTranscriptionStore = defineStore("transcription", () => {
   }
 
   async function setIsEnabled(value: boolean) {
-    console.log("[TranscriptionStore] setIsEnabled called:", value, "current:", isEnabled.value);
-    
     await setupListeners();
-    console.log("[TranscriptionStore] Listeners ready");
 
     try {
       if (value) {
-        console.log("[TranscriptionStore] Calling start_transcription");
-        await invoke("start_transcription");
+        const providerId = getSelectedSttProvider();
+        const sttSettings = buildSttSettings(providerId);
+        const audioConfig = buildAudioConfig();
+
+        await invoke("start_transcription", {
+          audioConfig,
+          sttSettings,
+        });
       } else {
-        console.log("[TranscriptionStore] Calling stop_transcription");
         await invoke("stop_transcription");
       }
     } catch (e) {

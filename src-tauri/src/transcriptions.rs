@@ -16,10 +16,7 @@ static CURRENT_CONVERSATION_ID: Mutex<Option<String>> = Mutex::new(None);
 
 #[tauri::command]
 pub async fn update_transcription_session(conversation_id: String) -> Result<(), String> {
-    tracing::debug!(
-        conversation_id = %conversation_id,
-        "update_transcription_session called"
-    );
+    tracing::trace!(conversation_id, "update_transcription_session called");
     let mut current = CURRENT_CONVERSATION_ID.lock().map_err(|e| e.to_string())?;
     *current = Some(conversation_id);
     Ok(())
@@ -37,7 +34,7 @@ pub async fn start_transcription(
     };
 
     tracing::info!(
-        conversation_id = %conversation_id,
+        conversation_id,
         capture_system = audio_config.capture_system_audio,
         capture_mic = audio_config.capture_microphone,
         stt_type = ?stt_settings,

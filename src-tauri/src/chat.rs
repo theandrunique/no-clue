@@ -1,4 +1,4 @@
-use crate::ai_providers::{create_provider, AiRequest, AiStreamEvent};
+use crate::ai_providers::{create_ai_provider, AiRequest, AiStreamEvent};
 use crate::db::ai_provider as provider_repo;
 use crate::db::message as msg_repo;
 use crate::error::log_err;
@@ -82,7 +82,7 @@ pub async fn send_message(
             })?;
 
     let ai_provider =
-        create_provider(&provider_settings).map_err(|e| log_err(e, "create_provider"))?;
+        create_ai_provider(&provider_settings).map_err(|e| log_err(e, "create_provider"))?;
 
     // Get chat history for context
     let conv_id_for_history = conversation_id.clone();

@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+mod provider;
+pub use provider::*;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: String,

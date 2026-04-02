@@ -1,13 +1,14 @@
 use crate::{
     ai_providers::{
         ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor,
-        AiProviderDescriptor, AiProviderSettings,
+        AiProviderSettings,
     },
     db::ai_provider as provider_repo,
+    models::ProviderDescriptor,
 };
 
 #[tauri::command]
-pub fn get_ai_providers() -> Vec<AiProviderDescriptor> {
+pub fn get_ai_providers() -> Vec<ProviderDescriptor> {
     tracing::trace!("get_ai_providers called");
     vec![
         fake_provider_descriptor(),

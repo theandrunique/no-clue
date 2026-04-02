@@ -33,9 +33,9 @@ export const useConversationStore = defineStore("conversation", () => {
 
   async function sendMessage(content: string) {
     await ensureConversation();
-    
+
     // Read from localStorage directly - this works across windows
-    const savedProvider = localStorage.getItem("selected_provider");
+    const savedProvider = localStorage.getItem("selected_ai_provider");
     const provider = savedProvider || "fake";
     await chatStore.sendMessage(currentConversationId.value!, content, provider);
   }

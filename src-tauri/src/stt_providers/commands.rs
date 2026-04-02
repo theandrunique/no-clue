@@ -1,13 +1,13 @@
 use crate::{
     db::stt_provider as stt_provider_repo,
+    models::ProviderDescriptor,
     stt_providers::{
-        deepgram::deepgram_descriptor, fake::fake_stt_descriptor, SttProviderDescriptor,
-        SttProviderSettings,
+        deepgram::deepgram_descriptor, fake::fake_stt_descriptor, SttProviderSettings,
     },
 };
 
 #[tauri::command]
-pub fn get_stt_providers() -> Vec<SttProviderDescriptor> {
+pub fn get_stt_providers() -> Vec<ProviderDescriptor> {
     tracing::trace!("get_stt_providers called");
     vec![fake_stt_descriptor(), deepgram_descriptor()]
 }

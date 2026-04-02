@@ -19,6 +19,11 @@ pub trait AiProvider: Send + Sync {
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String>;
 }
 
+pub enum AiStreamEvent {
+    Chunk { content: String, is_finish: bool },
+    Error { code: String, message: String },
+}
+
 pub struct AiRequest {
     pub messages: Vec<Message>,
     pub system_prompt: Option<String>,
@@ -45,11 +50,6 @@ impl AiRequest {
     }
 }
 
-pub enum AiStreamEvent {
-    Chunk { content: String, is_finish: bool },
-    Error { code: String, message: String },
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum AiProviderSettings {
@@ -64,33 +64,7 @@ pub enum AiProviderSettings {
     },
 }
 
-#[derive(Serialize)]
-pub struct AiProviderDescriptor {
-    pub id: String,
-    pub label: String,
-    pub fields: Vec<FieldDescriptor>,
-}
-
-#[derive(Serialize)]
-pub struct FieldDescriptor {
-    pub key: String,
-    pub label: String,
-    pub field_type: FieldType,
-    pub required: bool,
-    pub placeholder: Option<String>,
-}
-
-#[derive(Serialize)]
-pub enum FieldType {
-    #[serde(rename = "text")]
-    Text,
-    #[serde(rename = "password")]
-    Password,
-    #[serde(rename = "select")]
-    Select { options: Vec<String> },
-}
-
-pub fn create_provider(settings: &AiProviderSettings) -> Result<Box<dyn AiProvider>, String> {
+pub fn create_ai_provider(settings: &AiProviderSettings) -> Result<Box<dyn AiProvider>, String> {
     match settings {
         AiProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
         AiProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {

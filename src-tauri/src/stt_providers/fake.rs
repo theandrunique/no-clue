@@ -1,15 +1,14 @@
-use super::{
-    FieldDescriptor, FieldType, SttProvider, SttProviderDescriptor, SttResultCallback,
-    SttTranscriptResult,
-};
+use crate::models::ProviderDescriptor;
+
+use super::{SttProvider, SttResultCallback, SttTranscriptResult};
 use async_trait::async_trait;
 use chrono::Utc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub fn fake_stt_descriptor() -> SttProviderDescriptor {
-    SttProviderDescriptor {
+pub fn fake_stt_descriptor() -> ProviderDescriptor {
+    ProviderDescriptor {
         id: "fake".to_string(),
         label: "Fake (Testing)".to_string(),
         fields: vec![],

@@ -1,7 +1,7 @@
-use crate::ai_providers::{AiProviderDescriptor, FieldDescriptor, FieldType};
+use crate::models::{FieldDescriptor, FieldType, ProviderDescriptor};
 
-pub fn ai_tunnel_descriptor() -> AiProviderDescriptor {
-    AiProviderDescriptor {
+pub fn ai_tunnel_descriptor() -> ProviderDescriptor {
+    ProviderDescriptor {
         id: "aitunnel".into(),
         label: "AI Tunnel".into(),
         fields: vec![

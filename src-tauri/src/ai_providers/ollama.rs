@@ -1,13 +1,16 @@
-use crate::ai_providers::{
-    utils::{build_json_messages, truncate_json_body},
-    AiProvider, AiProviderDescriptor, AiRequest, AiStreamEvent, FieldDescriptor, FieldType,
+use crate::{
+    ai_providers::{
+        utils::{build_json_messages, truncate_json_body},
+        AiProvider, AiRequest, AiStreamEvent,
+    },
+    models::{FieldDescriptor, FieldType, ProviderDescriptor},
 };
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
 use reqwest::Client;
 
-pub fn ollama_descriptor() -> AiProviderDescriptor {
-    AiProviderDescriptor {
+pub fn ollama_descriptor() -> ProviderDescriptor {
+    ProviderDescriptor {
         id: "ollama".into(),
         label: "Ollama".into(),
         fields: vec![

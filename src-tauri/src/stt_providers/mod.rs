@@ -19,55 +19,12 @@ pub enum SttProviderSettings {
     },
 }
 
-impl Default for SttProviderSettings {
-    fn default() -> Self {
-        Self::Fake
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioCaptureConfig {
     pub capture_system_audio: bool,
     pub system_audio_device_id: Option<String>,
     pub capture_microphone: bool,
     pub microphone_device_id: Option<String>,
-}
-
-impl Default for AudioCaptureConfig {
-    fn default() -> Self {
-        Self {
-            capture_system_audio: false,
-            system_audio_device_id: None,
-            capture_microphone: false,
-            microphone_device_id: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FieldDescriptor {
-    pub key: String,
-    pub label: String,
-    pub field_type: FieldType,
-    pub required: bool,
-    pub placeholder: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FieldType {
-    #[serde(rename = "text")]
-    Text,
-    #[serde(rename = "password")]
-    Password,
-    #[serde(rename = "select")]
-    Select { options: Vec<String> },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SttProviderDescriptor {
-    pub id: String,
-    pub label: String,
-    pub fields: Vec<FieldDescriptor>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,8 +53,8 @@ pub trait SttProvider: Send + Sync {
     fn set_result_callback(&mut self, callback: SttResultCallback);
 }
 
-pub fn create_stt_provider(config: &SttProviderSettings) -> Result<Box<dyn SttProvider>, String> {
-    match config {
+pub fn create_stt_provider(settings: &SttProviderSettings) -> Result<Box<dyn SttProvider>, String> {
+    match settings {
         SttProviderSettings::Fake => Ok(Box::new(fake::FakeSttProvider::new())),
         SttProviderSettings::Deepgram {
             api_key,
@@ -109,8 +66,4 @@ pub fn create_stt_provider(config: &SttProviderSettings) -> Result<Box<dyn SttPr
             model.clone(),
         ))),
     }
-}
-
-pub fn get_stt_descriptors() -> Vec<SttProviderDescriptor> {
-    vec![fake::fake_stt_descriptor(), deepgram::deepgram_descriptor()]
 }
