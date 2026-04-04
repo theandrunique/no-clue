@@ -22,6 +22,7 @@ static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 mod ai_providers;
 mod audio_capture;
+mod audio_processing;
 mod chat;
 mod conversations;
 mod db;
@@ -63,7 +64,7 @@ pub fn run() {
                 .with_target(true);
 
             let env_filter = EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn"));
+                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn,tungstenite=warn,tokio_tungstenite=warn"));
 
             tracing_subscriber::registry()
                 .with(env_filter)

@@ -1,10 +1,12 @@
 use crate::audio_capture::{AudioInput, AudioStream};
+use crate::audio_processing::AudioProcessor;
 use crate::db::stt_provider as stt_provider_repo;
 use crate::db::transcript as transcript_repo;
 use crate::error::log_err;
 use crate::models::TranscriptionResult;
 use crate::stt_providers::{
-    create_stt_provider, AudioCaptureConfig, SttProviderSettings, SttResultCallback, SttTranscriptResult,
+    create_stt_provider, AudioCaptureConfig, SttProviderSettings, SttResultCallback,
+    SttTranscriptResult,
 };
 use async_channel;
 use futures_util::StreamExt;
@@ -52,9 +54,18 @@ pub async fn start_transcription(
 
     let stt_type_log = match &stt_settings {
         SttProviderSettings::Fake => "Fake".to_string(),
-        SttProviderSettings::Deepgram { api_key, language, model } => {
-            let masked_key = api_key.as_ref().map(|k| format!("{}****", &k[..4.min(k.len())]));
-            format!("Deepgram {{ api_key: {:?}, language: {:?}, model: {:?} }}", masked_key, language, model)
+        SttProviderSettings::Deepgram {
+            api_key,
+            language,
+            model,
+        } => {
+            let masked_key = api_key
+                .as_ref()
+                .map(|k| format!("{}****", &k[..4.min(k.len())]));
+            format!(
+                "Deepgram {{ api_key: {:?}, language: {:?}, model: {:?} }}",
+                masked_key, language, model
+            )
         }
     };
 
@@ -139,8 +150,12 @@ pub async fn start_transcription(
         if audio_config.capture_system_audio {
             match AudioInput::system(audio_config.system_audio_device_id.clone()) {
                 Ok(input) => {
-                    tracing::info!("System audio stream created");
-                    system_stream = Some(input.stream());
+                    let stream = input.stream();
+                    tracing::info!(
+                        "System audio stream created, sample rate: {}",
+                        stream.sample_rate()
+                    );
+                    system_stream = Some(stream);
                 }
                 Err(e) => {
                     tracing::error!("Failed to create system audio stream: {}", e);
@@ -151,8 +166,12 @@ pub async fn start_transcription(
         if audio_config.capture_microphone {
             match AudioInput::microphone(audio_config.microphone_device_id.clone()) {
                 Ok(input) => {
-                    tracing::info!("Microphone stream created");
-                    mic_stream = Some(input.stream());
+                    let stream = input.stream();
+                    tracing::info!(
+                        "Microphone stream created, sample rate: {}",
+                        stream.sample_rate()
+                    );
+                    mic_stream = Some(stream);
                 }
                 Err(e) => {
                     tracing::error!("Failed to create microphone stream: {}", e);
@@ -160,153 +179,148 @@ pub async fn start_transcription(
             }
         }
 
-    let source_sample_rate = 48000u32;
-    let target_sample_rate = 16000u32;
-    let decimation_ratio = if source_sample_rate != target_sample_rate {
-        Some(source_sample_rate / target_sample_rate)
-    } else {
-        None
-    };
-    let chunk_size = (source_sample_rate / 10) as usize;
+        let actual_source_rate = if let Some(ref stream) = system_stream {
+            stream.sample_rate()
+        } else if let Some(ref stream) = mic_stream {
+            stream.sample_rate()
+        } else {
+            tracing::error!("No audio streams available");
+            return;
+        };
 
-    let (system_tx, system_rx) = async_channel::bounded(1024);
-    let (mic_tx, mic_rx) = async_channel::bounded(1024);
+        const TARGET_SAMPLE_RATE: u32 = 16000;
+        const CHUNK_DURATION_MS: u32 = 100;
 
-    let running = Arc::new(AtomicBool::new(true));
+        let mut processor =
+            AudioProcessor::new(actual_source_rate, TARGET_SAMPLE_RATE, CHUNK_DURATION_MS);
+        let chunk_size = processor.chunk_samples();
 
-    if let Some(input) = system_stream {
-        let running_clone = running.clone();
-        let tx = system_tx.clone();
-        tokio::spawn(async move {
-            let mut stream = input;
-            while let Some(sample) = stream.next().await {
-                if !running_clone.load(Ordering::SeqCst) {
-                    break;
+        let (system_tx, system_rx) = async_channel::bounded(2048);
+        let (mic_tx, mic_rx) = async_channel::bounded(2048);
+
+        let running = Arc::new(AtomicBool::new(true));
+
+        if let Some(input) = system_stream {
+            let running_clone = running.clone();
+            let tx = system_tx.clone();
+            tokio::spawn(async move {
+                let mut stream = input;
+                while let Some(sample) = stream.next().await {
+                    if !running_clone.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                    let _ = tx.send(sample_i16).await;
                 }
-                let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                let _ = tx.send(sample_i16).await;
-            }
-        });
-    }
-
-    if let Some(input) = mic_stream {
-        let running_clone = running.clone();
-        let tx = mic_tx.clone();
-        tokio::spawn(async move {
-            let mut stream = input;
-            while let Some(sample) = stream.next().await {
-                if !running_clone.load(Ordering::SeqCst) {
-                    break;
-                }
-                let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-                let _ = tx.send(sample_i16).await;
-            }
-        });
-    }
-
-    drop(system_tx);
-    drop(mic_tx);
-
-    let mut system_buffer: Vec<i16> = Vec::new();
-    let mut mic_buffer: Vec<i16> = Vec::new();
-
-    loop {
-        if !TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
-            break;
+                tracing::info!("System audio capture task ended");
+            });
         }
 
-        tokio::select! {
-            result = system_rx.recv() => {
-                if let Ok(sample) = result {
-                    system_buffer.push(sample);
+        if let Some(input) = mic_stream {
+            let running_clone = running.clone();
+            let tx = mic_tx.clone();
+            tokio::spawn(async move {
+                let mut stream = input;
+                while let Some(sample) = stream.next().await {
+                    if !running_clone.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    let sample_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                    let _ = tx.send(sample_i16).await;
                 }
-            }
-            result = mic_rx.recv() => {
-                if let Ok(sample) = result {
-                    mic_buffer.push(sample);
-                }
-            }
-            _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
+                tracing::info!("Microphone capture task ended");
+            });
         }
 
-        let min_len = system_buffer.len().min(mic_buffer.len());
-        let has_both = min_len >= chunk_size;
-        let has_system_only = system_buffer.len() >= chunk_size && mic_buffer.len() < chunk_size;
-        let has_mic_only = mic_buffer.len() >= chunk_size && system_buffer.len() < chunk_size;
+        drop(system_tx);
+        drop(mic_tx);
 
-        if has_both || has_system_only || has_mic_only {
-            let mut audio_to_send = Vec::new();
+        let mut system_buffer: Vec<i16> = Vec::with_capacity(chunk_size * 2);
+        let mut mic_buffer: Vec<i16> = Vec::with_capacity(chunk_size * 2);
 
-            if has_both {
-                let system_chunk: Vec<i16> = system_buffer.drain(..chunk_size).collect();
-                let mic_chunk: Vec<i16> = mic_buffer.drain(..chunk_size).collect();
+        let capture_system = audio_config.capture_system_audio;
+        let capture_mic = audio_config.capture_microphone;
 
-                audio_to_send = if let Some(ratio) = decimation_ratio {
-                    let decimated_system: Vec<i16> = system_chunk.iter().step_by(ratio as usize).copied().collect();
-                    let decimated_mic: Vec<i16> = mic_chunk.iter().step_by(ratio as usize).copied().collect();
-                    let min_dec = decimated_system.len().min(decimated_mic.len());
-                    let mut interleaved = Vec::with_capacity(min_dec * 4);
-                    for i in 0..min_dec {
-                        interleaved.extend_from_slice(&decimated_system[i].to_le_bytes());
-                        interleaved.extend_from_slice(&decimated_mic[i].to_le_bytes());
-                    }
-                    interleaved
-                } else {
-                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
-                    for i in 0..chunk_size {
-                        interleaved.extend_from_slice(&system_chunk[i].to_le_bytes());
-                        interleaved.extend_from_slice(&mic_chunk[i].to_le_bytes());
-                    }
-                    interleaved
-                };
-            } else if has_system_only {
-                let system_chunk: Vec<i16> = system_buffer.drain(..chunk_size).collect();
-                audio_to_send = if let Some(ratio) = decimation_ratio {
-                    let decimated: Vec<i16> = system_chunk.iter().step_by(ratio as usize).copied().collect();
-                    let mut interleaved = Vec::with_capacity(decimated.len() * 4);
-                    for sample in decimated {
-                        interleaved.extend_from_slice(&sample.to_le_bytes());
-                        interleaved.extend_from_slice(&0i16.to_le_bytes());
-                    }
-                    interleaved
-                } else {
-                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
-                    for sample in system_chunk {
-                        interleaved.extend_from_slice(&sample.to_le_bytes());
-                        interleaved.extend_from_slice(&0i16.to_le_bytes());
-                    }
-                    interleaved
-                };
-            } else if has_mic_only {
-                let mic_chunk: Vec<i16> = mic_buffer.drain(..chunk_size).collect();
-                audio_to_send = if let Some(ratio) = decimation_ratio {
-                    let decimated: Vec<i16> = mic_chunk.iter().step_by(ratio as usize).copied().collect();
-                    let mut interleaved = Vec::with_capacity(decimated.len() * 4);
-                    for sample in decimated {
-                        interleaved.extend_from_slice(&0i16.to_le_bytes());
-                        interleaved.extend_from_slice(&sample.to_le_bytes());
-                    }
-                    interleaved
-                } else {
-                    let mut interleaved = Vec::with_capacity(chunk_size * 4);
-                    for sample in mic_chunk {
-                        interleaved.extend_from_slice(&0i16.to_le_bytes());
-                        interleaved.extend_from_slice(&sample.to_le_bytes());
-                    }
-                    interleaved
-                };
+        loop {
+            if !TRANSCRIPTION_RUNNING.load(Ordering::SeqCst) {
+                break;
             }
 
-            if !audio_to_send.is_empty() {
-                tracing::debug!(bytes = audio_to_send.len(), "Sending interleaved audio chunk to STT provider");
-                if let Err(e) = stt_provider.send_audio(&audio_to_send).await {
-                    tracing::error!("Failed to send audio to STT provider: {}", e);
+            tokio::select! {
+                result = system_rx.recv() => {
+                    if let Ok(sample) = result {
+                        system_buffer.push(sample);
+                    }
+                }
+                result = mic_rx.recv() => {
+                    if let Ok(sample) = result {
+                        mic_buffer.push(sample);
+                    }
+                }
+                _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
+            }
+
+            let has_system = capture_system && system_buffer.len() >= chunk_size;
+            let has_mic = capture_mic && mic_buffer.len() >= chunk_size;
+
+            let should_process = if capture_system && capture_mic {
+                has_system && has_mic
+            } else {
+                has_system || has_mic
+            };
+
+            if should_process {
+                let sys_chunk = if has_system {
+                    Some(system_buffer.drain(..chunk_size).collect::<Vec<_>>())
+                } else {
+                    None
+                };
+                let mic_chunk = if has_mic {
+                    Some(mic_buffer.drain(..chunk_size).collect::<Vec<_>>())
+                } else {
+                    None
+                };
+
+                let audio_data =
+                    processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
+
+                if !audio_data.is_empty() {
+                    if let Err(e) = stt_provider.send_audio(&audio_data).await {
+                        tracing::error!("Failed to send audio to STT provider: {}", e);
+                    }
                 }
             }
         }
-    }
 
-    running.store(false, Ordering::SeqCst);
+        if !system_buffer.is_empty() || !mic_buffer.is_empty() {
+            let sys_chunk = if !system_buffer.is_empty() && capture_system {
+                Some(std::mem::take(&mut system_buffer))
+            } else {
+                None
+            };
+            let mic_chunk = if !mic_buffer.is_empty() && capture_mic {
+                Some(std::mem::take(&mut mic_buffer))
+            } else {
+                None
+            };
+            let audio_data = processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
+            if !audio_data.is_empty() {
+                let _ = stt_provider.send_audio(&audio_data).await;
+            }
+        }
+
+        running.store(false, Ordering::SeqCst);
+
+        let metrics = processor.get_metrics();
+        tracing::info!(
+            chunks = metrics.chunks_processed,
+            bytes_sent = metrics.bytes_sent,
+            system_chunks = metrics.system_chunks,
+            mic_chunks = metrics.mic_chunks,
+            mixed_chunks = metrics.mixed_chunks,
+            underruns = metrics.buffer_underruns,
+            "Audio processing metrics"
+        );
 
         if let Err(e) = stt_provider.stop().await {
             tracing::error!("Failed to stop STT provider: {}", e);
