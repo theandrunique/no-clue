@@ -119,13 +119,25 @@ onMounted(() => {
       </Button>
     </div>
 
-    <SystemPromptCard
-      :prompts="prompts"
-      :selected-id="selectedPrompt?.id ?? activePromptId"
-      @select="handleSelect"
-      @edit="openEditDialog"
-      @request-delete="handleRequestDelete"
-    />
+    <div class="flex-1 overflow-y-auto p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SystemPromptCard
+          v-for="prompt in prompts"
+          :key="prompt.id"
+          :prompt="prompt"
+          :is-selected="selectedPrompt?.id === prompt.id || activePromptId === prompt.id"
+          @select="handleSelect"
+          @edit="openEditDialog"
+          @request-delete="handleRequestDelete"
+        />
+        <div
+          v-if="prompts.length === 0"
+          class="col-span-full flex items-center justify-center text-muted-foreground text-sm py-8"
+        >
+          No system prompts yet
+        </div>
+      </div>
+    </div>
 
     <SystemPromptDialog
       :open="dialogOpen"
