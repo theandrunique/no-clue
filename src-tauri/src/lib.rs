@@ -64,7 +64,7 @@ pub fn run() {
                 .with_target(true);
 
             let env_filter = EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn,tungstenite=warn,tokio_tungstenite=warn"));
+                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn,tungstenite=warn,tokio_tungstenite=warn,tao=warn"));
 
             tracing_subscriber::registry()
                 .with(env_filter)

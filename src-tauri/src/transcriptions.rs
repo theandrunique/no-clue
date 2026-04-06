@@ -246,20 +246,6 @@ pub async fn start_transcription(
                 break;
             }
 
-            tokio::select! {
-                result = system_rx.recv() => {
-                    if let Ok(sample) = result {
-                        system_buffer.push(sample);
-                    }
-                }
-                result = mic_rx.recv() => {
-                    if let Ok(sample) = result {
-                        mic_buffer.push(sample);
-                    }
-                }
-                _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
-            }
-
             let has_system = capture_system && system_buffer.len() >= chunk_size;
             let has_mic = capture_mic && mic_buffer.len() >= chunk_size;
 
@@ -281,14 +267,28 @@ pub async fn start_transcription(
                     None
                 };
 
-                let audio_data =
-                    processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
+                let audio_data = processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
 
                 if !audio_data.is_empty() {
                     if let Err(e) = stt_provider.send_audio(&audio_data).await {
                         tracing::error!("Failed to send audio to STT provider: {}", e);
                     }
                 }
+                continue;
+            }
+
+            tokio::select! {
+                result = system_rx.recv(), if capture_system => {
+                    if let Ok(sample) = result {
+                        system_buffer.push(sample);
+                    }
+                }
+                result = mic_rx.recv(), if capture_mic => {
+                    if let Ok(sample) = result {
+                        mic_buffer.push(sample);
+                    }
+                }
+                _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
             }
         }
 
