@@ -71,6 +71,8 @@ export const useChatStore = defineStore("chat", () => {
     currentStreamingConversationId.value = conversationId;
     await setupListeners();
 
+    const systemPromptId = localStorage.getItem("active_system_prompt_id");
+
     const newMessage: Message = {
       id: crypto.randomUUID(),
       conversationId,
@@ -87,6 +89,7 @@ export const useChatStore = defineStore("chat", () => {
         conversationId,
         userMessage: content,
         captureScreenshot: isScreenshotEnabled.value,
+        systemPromptId,
       });
     } catch (error) {
       console.error("[ChatStore] Failed to send message:", error);

@@ -32,3 +32,11 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface SystemPrompt {
+  id: string;
+  name: string;
+  prompt: string;
+  createdAt: number;
+  updatedAt: number;
+}

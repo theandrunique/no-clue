@@ -9,6 +9,10 @@ use crate::{
         get_messages, get_transcripts,
     },
     stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings},
+    system_prompts::{
+        create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
+        update_system_prompt,
+    },
     transcriptions::{start_transcription, stop_transcription, update_transcription_session},
     utils::{move_overlay, open_dashboard, set_overlay_visible},
 };
@@ -30,6 +34,7 @@ mod error;
 mod models;
 mod screenshot;
 mod stt_providers;
+mod system_prompts;
 mod transcriptions;
 mod utils;
 
@@ -102,6 +107,11 @@ pub fn run() {
             get_output_devices,
             test_system_audio,
             test_microphone_audio,
+            get_system_prompts,
+            get_system_prompt,
+            create_system_prompt,
+            update_system_prompt,
+            delete_system_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

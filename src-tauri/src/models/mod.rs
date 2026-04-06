@@ -4,6 +4,17 @@ mod provider;
 pub use provider::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemPrompt {
+    pub id: String,
+    pub name: String,
+    pub prompt: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: i64,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: String,
     pub title: String,

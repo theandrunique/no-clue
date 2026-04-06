@@ -6,6 +6,7 @@ pub mod ai_provider;
 pub mod conversation;
 pub mod message;
 pub mod stt_provider;
+pub mod system_prompt;
 pub mod transcript;
 
 static DB_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);

@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: "system-prompts",
         name: "system-prompts",
-        component: () => import("../views/dashboard/tabs/SystemPromptsTab.vue"),
+        component: () => import("../views/dashboard/tabs/SystemPromptsTab"),
       },
       {
         path: "shortcuts",

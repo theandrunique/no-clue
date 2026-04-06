@@ -26,11 +26,11 @@ CREATE TABLE IF NOT EXISTS transcripts (
 );
 
 CREATE TABLE IF NOT EXISTS system_prompts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     prompt TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now')) NOT NULL,
-    updated_at TEXT DEFAULT (datetime('now')) NOT NULL
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ai_providers (

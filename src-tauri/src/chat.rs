@@ -1,6 +1,7 @@
 use crate::ai_providers::{create_ai_provider, AiRequest, AiStreamEvent};
 use crate::db::ai_provider as provider_repo;
 use crate::db::message as msg_repo;
+use crate::db::system_prompt as system_prompt_repo;
 use crate::error::log_err;
 use crate::models::{ChatStreamEvent, MessageRole};
 use crate::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult};
@@ -19,11 +20,13 @@ pub async fn send_message(
     conversation_id: String,
     user_message: String,
     capture_screenshot: bool,
+    system_prompt_id: Option<String>,
 ) -> Result<(), String> {
     tracing::trace!(
         provider = %provider,
         conversation_id = %conversation_id,
         capture_screenshot,
+        system_prompt_id = ?system_prompt_id,
         user_message = %user_message,
         "send_message called"
     );
@@ -92,8 +95,25 @@ pub async fn send_message(
             .map_err(|e| log_err(e, "get_chat_history"))?
             .map_err(|e| log_err(e, "get_chat_history"))?;
 
+    // Get system prompt if provided
+    let system_prompt_text = if let Some(ref sp_id) = system_prompt_id {
+        let sp_id_clone = sp_id.clone();
+        tokio::task::spawn_blocking(move || system_prompt_repo::get_by_id(&sp_id_clone))
+            .await
+            .map_err(|e| log_err(e, "get_system_prompt"))?
+            .map_err(|e| log_err(e, "get_system_prompt"))?
+            .map(|sp| sp.prompt)
+    } else {
+        None
+    };
+
     // Build AI request
     let mut request = AiRequest::new(history);
+
+    // Add system prompt
+    if let Some(sp) = system_prompt_text {
+        request = request.with_system_prompt(sp);
+    }
 
     // Add screenshot if captured (as base64)
     if let Some(b64) = screenshot_base64 {
