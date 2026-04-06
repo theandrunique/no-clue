@@ -28,11 +28,14 @@ export const useTranscriptionStore = defineStore("transcription", () => {
   }
 
   function buildAudioConfig(): AudioCaptureConfig {
+    const raw = localStorage.getItem("no-clue-audio-settings");
+    const lsSettings = raw ? JSON.parse(raw) : {};
+
     return {
-      capture_system_audio: true,
-      system_audio_device_id: null,
-      capture_microphone: true,
-      microphone_device_id: null,
+      capture_system_audio: lsSettings.capture_system,
+      capture_microphone: lsSettings.capture_microphone,
+      system_audio_device_id: lsSettings.system_device_id,
+      microphone_device_id: lsSettings.microphone_device_id,
     };
   }
 
