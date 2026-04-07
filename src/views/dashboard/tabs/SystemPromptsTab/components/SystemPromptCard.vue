@@ -45,13 +45,13 @@ function truncateText(text: string, maxLen: number) {
     }"
     @dblclick="emit('select', prompt)"
   >
-    <CardContent class="p-4 py-0">
+    <CardContent class="flex flex-col h-full p-4 py-0">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <span class="font-semibold text-sm truncate">{{ prompt.name }}</span>
         </div>
       </div>
-      <p class="text-xs text-muted-foreground line-clamp-3">
+      <p class="grow text-xs text-muted-foreground line-clamp-3">
         {{ truncateText(prompt.prompt, 150) }}
       </p>
       <p class="text-xs text-muted-foreground mt-3">

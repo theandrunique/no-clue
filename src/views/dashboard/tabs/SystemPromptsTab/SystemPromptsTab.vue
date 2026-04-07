@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { ref } from "vue";
+import { onMounted } from "vue";
+import { storeToRefs } from "pinia";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-vue-next";
 import {
@@ -11,83 +12,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useSystemPromptsStore } from "@/stores/systemPrompts";
 import { type SystemPrompt } from "@/types";
 import SystemPromptCard from "./components/SystemPromptCard.vue";
 import SystemPromptDialog from "./components/SystemPromptDialog.vue";
 
-const prompts = ref<SystemPrompt[]>([]);
-const selectedPrompt = ref<SystemPrompt | null>(null);
+const store = useSystemPromptsStore();
+const { prompts, activePromptId } = storeToRefs(store);
+
 const dialogOpen = ref(false);
 const editingPrompt = ref<SystemPrompt | null>(null);
-const loading = ref(false);
-
-const ACTIVE_PROMPT_KEY = "active_system_prompt_id";
-const activePromptId = ref<string | null>(null);
 
 const deleteConfirmOpen = ref(false);
 const pendingDeleteId = ref<string | null>(null);
-
-function getActivePromptId(): string | null {
-  return localStorage.getItem(ACTIVE_PROMPT_KEY);
-}
-
-async function loadPrompts() {
-  loading.value = true;
-  try {
-    prompts.value = await invoke<SystemPrompt[]>("get_system_prompts");
-    activePromptId.value = getActivePromptId();
-  } catch (e) {
-    console.error("Failed to load prompts:", e);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function handleSave(payload: { name: string; prompt: string }) {
-  try {
-    if (editingPrompt.value) {
-      await invoke("update_system_prompt", {
-        id: editingPrompt.value.id,
-        name: payload.name,
-        prompt: payload.prompt,
-      });
-    } else {
-      const newPrompt = await invoke<SystemPrompt>("create_system_prompt", {
-        name: payload.name,
-        prompt: payload.prompt,
-      });
-      prompts.value.unshift(newPrompt);
-    }
-    await loadPrompts();
-    dialogOpen.value = false;
-    editingPrompt.value = null;
-  } catch (e) {
-    console.error("Failed to save prompt:", e);
-  }
-}
-
-async function handleDelete(id: string) {
-  if (!id) return;
-  try {
-    await invoke("delete_system_prompt", { id });
-    prompts.value = prompts.value.filter((p) => p.id !== id);
-    if (selectedPrompt.value?.id === id) {
-      selectedPrompt.value = null;
-    }
-    if (activePromptId.value === id) {
-      activePromptId.value = null;
-      localStorage.removeItem(ACTIVE_PROMPT_KEY);
-    }
-    deleteConfirmOpen.value = false;
-    pendingDeleteId.value = null;
-  } catch (e) {
-    console.error("Failed to delete prompt:", e);
-  }
-}
-
-function handleSelect(prompt: SystemPrompt) {
-  selectedPrompt.value = prompt;
-}
 
 function openCreateDialog() {
   editingPrompt.value = null;
@@ -99,13 +36,39 @@ function openEditDialog(prompt: SystemPrompt) {
   dialogOpen.value = true;
 }
 
+async function handleSave(payload: { name: string; prompt: string }) {
+  try {
+    if (editingPrompt.value) {
+      await store.updatePrompt(editingPrompt.value.id, payload);
+    } else {
+      await store.createPrompt(payload);
+    }
+    dialogOpen.value = false;
+    editingPrompt.value = null;
+  } catch (e) {
+    console.error("Failed to save prompt:", e);
+  }
+}
+
 function handleRequestDelete(id: string) {
   pendingDeleteId.value = id;
   deleteConfirmOpen.value = true;
 }
 
+async function confirmDelete() {
+  if (pendingDeleteId.value) {
+    await store.deletePrompt(pendingDeleteId.value);
+    deleteConfirmOpen.value = false;
+    pendingDeleteId.value = null;
+  }
+}
+
+function handleSelect(prompt: SystemPrompt) {
+  store.setActive(prompt.id);
+}
+
 onMounted(() => {
-  loadPrompts();
+  store.loadPrompts();
 });
 </script>
 
@@ -125,7 +88,7 @@ onMounted(() => {
           v-for="prompt in prompts"
           :key="prompt.id"
           :prompt="prompt"
-          :is-selected="selectedPrompt?.id === prompt.id || activePromptId === prompt.id"
+          :is-selected="activePromptId === prompt.id"
           @select="handleSelect"
           @edit="openEditDialog"
           @request-delete="handleRequestDelete"
@@ -157,7 +120,7 @@ onMounted(() => {
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" @click="deleteConfirmOpen = false">Cancel</Button>
-          <Button variant="destructive" @click="handleDelete(pendingDeleteId!)">Delete</Button>
+          <Button variant="destructive" @click="confirmDelete">Delete</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
