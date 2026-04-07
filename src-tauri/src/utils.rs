@@ -1,20 +1,40 @@
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 // Window management
-#[tauri::command]
-pub async fn move_overlay(
-    window: WebviewWindow,
-    direction: String,
-    step: i32,
-) -> Result<(), String> {
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Direction::Up => write!(f, "Up"),
+            Direction::Down => write!(f, "Down"),
+            Direction::Left => write!(f, "Left"),
+            Direction::Right => write!(f, "Right"),
+        }
+    }
+}
+
+pub fn move_overlay(app: AppHandle, direction: Direction, step: i32) -> Result<(), String> {
     tracing::debug!(direction = %direction, step, "move_overlay called");
 
-    let (delta_x, delta_y) = match direction.as_str() {
-        "up" => (0, -step),
-        "down" => (0, step),
-        "left" => (-step, 0),
-        "right" => (step, 0),
-        _ => return Err("Invalid direction".to_string()),
+    let window = app
+        .get_webview_window("overlay")
+        .ok_or("Overlay window not found")?;
+
+    let (delta_x, delta_y) = match direction {
+        Direction::Up => (0, -step),
+        Direction::Down => (0, step),
+        Direction::Left => (-step, 0),
+        Direction::Right => (step, 0),
     };
 
     if let Ok(position) = window.outer_position() {

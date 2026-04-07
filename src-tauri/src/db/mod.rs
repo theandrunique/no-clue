@@ -5,6 +5,7 @@ use std::sync::Mutex;
 pub mod ai_provider;
 pub mod conversation;
 pub mod message;
+pub mod shortcut_overrides;
 pub mod stt_provider;
 pub mod system_prompt;
 pub mod transcript;

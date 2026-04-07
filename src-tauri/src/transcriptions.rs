@@ -267,7 +267,8 @@ pub async fn start_transcription(
                     None
                 };
 
-                let audio_data = processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
+                let audio_data =
+                    processor.process_chunk(sys_chunk.as_deref(), mic_chunk.as_deref());
 
                 if !audio_data.is_empty() {
                     if let Err(e) = stt_provider.send_audio(&audio_data).await {

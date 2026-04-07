@@ -47,5 +47,11 @@ CREATE TABLE IF NOT EXISTS stt_providers (
 
 INSERT OR IGNORE INTO stt_providers (id, config) VALUES ('fake', '{"type":"Fake"}');
 
+CREATE TABLE IF NOT EXISTS shortcut_overrides (
+    id TEXT PRIMARY KEY NOT NULL,
+    key_override TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_transcripts_conversation ON transcripts(conversation_id);

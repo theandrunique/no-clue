@@ -8,13 +8,14 @@ use crate::{
         create_conversation, delete_conversation, get_conversation, get_conversations,
         get_messages, get_transcripts,
     },
+    shortcuts::{delete_shortcut_override, get_shortcuts, register_all_shortcuts, save_shortcut},
     stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings},
     system_prompts::{
         create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
         update_system_prompt,
     },
     transcriptions::{start_transcription, stop_transcription, update_transcription_session},
-    utils::{move_overlay, open_dashboard, set_overlay_visible},
+    utils::{open_dashboard, set_overlay_visible},
 };
 use std::sync::OnceLock;
 use tauri::Manager;
@@ -33,6 +34,7 @@ mod db;
 mod error;
 mod models;
 mod screenshot;
+mod shortcuts;
 mod stt_providers;
 mod system_prompts;
 mod transcriptions;
@@ -80,11 +82,15 @@ pub fn run() {
             tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
 
             db::init_db(&app_data_dir).expect("Failed to initialize database");
+
+            if let Err(e) = register_all_shortcuts(&app.handle()) {
+                tracing::error!("Failed to register shortcuts: {}", e);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             open_dashboard,
-            move_overlay,
             set_overlay_visible,
             create_conversation,
             delete_conversation,
@@ -112,6 +118,9 @@ pub fn run() {
             create_system_prompt,
             update_system_prompt,
             delete_system_prompt,
+            get_shortcuts,
+            save_shortcut,
+            delete_shortcut_override,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

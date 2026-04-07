@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 mod provider;
+pub mod shortcut;
 pub use provider::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
