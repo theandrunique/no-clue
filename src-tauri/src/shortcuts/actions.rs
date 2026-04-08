@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::db::shortcut_overrides as db_shortcut;
 use crate::shortcuts::definitions::get_shortcut_definitions;
-use crate::utils::{move_overlay, Direction};
+use crate::utils::{move_overlay, toggle_overlay, Direction};
 
 struct RepeatState {
     running: AtomicBool,
@@ -115,6 +115,11 @@ fn run_backend_action(app: &AppHandle, shortcut_id: &str) {
         "move_window_right" => {
             if let Err(e) = move_overlay(app.clone(), Direction::Right, 10) {
                 tracing::warn!("Failed to move window right: {}", e);
+            }
+        }
+        "toggle_overlay_visibility" => {
+            if let Err(e) = toggle_overlay(app) {
+                tracing::warn!("Failed to toggle overlay: {}", e);
             }
         }
         _ => {}

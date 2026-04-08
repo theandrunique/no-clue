@@ -5,7 +5,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "move_window_up",
             name: "Move Window Up",
-            description: "",
+            description: "Moves the overlay window up.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+ArrowUp",
                 macos: "Cmd+ArrowUp",
@@ -18,7 +18,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "move_window_down",
             name: "Move Window Down",
-            description: "",
+            description: "Moves the overlay window down.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+ArrowDown",
                 macos: "Cmd+ArrowDown",
@@ -31,7 +31,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "move_window_right",
             name: "Move Window Right",
-            description: "",
+            description: "Moves the overlay window right.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+ArrowRight",
                 macos: "Cmd+ArrowRight",
@@ -44,7 +44,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "move_window_left",
             name: "Move Window Left",
-            description: "",
+            description: "Moves the overlay window left.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+ArrowLeft",
                 macos: "Cmd+ArrowLeft",
@@ -55,9 +55,22 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
             },
         },
         ShortcutDef {
+            id: "toggle_overlay_visibility",
+            name: "Toggle Overlay",
+            description: "Toggles the visibility of the overlay window.",
+            defaults: PlatformDefaults {
+                windows: "Ctrl+Backslash",
+                macos: "Cmd+Backslash",
+                linux: "Ctrl+Backslash",
+            },
+            rules: ValidationRules {
+                requires_modifier: true,
+            },
+        },
+        ShortcutDef {
             id: "ask_for_help",
             name: "Ask For Help",
-            description: "",
+            description: "Triggers the AI assistant to help with the current context.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+Enter",
                 macos: "Cmd+Enter",
@@ -70,7 +83,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "scroll_chat_up",
             name: "Scroll Chat Up",
-            description: "Scroll chat history up",
+            description: "Scrolls the chat history up.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+Shift+ArrowUp",
                 macos: "Cmd+Shift+ArrowUp",
@@ -83,7 +96,7 @@ pub fn get_shortcut_definitions() -> Vec<ShortcutDef> {
         ShortcutDef {
             id: "scroll_chat_down",
             name: "Scroll Chat Down",
-            description: "Scroll chat history down",
+            description: "Scrolls the chat history down.",
             defaults: PlatformDefaults {
                 windows: "Ctrl+Shift+ArrowDown",
                 macos: "Cmd+Shift+ArrowDown",
