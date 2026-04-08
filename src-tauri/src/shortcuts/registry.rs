@@ -5,6 +5,11 @@ use crate::shortcuts::{actions, get_all_shortcut_bindings};
 
 pub fn register_all_shortcuts(app: &AppHandle) -> Result<(), String> {
     let manager = app.global_shortcut();
+
+    if let Err(e) = manager.unregister_all() {
+        tracing::warn!("Failed to unregister old shortcuts: {}", e);
+    }
+
     let bindings = get_all_shortcut_bindings();
     let enabled_count = bindings.iter().filter(|b| b.enabled).count();
 

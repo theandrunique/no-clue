@@ -68,12 +68,19 @@ fn start_repeat(app: AppHandle, shortcut_id: String) {
     }
 
     let app_clone = app.clone();
+    let shortcut_id_clone = shortcut_id.clone();
 
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(200));
 
+        if !state.running.load(Ordering::SeqCst) {
+            return;
+        }
+
         while state.running.load(Ordering::SeqCst) {
-            run_backend_action(&app_clone, &shortcut_id);
+            if state.running.load(Ordering::SeqCst) {
+                run_backend_action(&app_clone, &shortcut_id_clone);
+            }
             std::thread::sleep(Duration::from_millis(50));
         }
     });
@@ -91,16 +98,24 @@ fn stop_repeat(shortcut_id: &str) {
 fn run_backend_action(app: &AppHandle, shortcut_id: &str) {
     match shortcut_id {
         "move_window_up" => {
-            let _ = move_overlay(app.clone(), Direction::Up, 10);
+            if let Err(e) = move_overlay(app.clone(), Direction::Up, 10) {
+                tracing::warn!("Failed to move window up: {}", e);
+            }
         }
         "move_window_down" => {
-            let _ = move_overlay(app.clone(), Direction::Down, 10);
+            if let Err(e) = move_overlay(app.clone(), Direction::Down, 10) {
+                tracing::warn!("Failed to move window down: {}", e);
+            }
         }
         "move_window_left" => {
-            let _ = move_overlay(app.clone(), Direction::Left, 10);
+            if let Err(e) = move_overlay(app.clone(), Direction::Left, 10) {
+                tracing::warn!("Failed to move window left: {}", e);
+            }
         }
         "move_window_right" => {
-            let _ = move_overlay(app.clone(), Direction::Right, 10);
+            if let Err(e) = move_overlay(app.clone(), Direction::Right, 10) {
+                tracing::warn!("Failed to move window right: {}", e);
+            }
         }
         _ => {}
     }
