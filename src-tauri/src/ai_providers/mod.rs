@@ -1,4 +1,4 @@
-use crate::models::Message;
+use crate::models::{Message, TokenUsage};
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub trait AiProvider: Send + Sync {
 }
 
 pub enum AiStreamEvent {
-    Chunk { content: String, is_finish: bool },
+    Chunk { content: String, is_finish: bool, usage: Option<TokenUsage> },
     Error { code: String, message: String },
 }
 

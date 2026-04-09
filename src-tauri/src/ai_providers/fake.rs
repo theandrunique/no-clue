@@ -66,7 +66,7 @@ impl Stream for FakeStream {
             this.pos = end;
 
             let is_finish = this.pos >= this.chars.len();
-            std::task::Poll::Ready(Some(AiStreamEvent::Chunk { content, is_finish }))
+            std::task::Poll::Ready(Some(AiStreamEvent::Chunk { content, is_finish, usage: None }))
         } else {
             std::task::Poll::Ready(None)
         }

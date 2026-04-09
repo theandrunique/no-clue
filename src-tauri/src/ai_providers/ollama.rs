@@ -1,9 +1,8 @@
 use crate::{
     ai_providers::{
-        utils::{build_json_messages, truncate_json_body},
-        AiProvider, AiRequest, AiStreamEvent,
+        AiProvider, AiRequest, AiStreamEvent, utils::{build_json_messages, truncate_json_body}
     },
-    models::{FieldDescriptor, FieldType, ProviderDescriptor},
+    models::{FieldDescriptor, FieldType, ProviderDescriptor, TokenUsage},
 };
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
@@ -46,11 +45,12 @@ impl AiProvider for OllamaProvider {
         let client = Client::new();
         let messages = build_json_messages(&request);
 
-        let url = format!("{}/api/chat", self.base_url);
+        let url = format!("{}/v1/chat/completions", self.base_url);
         let body = serde_json::json!({
             "model": self.model,
             "messages": messages,
-            "stream": true
+            "stream": true,
+            "stream_options": { "include_usage": true }
         });
 
         tracing::trace!(url = %url, "Sending request to Ollama");
@@ -82,37 +82,47 @@ impl AiProvider for OllamaProvider {
             tracing::trace!(chunk = %text, "Raw chunk");
 
             let mut result = String::new();
+            let mut is_finish = false;
+            let mut usage: Option<TokenUsage> = None;
+
             for line in text.lines() {
-                if line.is_empty() || !line.starts_with('{') {
+                if line.is_empty() || line == "data: [DONE]" {
                     continue;
                 }
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                    tracing::trace!(json = %json, "Parsed JSON");
-
-                    if let Some(content) = json["message"]["content"].as_str() {
+                let data = line.strip_prefix("data: ").unwrap_or(line);
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
+                    if let Some(content) = json["choices"]
+                        .get(0)
+                        .and_then(|c| c.get("delta"))
+                        .and_then(|d| d.get("content"))
+                        .and_then(|c| c.as_str())
+                    {
                         result.push_str(content);
                     }
 
-                    if json["done"].as_bool() == Some(true) {
-                        tracing::trace!("Stream finished");
-                        return AiStreamEvent::Chunk {
-                            content: String::new(),
-                            is_finish: true,
-                        };
+                    if json["choices"]
+                        .get(0)
+                        .and_then(|c| c.get("finish_reason"))
+                        .and_then(|f| f.as_str())
+                        .map(|f| f == "stop")
+                        .unwrap_or(false)
+                    {
+                        is_finish = true;
+                    }
+
+                    if let Some(usage_obj) = json.get("usage") {
+                        let prompt = usage_obj["prompt_tokens"].as_u64().unwrap_or(0);
+                        let completion = usage_obj["completion_tokens"].as_u64().unwrap_or(0);
+                        let total = usage_obj["total_tokens"].as_u64().unwrap_or(prompt + completion);
+                        usage = Some(TokenUsage { prompt_tokens: prompt, completion_tokens: completion, total_tokens: total });
                     }
                 }
-            }
-
-            if result.is_empty() {
-                return AiStreamEvent::Chunk {
-                    content: String::new(),
-                    is_finish: false,
-                };
             }
 
             AiStreamEvent::Chunk {
                 content: result,
-                is_finish: false,
+                is_finish,
+                usage
             }
         });
 

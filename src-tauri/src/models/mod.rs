@@ -37,6 +37,13 @@ pub struct Message {
     pub timestamp: i64,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TokenUsage {
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub total_tokens: u64,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "event_type", content = "payload")]
 pub enum ChatStreamEvent {
@@ -47,6 +54,7 @@ pub enum ChatStreamEvent {
         content: String,
         #[serde(rename = "isFinish")]
         is_finish: bool,
+        usage: Option<TokenUsage>,
         timestamp: i64,
     },
     #[serde(rename = "message:error")]

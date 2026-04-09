@@ -139,7 +139,7 @@ pub async fn send_message(
                 }
 
                 match event {
-                    AiStreamEvent::Chunk { content, is_finish } => {
+                    AiStreamEvent::Chunk { content, is_finish, usage } => {
                         assistant_response.push_str(&content);
 
                         let _ = app.emit(
@@ -149,15 +149,19 @@ pub async fn send_message(
                                 content: content,
                                 is_finish: is_finish,
                                 timestamp: Utc::now().timestamp(),
+                                usage: usage,
                             },
                         );
-
-                        if is_finish {
-                            break;
-                        }
                     }
                     AiStreamEvent::Error { code, message } => {
                         tracing::error!(code = %code, message = %message, "Stream error");
+                        let _ = app.emit(
+                            "chat-stream",
+                            ChatStreamEvent::Error {
+                                code: code,
+                                message: message,
+                            },
+                        );
                     }
                 }
             }
