@@ -1,5 +1,5 @@
 use crate::{
-    ai_providers::{get_ai_provider_settings, get_ai_providers, save_ai_provider_settings},
+    ai_providers::{get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings},
     audio_capture::{
         get_input_devices, get_output_devices, test_microphone_audio, test_system_audio,
     },
@@ -71,7 +71,7 @@ pub fn run() {
                 .with_target(true);
 
             let env_filter = EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn,tungstenite=warn,tokio_tungstenite=warn,tao=warn"));
+                .unwrap_or_else(|_| EnvFilter::new("trace,wasapi=warn,wgpu=warn,nokia=warn,tungstenite=warn,tokio_tungstenite=warn,tao=warn,hyper_util=warn,reqwest=warn"));
 
             tracing_subscriber::registry()
                 .with(env_filter)
@@ -121,6 +121,7 @@ pub fn run() {
             get_shortcuts,
             save_shortcut,
             delete_shortcut_override,
+            get_model_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

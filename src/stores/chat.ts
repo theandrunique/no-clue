@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, onScopeDispose } from "vue";
+import { ref, computed, onScopeDispose } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Message } from "@/types";
@@ -16,6 +16,12 @@ export interface ErrorPayload {
   message: string;
 }
 
+export interface ModelInfo {
+  modelName: string;
+  contextWindow: number;
+  supportsVision: boolean;
+}
+
 export type ChatStreamEvent =
   | { event_type: 'message:chunk'; payload: ChunkPayload }
   | { event_type: 'message:error'; payload: ErrorPayload };
@@ -26,6 +32,9 @@ export const useChatStore = defineStore("chat", () => {
   const streamingMessage = ref<Message | null>(null);
   const isScreenshotEnabled = ref(true);
   const currentStreamingConversationId = ref<string | null>(null);
+  const modelInfo = ref<ModelInfo | null>(null);
+
+  const canUseScreenshot = computed(() => modelInfo.value?.supportsVision ?? false);
 
   let unlistenStream: UnlistenFn | null = null;
 
@@ -105,7 +114,25 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   function setCaptureScreenshot(capture: boolean) {
+    if (!canUseScreenshot.value && capture) {
+      return;
+    }
     isScreenshotEnabled.value = capture;
+  }
+
+  async function loadModelInfo() {
+    const provider = localStorage.getItem("selected_ai_provider");
+    if (!provider) return;
+
+    try {
+      const info = await invoke<ModelInfo>("get_model_info", { provider });
+      modelInfo.value = info;
+      if (!info.supportsVision) {
+        isScreenshotEnabled.value = false;
+      }
+    } catch (error) {
+      console.error("Failed to load model info:", error);
+    }
   }
 
   async function clearMessages() {
@@ -123,9 +150,12 @@ export const useChatStore = defineStore("chat", () => {
     isStreamingResponse,
     currentStreamingMessage: streamingMessage,
     isScreenshotEnabled,
+    canUseScreenshot,
+    modelInfo,
     setCaptureScreenshot,
     sendMessage,
     stopStream,
     clearMessages,
+    loadModelInfo,
   };
 });

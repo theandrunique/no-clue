@@ -61,6 +61,14 @@ pub enum ChatStreamEvent {
     Error { code: String, message: String },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelInfo {
+    pub model_name: String,
+    pub context_window: u64,
+    pub supports_vision: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MessageRole {

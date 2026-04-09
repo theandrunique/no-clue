@@ -2,15 +2,18 @@
 import { onMounted, onUnmounted, computed } from "vue";
 import { useSettingsStore } from "@/stores/settings";
 import { useConversationStore } from "@/stores/conversation";
+import { useChatStore } from "@/stores/chat";
 import { Mic, MicOff, Settings, Camera, CameraOff, Trash2 } from "lucide-vue-next";
 import { invoke } from "@tauri-apps/api/core";
 import DragButton from "@/components/ui/drag-button/DragButton.vue";
 import { Button } from "@/components/ui/button";
 import OverlayPopover from "./components/OverlayPopover.vue";
+import ContextIndicator from "./components/ContextIndicator.vue";
 import Card from "@/components/ui/card/Card.vue";
 
 const settingsStore = useSettingsStore();
 const conversationStore = useConversationStore();
+const chatStore = useChatStore();
 
 const cardStyle = computed(() => ({
   "--overlay-opacity": settingsStore.settings.overlayOpacity,
@@ -21,11 +24,15 @@ function toggleMic() {
 }
 
 function toggleScreenshot() {
+  if (!chatStore.canUseScreenshot && !chatStore.isScreenshotEnabled) {
+    return;
+  }
   conversationStore.setCaptureScreenshot(!conversationStore.isScreenshotEnabled);
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.body.classList.add("transparent");
+  await chatStore.loadModelInfo();
 });
 
 onUnmounted(() => {
@@ -55,6 +62,8 @@ async function openDashboard() {
           <Button
             variant="default"
             size="icon"
+            :class="{ 'opacity-50 cursor-not-allowed': !chatStore.canUseScreenshot }"
+            :disabled="!chatStore.canUseScreenshot && !conversationStore.isScreenshotEnabled"
             @click="toggleScreenshot"
           >
             <Camera v-if="conversationStore.isScreenshotEnabled" class="w-4 h-4" />
@@ -63,13 +72,14 @@ async function openDashboard() {
         </div>
 
         <div class="flex gap-2 items-center">
-        <Button
-            variant="ghost"
-            size="icon"
-            @click="conversationStore.clearCurrentConversation()"
-        >
-            <Trash2 class="w-4 h-4" />
-        </Button>
+          <ContextIndicator />
+            <Button
+                variant="ghost"
+                size="icon"
+                @click="conversationStore.clearCurrentConversation()"
+            >
+                <Trash2 class="w-4 h-4" />
+            </Button>
 
           <Button variant="ghost" size="icon" @click="openDashboard">
             <Settings class="w-4 h-4" />

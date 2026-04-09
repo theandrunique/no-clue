@@ -1,4 +1,4 @@
-use crate::models::{Message, TokenUsage};
+use crate::models::{Message, ModelInfo, TokenUsage};
 use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ pub trait AiProvider: Send + Sync {
         &self,
         request: AiRequest,
     ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String>;
+    async fn get_model_info(&self) -> Result<ModelInfo, String>;
 }
 
 pub enum AiStreamEvent {
@@ -72,6 +73,7 @@ pub fn create_ai_provider(settings: &AiProviderSettings) -> Result<Box<dyn AiPro
                 .clone()
                 .unwrap_or_else(|| "http://localhost:11434".into()),
             model: model.clone(),
+            model_info: None,
         })),
         AiProviderSettings::AiTunnel { .. } => {
             Err("AiTunnel provider is not implemented yet".to_string())

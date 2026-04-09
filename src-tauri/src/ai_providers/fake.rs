@@ -1,5 +1,5 @@
 use crate::{
-    ai_providers::{AiProvider, AiRequest, AiStreamEvent},
+    ai_providers::{AiProvider, AiRequest, AiStreamEvent, ModelInfo},
     models::ProviderDescriptor,
 };
 use async_trait::async_trait;
@@ -110,5 +110,13 @@ That's the way the *poem* goes."#;
         };
 
         Ok(Box::new(FakeStream::new(chars, delay_ms)))
+    }
+
+    async fn get_model_info(&self) -> Result<ModelInfo, String> {
+        Ok(ModelInfo {
+            model_name: "fake-model".into(),
+            context_window: 4096,
+            supports_vision: false,
+        })
     }
 }

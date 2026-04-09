@@ -1,7 +1,7 @@
 use crate::{
     ai_providers::{
         ai_tunnel::ai_tunnel_descriptor, fake::fake_provider_descriptor, ollama::ollama_descriptor,
-        AiProviderSettings,
+        create_ai_provider, AiProviderSettings, ModelInfo,
     },
     db::ai_provider as provider_repo,
     models::ProviderDescriptor,
@@ -38,4 +38,18 @@ pub async fn get_ai_provider_settings(
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_model_info(provider: String) -> Result<ModelInfo, String> {
+    tracing::trace!(provider, "get_model_info called");
+    let provider_clone = provider.clone();
+    let settings = tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Provider {} not configured", provider_clone))?;
+
+    let ai_provider = create_ai_provider(&settings)?;
+    ai_provider.get_model_info().await
 }
