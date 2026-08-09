@@ -1,7 +1,10 @@
 use std::{path::Path, sync::OnceLock};
 
-use tracing_appender::{non_blocking::WorkerGuard, rolling::{RollingFileAppender, Rotation}};
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_appender::{
+    non_blocking::WorkerGuard,
+    rolling::{RollingFileAppender, Rotation},
+};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
@@ -31,12 +34,13 @@ pub fn init_logging(app_data_dir: &Path) {
         .with(env_filter)
         .with(file_layer)
         .with(stdout_layer)
-        .try_init() {
-            Ok(_) => {
-                tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
-            }
-            Err(e) => {
-                eprintln!("Failed to initialize logging: {}", e);
-            }
+        .try_init()
+    {
+        Ok(_) => {
+            tracing::info!(logs_dir = %logs_dir.display(), "Logging initialized");
         }
+        Err(e) => {
+            eprintln!("Failed to initialize logging: {}", e);
+        }
+    }
 }
