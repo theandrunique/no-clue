@@ -5,10 +5,6 @@ description = "A Tauri App - AI Assistant with Overlay"
 authors = ["theandru"]
 edition = "2021"
 
-[lib]
-name = "no_clue_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
