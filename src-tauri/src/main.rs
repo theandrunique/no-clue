@@ -7,7 +7,7 @@ use crate::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
             get_messages, get_transcripts,
         },
-        llm::{
+        llm_providers::{
             get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
         },
         shortcuts::{
