@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use crate::{
     application::{
+        audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
         chats::{send_message, stop_stream},
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
@@ -20,12 +21,7 @@ use crate::{
         },
         transcriptions::{start_transcription, stop_transcription, update_transcription_session},
     },
-    infra::{
-        audio_capture::{
-            get_input_devices, get_output_devices, test_microphone_audio, test_system_audio,
-        },
-        db,
-    },
+    infra::db,
     utils::{open_dashboard, set_overlay_visible},
 };
 use tauri::Manager;

@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod chats;
 pub mod conversations;
 pub mod llm_providers;
