@@ -1,15 +1,14 @@
-use async_channel::Sender;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 
 use crate::domain::providers::{FieldDescriptor, FieldType, ProviderDescriptor};
-use crate::domain::stt::{SttResultCallback, SttTranscriptResult};
+use crate::domain::stt::{
+    AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult,
+};
 use crate::domain::transcriptions::AudioSource;
 
-use super::SttProvider;
 use async_trait::async_trait;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use tokio::task::JoinHandle;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
@@ -48,10 +47,7 @@ pub struct DeepgramProvider {
     api_key: Option<String>,
     language: Option<String>,
     model: Option<String>,
-    running: Arc<AtomicBool>,
-    callback: Option<SttResultCallback>,
-    ws_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
-    audio_sender: Arc<Mutex<Option<Sender<Vec<u8>>>>>,
+    task: Option<JoinHandle<()>>,
 }
 
 impl DeepgramProvider {
@@ -60,21 +56,22 @@ impl DeepgramProvider {
             api_key,
             language,
             model,
-            running: Arc::new(AtomicBool::new(false)),
-            callback: None,
-            ws_task: Arc::new(Mutex::new(None)),
-            audio_sender: Arc::new(Mutex::new(None)),
+            task: None,
+        }
+    }
+}
+
+impl Drop for DeepgramProvider {
+    fn drop(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.abort();
         }
     }
 }
 
 #[async_trait]
 impl SttProvider for DeepgramProvider {
-    async fn start(&mut self) -> Result<(), String> {
-        if self.running.load(Ordering::SeqCst) {
-            return Err("Already running".to_string());
-        }
-
+    async fn transcribe(&mut self, mut audio: AudioChunkStream) -> Result<SttResultStream, String> {
         let api_key = self.api_key.clone().ok_or("API key not provided")?;
         let language = self.language.clone().unwrap_or_else(|| "en".to_string());
         let model = self.model.clone().unwrap_or_else(|| "nova-2".to_string());
@@ -109,43 +106,27 @@ impl SttProvider for DeepgramProvider {
         );
 
         let (mut write, mut read) = ws_stream.split();
-
-        let (tx, rx) = async_channel::bounded(32);
-
-        {
-            let mut sender = self.audio_sender.lock().map_err(|e| e.to_string())?;
-            *sender = Some(tx);
-        }
-
-        let callback = self.callback.clone();
-        let running = self.running.clone();
-        let running_for_audio = running.clone();
+        let (tx, rx) = async_channel::bounded::<SttTranscriptResult>(32);
 
         let task = tokio::spawn(async move {
-            let running_for_audio = running_for_audio.clone();
             let audio_task = tokio::spawn(async move {
-                while let Ok(audio_data) = rx.recv().await {
-                    if !running_for_audio.load(Ordering::SeqCst) {
-                        break;
-                    }
+                while let Some(AudioChunk(audio_data)) = audio.next().await {
                     let msg = Message::Binary(audio_data.into());
                     if let Err(e) = write.send(msg).await {
                         tracing::error!("Failed to send audio to Deepgram: {}", e);
                         break;
                     }
                 }
+                // Весь аудио-поток исчерпан — закрываем websocket.
+                let _ = write.close().await;
             });
 
             while let Some(msg) = read.next().await {
-                if !running.load(Ordering::SeqCst) {
-                    break;
-                }
-
                 match msg {
                     Ok(Message::Text(text)) => {
                         if let Some(result) = parse_deepgram_response(&text) {
-                            if let Some(ref cb) = callback {
-                                cb(result);
+                            if tx.send(result).await.is_err() {
+                                break;
                             }
                         }
                     }
@@ -163,83 +144,24 @@ impl SttProvider for DeepgramProvider {
             }
 
             audio_task.abort();
-            running.store(false, Ordering::SeqCst);
         });
 
-        {
-            let mut task_guard = self.ws_task.lock().map_err(|e| e.to_string())?;
-            *task_guard = Some(task);
+        if let Some(old) = self.task.replace(task) {
+            old.abort();
         }
 
-        self.running.store(true, Ordering::SeqCst);
-        tracing::info!("Deepgram STT provider started");
-        Ok(())
-    }
+        let stream = futures_util::stream::unfold(rx, |rx| async move {
+            rx.recv().await.ok().map(|result| (result, rx))
+        });
 
-    async fn stop(&mut self) -> Result<(), String> {
-        self.running.store(false, Ordering::SeqCst);
-
-        {
-            let mut sender = self.audio_sender.lock().map_err(|e| e.to_string())?;
-            let _ = sender.take();
-        }
-
-        let task = {
-            let mut task_guard = self.ws_task.lock().map_err(|e| e.to_string())?;
-            task_guard.take()
-        };
-
-        if let Some(task) = task {
-            let _ = task.await;
-        }
-
-        tracing::info!("Deepgram STT provider stopped");
-        Ok(())
-    }
-
-    fn is_running(&self) -> bool {
-        self.running.load(Ordering::SeqCst)
-    }
-
-    async fn send_audio(&mut self, audio_data: &[u8]) -> Result<(), String> {
-        if !self.running.load(Ordering::SeqCst) {
-            return Err("Not running".to_string());
-        }
-
-        let tx = {
-            let sender = self.audio_sender.lock().map_err(|e| e.to_string())?;
-            sender.clone().ok_or("Audio sender not initialized")?
-        };
-
-        tx.send(audio_data.to_vec())
-            .await
-            .map_err(|e| format!("Failed to send audio: {}", e))?;
-
-        Ok(())
-    }
-
-    fn set_result_callback(&mut self, callback: SttResultCallback) {
-        self.callback = Some(callback);
+        Ok(Box::pin(stream))
     }
 }
 
 fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
     #[derive(Deserialize)]
-    struct DeepgramResponse {
-        #[serde(rename = "type")]
-        msg_type: Option<String>,
-        #[serde(rename = "is_final")]
-        is_final: Option<bool>,
-        channel_index: Option<ChannelIndex>,
-        channel: Option<Channel>,
-    }
-
-    #[derive(Deserialize)]
-    struct ChannelIndex {
-        #[serde(rename = "0")]
-        channel: usize,
-        #[serde(rename = "1")]
-        total: Option<usize>,
+    struct Response {
+        channel: Channel,
     }
 
     #[derive(Deserialize)]
@@ -253,46 +175,14 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
         confidence: Option<f64>,
     }
 
-    let response: DeepgramResponse = match serde_json::from_str(text) {
-        Ok(r) => r,
-        Err(_) => return None,
-    };
+    let parsed: Response = serde_json::from_str(text).ok()?;
+    let alternative = parsed.channel.alternatives.first()?;
+    let is_final = text.contains("\"is_final\":true");
 
-    if response.msg_type.as_deref() == Some("Metadata") {
-        return None;
-    }
-
-    let is_final_result = response.is_final.unwrap_or(false);
-
-    let source = match response.channel_index {
-        Some(idx) if idx.channel == 0 => AudioSource::System,
-        Some(idx) if idx.channel == 1 => AudioSource::Microphone,
-        _ => AudioSource::System,
-    };
-
-    if let Some(channel) = response.channel {
-        if let Some(alt) = channel.alternatives.first() {
-            let transcript = alt.transcript.trim();
-            if transcript.is_empty() {
-                return None;
-            }
-
-            tracing::trace!(
-                text = transcript,
-                is_final = is_final_result,
-                source = ?source,
-                confidence = alt.confidence,
-                "Deepgram response received"
-            );
-
-            return Some(SttTranscriptResult {
-                text: transcript.to_string(),
-                is_final: is_final_result,
-                confidence: alt.confidence.unwrap_or(0.0),
-                source,
-            });
-        }
-    }
-
-    None
+    Some(SttTranscriptResult {
+        text: alternative.transcript.clone(),
+        source: AudioSource::System,
+        confidence: alternative.confidence.unwrap_or(0.0),
+        is_final,
+    })
 }

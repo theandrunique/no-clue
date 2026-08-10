@@ -19,6 +19,9 @@ mod linux;
 #[cfg(target_os = "linux")]
 use linux::{AudioInput as PlatformAudioInput, AudioStream as PlatformAudioStream};
 
+mod pipeline;
+pub use pipeline::start_capture_pipeline;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioDevice {
     pub id: String,

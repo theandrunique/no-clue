@@ -1,7 +1,16 @@
-use crate::domain::transcriptions::AudioSource;
 use async_trait::async_trait;
+use futures_util::Stream;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::pin::Pin;
+
+use crate::domain::transcriptions::AudioSource;
+
+/// Кусок захваченного звука в формате PCM16 (signed 16-bit LE), stereo interleaved
+/// ([L,R,L,R,...]), 16 кГц — именно то, что выдаёт audio_processing.
+pub struct AudioChunk(pub Vec<u8>);
+
+pub type AudioChunkStream = Pin<Box<dyn Stream<Item = AudioChunk> + Send>>;
+pub type SttResultStream = Pin<Box<dyn Stream<Item = SttTranscriptResult> + Send>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SttTranscriptResult {
@@ -11,19 +20,11 @@ pub struct SttTranscriptResult {
     pub confidence: f64,
 }
 
-pub type SttResultCallback = Arc<dyn Fn(SttTranscriptResult) + Send + Sync>;
-
 #[async_trait]
 pub trait SttProvider: Send + Sync {
-    async fn start(&mut self) -> Result<(), String>;
-
-    async fn stop(&mut self) -> Result<(), String>;
-
-    fn is_running(&self) -> bool;
-
-    async fn send_audio(&mut self, audio_data: &[u8]) -> Result<(), String>;
-
-    fn set_result_callback(&mut self, callback: SttResultCallback);
+    /// Подаёт поток аудио, возвращает поток результатов транскрибации.
+    /// Жизнь сессии = время жизни потоков; закрытие = дроп стрима/провайдера.
+    async fn transcribe(&mut self, audio: AudioChunkStream) -> Result<SttResultStream, String>;
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

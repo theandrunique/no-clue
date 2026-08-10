@@ -2,46 +2,6 @@
 // Currently using step_by() decimation which is simple but may introduce aliasing.
 // rubato provides polynomial interpolation for better quality resampling.
 
-pub fn f32_to_i16(sample: f32) -> i16 {
-    (sample.clamp(-1.0, 1.0) * 32767.0) as i16
-}
-
-pub fn interleave_stereo(left: &[i16], right: &[i16]) -> Vec<u8> {
-    let min_len = left.len().min(right.len());
-    let mut result = Vec::with_capacity(min_len * 4);
-    for i in 0..min_len {
-        result.extend_from_slice(&left[i].to_le_bytes());
-        result.extend_from_slice(&right[i].to_le_bytes());
-    }
-    result
-}
-
-pub fn interleave_with_silence(
-    left: &[i16],
-    use_silence_left: bool,
-    right: &[i16],
-    use_silence_right: bool,
-) -> Vec<u8> {
-    let len = left.len().max(right.len());
-    let mut result = Vec::with_capacity(len * 4);
-
-    for i in 0..len {
-        let left_sample = if use_silence_left || i >= left.len() {
-            0i16
-        } else {
-            left[i]
-        };
-        let right_sample = if use_silence_right || i >= right.len() {
-            0i16
-        } else {
-            right[i]
-        };
-        result.extend_from_slice(&left_sample.to_le_bytes());
-        result.extend_from_slice(&right_sample.to_le_bytes());
-    }
-    result
-}
-
 pub fn decimate(samples: &[i16], ratio: usize) -> Vec<i16> {
     if ratio <= 1 {
         return samples.to_vec();
@@ -49,15 +9,6 @@ pub fn decimate(samples: &[i16], ratio: usize) -> Vec<i16> {
     samples.iter().step_by(ratio).copied().collect()
 }
 
-pub fn decimate_to_target(input: &[i16], source_rate: u32, target_rate: u32) -> Vec<i16> {
-    if source_rate == target_rate {
-        return input.to_vec();
-    }
-    let ratio = source_rate / target_rate;
-    decimate(input, ratio as usize)
-}
-
-#[allow(dead_code)]
 pub struct AudioProcessor {
     decimation_ratio: usize,
     chunk_samples: usize,
@@ -94,7 +45,6 @@ impl AudioProcessor {
         self.chunk_samples
     }
 
-    #[allow(dead_code)]
     pub fn process_chunk(&mut self, system: Option<&[i16]>, mic: Option<&[i16]>) -> Vec<u8> {
         let has_system = system.is_some();
         let has_mic = mic.is_some();
@@ -150,7 +100,6 @@ impl AudioProcessor {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_metrics(&self) -> ProcessorMetrics {
         self.metrics.clone()
     }
@@ -164,22 +113,6 @@ impl AudioProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_f32_to_i16() {
-        assert_eq!(f32_to_i16(0.0), 0);
-        assert_eq!(f32_to_i16(1.0), 32767);
-        assert_eq!(f32_to_i16(-1.0), -32767);
-        assert_eq!(f32_to_i16(0.5), 16383);
-    }
-
-    #[test]
-    fn test_interleave_stereo() {
-        let left = vec![1i16, 2, 3];
-        let right = vec![10i16, 20, 30];
-        let result = interleave_stereo(&left, &right);
-        assert_eq!(result.len(), 12);
-    }
 
     #[test]
     fn test_decimate() {
