@@ -5,7 +5,6 @@ use crate::domain::messages::Message;
 use crate::domain::transcriptions::Transcript;
 use crate::{domain::conversations::Conversation, error::log_err};
 
-// Conversation management
 #[tauri::command]
 pub async fn create_conversation() -> Result<Conversation, String> {
     tracing::trace!("create_conversation called");
