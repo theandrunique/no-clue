@@ -1,68 +1,37 @@
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use crate::{
+    db::stt_provider as stt_provider_repo,
+    domain::{providers::ProviderDescriptor, stt::SttProviderSettings},
+    infra::stt_providers::{deepgram_descriptor, fake_stt_descriptor},
+};
 
-pub mod commands;
-pub mod deepgram;
-pub mod fake;
-
-pub use commands::*;
-
-use crate::domain::transcriptions::AudioSource;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type")]
-pub enum SttProviderSettings {
-    Fake,
-    Deepgram {
-        api_key: Option<String>,
-        language: Option<String>,
-        model: Option<String>,
-    },
+#[tauri::command]
+pub fn get_stt_providers() -> Vec<ProviderDescriptor> {
+    tracing::trace!("get_stt_providers called");
+    vec![fake_stt_descriptor(), deepgram_descriptor()]
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AudioCaptureConfig {
-    pub capture_system_audio: bool,
-    pub system_audio_device_id: Option<String>,
-    pub capture_microphone: bool,
-    pub microphone_device_id: Option<String>,
+#[tauri::command]
+pub async fn save_stt_provider_settings(
+    provider: String,
+    settings: SttProviderSettings,
+) -> Result<(), String> {
+    tracing::trace!(provider, "save_stt_provider_settings called");
+    tokio::task::spawn_blocking(move || {
+        stt_provider_repo::upsert_stt_settings(&provider, &settings)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SttTranscriptResult {
-    pub text: String,
-    pub source: AudioSource,
-    pub is_final: bool,
-    pub confidence: f64,
-}
+#[tauri::command]
+pub async fn get_stt_provider_settings(
+    provider: String,
+) -> Result<Option<SttProviderSettings>, String> {
+    tracing::trace!(provider, "get_stt_provider_settings called");
 
-pub type SttResultCallback = Arc<dyn Fn(SttTranscriptResult) + Send + Sync>;
-
-#[async_trait]
-pub trait SttProvider: Send + Sync {
-    async fn start(&mut self) -> Result<(), String>;
-
-    async fn stop(&mut self) -> Result<(), String>;
-
-    fn is_running(&self) -> bool;
-
-    async fn send_audio(&mut self, audio_data: &[u8]) -> Result<(), String>;
-
-    fn set_result_callback(&mut self, callback: SttResultCallback);
-}
-
-pub fn create_stt_provider(settings: &SttProviderSettings) -> Result<Box<dyn SttProvider>, String> {
-    match settings {
-        SttProviderSettings::Fake => Ok(Box::new(fake::FakeSttProvider::new())),
-        SttProviderSettings::Deepgram {
-            api_key,
-            language,
-            model,
-        } => Ok(Box::new(deepgram::DeepgramProvider::new(
-            api_key.clone(),
-            language.clone(),
-            model.clone(),
-        ))),
-    }
+    tokio::task::spawn_blocking(move || stt_provider_repo::get_stt_settings(&provider))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }

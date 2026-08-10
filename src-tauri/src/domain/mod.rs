@@ -3,5 +3,6 @@ pub mod llm;
 pub mod messages;
 pub mod providers;
 pub mod shortcuts;
+pub mod stt;
 pub mod system_prompts;
 pub mod transcriptions;

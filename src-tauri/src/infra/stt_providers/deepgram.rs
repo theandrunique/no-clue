@@ -3,9 +3,10 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 
 use crate::domain::providers::{FieldDescriptor, FieldType, ProviderDescriptor};
+use crate::domain::stt::{SttResultCallback, SttTranscriptResult};
 use crate::domain::transcriptions::AudioSource;
 
-use super::{SttProvider, SttResultCallback, SttTranscriptResult};
+use super::SttProvider;
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

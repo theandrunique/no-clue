@@ -1,6 +1,6 @@
 use rusqlite::{params, Result};
 
-use crate::application::stt_providers::SttProviderSettings;
+use crate::domain::stt::SttProviderSettings;
 
 pub fn upsert_stt_settings(provider: &str, settings: &SttProviderSettings) -> Result<()> {
     let conn = crate::db::get_connection()?;

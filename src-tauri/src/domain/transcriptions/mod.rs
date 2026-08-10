@@ -62,3 +62,11 @@ impl std::str::FromStr for AudioSource {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioCaptureConfig {
+    pub capture_system_audio: bool,
+    pub system_audio_device_id: Option<String>,
+    pub capture_microphone: bool,
+    pub microphone_device_id: Option<String>,
+}

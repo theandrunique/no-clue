@@ -1,7 +1,8 @@
 use crate::domain::providers::ProviderDescriptor;
+use crate::domain::stt::{SttResultCallback, SttTranscriptResult};
 use crate::domain::transcriptions::AudioSource;
 
-use super::{SttProvider, SttResultCallback, SttTranscriptResult};
+use super::SttProvider;
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
