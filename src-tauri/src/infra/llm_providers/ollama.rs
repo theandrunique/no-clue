@@ -4,15 +4,12 @@ use reqwest::Client;
 use serde::Deserialize;
 
 use crate::{
-    application::ai_providers::{
-        utils::{build_json_messages, truncate_json_body},
-        AiProvider, AiRequest, AiStreamEvent,
-    },
     domain::{
         conversations::TokenUsage,
+        llm::{LlmChatCompletionRequest, LlmChatCompletionStreamEvent, LlmProvider, ModelInfo},
         providers::{FieldDescriptor, FieldType, ProviderDescriptor},
-        ModelInfo,
     },
+    infra::llm_providers::utils::{build_json_messages, truncate_json_body},
 };
 
 pub fn ollama_descriptor() -> ProviderDescriptor {
@@ -52,11 +49,11 @@ struct OllamaModelShowResponse {
 }
 
 #[async_trait]
-impl AiProvider for OllamaProvider {
-    async fn stream(
+impl LlmProvider for OllamaProvider {
+    async fn stream_chat_completion(
         &self,
-        request: AiRequest,
-    ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String> {
+        request: LlmChatCompletionRequest,
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, String> {
         let client = Client::new();
         let messages = build_json_messages(&request);
 
@@ -87,7 +84,7 @@ impl AiProvider for OllamaProvider {
                 Ok(c) => c,
                 Err(e) => {
                     tracing::error!(error = %e, "Chunk error");
-                    return AiStreamEvent::Error {
+                    return LlmChatCompletionStreamEvent::Error {
                         code: "reqwest".into(),
                         message: e.to_string(),
                     };
@@ -140,7 +137,7 @@ impl AiProvider for OllamaProvider {
                 }
             }
 
-            AiStreamEvent::Chunk {
+            LlmChatCompletionStreamEvent::Chunk {
                 content: result,
                 is_finish,
                 usage,

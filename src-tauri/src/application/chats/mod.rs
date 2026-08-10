@@ -1,12 +1,12 @@
-use crate::application::ai_providers::create_ai_provider;
-use crate::application::ai_providers::AiRequest;
-use crate::application::ai_providers::AiStreamEvent;
 use crate::db::ai_provider as provider_repo;
 use crate::db::message as msg_repo;
 use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
+use crate::domain::llm::LlmChatCompletionRequest;
+use crate::domain::llm::LlmChatCompletionStreamEvent;
 use crate::domain::messages::MessageRole;
 use crate::error::log_err;
+use crate::infra::llm_providers::create_ai_provider;
 use crate::infra::screenshot::capture_screenshot as do_capture_screenshot;
 use crate::infra::screenshot::ScreenshotResult;
 use chrono::Utc;
@@ -112,7 +112,7 @@ pub async fn send_message(
     };
 
     // Build AI request
-    let mut request = AiRequest::new(history);
+    let mut request = LlmChatCompletionRequest::new(history);
 
     // Add system prompt
     if let Some(sp) = system_prompt_text {
@@ -131,7 +131,7 @@ pub async fn send_message(
     let mut assistant_response = String::new();
 
     // Stream from provider
-    let stream_result = ai_provider.stream(request).await;
+    let stream_result = ai_provider.stream_chat_completion(request).await;
 
     match stream_result {
         Ok(mut stream) => {
@@ -143,7 +143,7 @@ pub async fn send_message(
                 }
 
                 match event {
-                    AiStreamEvent::Chunk {
+                    LlmChatCompletionStreamEvent::Chunk {
                         content,
                         is_finish,
                         usage,
@@ -161,7 +161,7 @@ pub async fn send_message(
                             },
                         );
                     }
-                    AiStreamEvent::Error { code, message } => {
+                    LlmChatCompletionStreamEvent::Error { code, message } => {
                         tracing::error!(code = %code, message = %message, "Stream error");
                         let _ = app.emit(
                             "chat-stream",

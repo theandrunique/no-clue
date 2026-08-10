@@ -1,10 +1,12 @@
 use crate::{
-    application::ai_providers::{
-        ai_tunnel::ai_tunnel_descriptor, create_ai_provider, fake::fake_provider_descriptor,
-        ollama::ollama_descriptor, AiProviderSettings,
-    },
     db::ai_provider as provider_repo,
-    domain::{providers::ProviderDescriptor, ModelInfo},
+    domain::{
+        llm::{LlmProviderSettings, ModelInfo},
+        providers::ProviderDescriptor,
+    },
+    infra::llm_providers::{
+        ai_tunnel_descriptor, create_ai_provider, fake_provider_descriptor, ollama_descriptor,
+    },
 };
 
 #[tauri::command]
@@ -20,7 +22,7 @@ pub fn get_ai_providers() -> Vec<ProviderDescriptor> {
 #[tauri::command]
 pub async fn save_ai_provider_settings(
     provider: String,
-    settings: AiProviderSettings,
+    settings: LlmProviderSettings,
 ) -> Result<(), String> {
     tracing::trace!(provider, "save_ai_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
@@ -32,7 +34,7 @@ pub async fn save_ai_provider_settings(
 #[tauri::command]
 pub async fn get_ai_provider_settings(
     provider: String,
-) -> Result<Option<AiProviderSettings>, String> {
+) -> Result<Option<LlmProviderSettings>, String> {
     tracing::trace!(provider, "get_ai_provider_settings called");
     tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
         .await

@@ -2,26 +2,19 @@ use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 
-mod ai_tunnel;
-mod commands;
-mod fake;
-mod ollama;
-mod utils;
-
-pub use commands::*;
-
-use crate::domain::{conversations::TokenUsage, messages::Message, ModelInfo};
+use crate::domain::{conversations::TokenUsage, messages::Message};
 
 #[async_trait]
-pub trait AiProvider: Send + Sync {
-    async fn stream(
+pub trait LlmProvider: Send + Sync {
+    async fn stream_chat_completion(
         &self,
-        request: AiRequest,
-    ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String>;
+        request: LlmChatCompletionRequest,
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, String>;
+
     async fn get_model_info(&self) -> Result<ModelInfo, String>;
 }
 
-pub enum AiStreamEvent {
+pub enum LlmChatCompletionStreamEvent {
     Chunk {
         content: String,
         is_finish: bool,
@@ -33,13 +26,13 @@ pub enum AiStreamEvent {
     },
 }
 
-pub struct AiRequest {
+pub struct LlmChatCompletionRequest {
     pub messages: Vec<Message>,
     pub system_prompt: Option<String>,
     pub screenshot_base64: Option<String>,
 }
 
-impl AiRequest {
+impl LlmChatCompletionRequest {
     pub fn new(messages: Vec<Message>) -> Self {
         Self {
             messages,
@@ -61,7 +54,7 @@ impl AiRequest {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
-pub enum AiProviderSettings {
+pub enum LlmProviderSettings {
     Fake,
     Ollama {
         base_url: Option<String>,
@@ -73,18 +66,9 @@ pub enum AiProviderSettings {
     },
 }
 
-pub fn create_ai_provider(settings: &AiProviderSettings) -> Result<Box<dyn AiProvider>, String> {
-    match settings {
-        AiProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
-        AiProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {
-            base_url: base_url
-                .clone()
-                .unwrap_or_else(|| "http://localhost:11434".into()),
-            model: model.clone(),
-            model_info: None,
-        })),
-        AiProviderSettings::AiTunnel { .. } => {
-            Err("AiTunnel provider is not implemented yet".to_string())
-        }
-    }
+#[derive(Clone, Serialize)]
+pub struct ModelInfo {
+    pub model_name: String,
+    pub context_window: u64,
+    pub supports_vision: bool,
 }

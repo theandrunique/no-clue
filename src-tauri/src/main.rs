@@ -2,13 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use crate::{
     application::{
-        ai_providers::{
-            get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
-        },
         chats::{send_message, stop_stream},
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
             get_messages, get_transcripts,
+        },
+        llm::{
+            get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
         },
         shortcuts::{
             delete_shortcut_override, get_shortcuts, register_all_shortcuts, save_shortcut,

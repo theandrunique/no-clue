@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use futures_util::Stream;
 use std::time::Instant;
 
-use crate::{
-    application::ai_providers::{AiProvider, AiRequest, AiStreamEvent},
-    domain::{providers::ProviderDescriptor, ModelInfo},
+use crate::domain::{
+    llm::{LlmChatCompletionRequest, LlmChatCompletionStreamEvent, LlmProvider, ModelInfo},
+    providers::ProviderDescriptor,
 };
 
 pub fn fake_provider_descriptor() -> ProviderDescriptor {
@@ -36,7 +36,7 @@ impl FakeStream {
 }
 
 impl Stream for FakeStream {
-    type Item = AiStreamEvent;
+    type Item = LlmChatCompletionStreamEvent;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -67,7 +67,7 @@ impl Stream for FakeStream {
             this.pos = end;
 
             let is_finish = this.pos >= this.chars.len();
-            std::task::Poll::Ready(Some(AiStreamEvent::Chunk {
+            std::task::Poll::Ready(Some(LlmChatCompletionStreamEvent::Chunk {
                 content,
                 is_finish,
                 usage: None,
@@ -79,11 +79,11 @@ impl Stream for FakeStream {
 }
 
 #[async_trait]
-impl AiProvider for FakeProvider {
-    async fn stream(
+impl LlmProvider for FakeProvider {
+    async fn stream_chat_completion(
         &self,
-        _request: AiRequest,
-    ) -> Result<Box<dyn Stream<Item = AiStreamEvent> + Send + Unpin>, String> {
+        _request: LlmChatCompletionRequest,
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, String> {
         let poem = r#"Here's a poem for you:
 
 ## The Code

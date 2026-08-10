@@ -1,6 +1,6 @@
-use crate::{application::ai_providers::AiRequest, domain::messages::MessageRole};
+use crate::domain::{llm::LlmChatCompletionRequest, messages::MessageRole};
 
-pub fn build_json_messages(request: &AiRequest) -> Vec<serde_json::Value> {
+pub fn build_json_messages(request: &LlmChatCompletionRequest) -> Vec<serde_json::Value> {
     let mut messages: Vec<serde_json::Value> = Vec::new();
 
     if let Some(ref system_prompt) = request.system_prompt {
