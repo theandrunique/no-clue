@@ -47,9 +47,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "sql": {
-      "preload": ["sqlite:no-clue.db"]
-    }
-  }
+  "plugins": {}
 }
