@@ -1,8 +1,9 @@
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 use crate::domain::conversations::Conversation;
 
-pub async fn create(pool: &SqlitePool, conversation: &Conversation) -> Result<(), sqlx::Error> {
+pub async fn save(pool: &SqlitePool, conversation: &Conversation) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
     )
@@ -25,7 +26,7 @@ pub async fn get_all(pool: &SqlitePool) -> Result<Vec<Conversation>, sqlx::Error
     .await
 }
 
-pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<Conversation>, sqlx::Error> {
+pub async fn get_by_id(pool: &SqlitePool, id: &Uuid) -> Result<Option<Conversation>, sqlx::Error> {
     sqlx::query_as::<_, Conversation>(
         "SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?",
     )
@@ -34,7 +35,7 @@ pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<Conversatio
     .await
 }
 
-pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
+pub async fn delete(pool: &SqlitePool, id: &Uuid) -> Result<bool, sqlx::Error> {
     let result = sqlx::query("DELETE FROM conversations WHERE id = ?")
         .bind(id)
         .execute(pool)

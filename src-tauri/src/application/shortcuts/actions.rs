@@ -26,7 +26,7 @@ fn get_repeat_states() -> std::sync::MutexGuard<'static, Option<HashMap<String, 
 
 pub async fn execute_action(app: &AppHandle, shortcut_id: &str) {
     let pool = app.state::<SqlitePool>();
-    if let Ok(Some(override_)) = db_shortcut::get_override(&pool, shortcut_id).await {
+    if let Ok(Some(override_)) = db_shortcut::get_by_id(&pool, shortcut_id).await {
         if !override_.enabled {
             tracing::trace!("Shortcut {} is disabled", shortcut_id);
             return;

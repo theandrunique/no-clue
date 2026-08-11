@@ -5,19 +5,20 @@ use serde::Serialize;
 pub enum AppError {
     Internal { message: String },
     Database { message: String },
-    SystemMessageNotFound,
+    SystemPromptNotFound,
     ConversationNotFound,
     LlmProviderNotConfigured,
     SttProviderNotConfigured,
+    LlmProviderAlreadyRunning,
+    SttProviderAlreadyRunning,
     ShourtcutOverrideNotFound,
-    TranscriptionAlreadyRunning,
     AtLeactOneAudioSourceMustBeEnabled,
     TranscriptionConversationIdNotSet,
-    LlmAlreadyRunning,
 }
 
 impl From<anyhow::Error> for AppError {
     fn from(value: anyhow::Error) -> Self {
+        tracing::error!("Internal error: {:#?}", value);
         AppError::Internal {
             message: value.to_string(),
         }
@@ -26,6 +27,7 @@ impl From<anyhow::Error> for AppError {
 
 impl From<sqlx::Error> for AppError {
     fn from(value: sqlx::Error) -> Self {
+        tracing::error!("Internal error: {:#?}", value);
         AppError::Database {
             message: value.to_string(),
         }
@@ -37,19 +39,19 @@ impl std::fmt::Display for AppError {
         match self {
             AppError::Internal { message } => write!(f, "Internal error: {message}"),
             AppError::Database { message } => write!(f, "Database error: {message}"),
-            AppError::SystemMessageNotFound => write!(f, "System prompt not found"),
+            AppError::SystemPromptNotFound => write!(f, "System prompt not found"),
             AppError::ConversationNotFound => write!(f, "Conversation not found"),
             AppError::LlmProviderNotConfigured => write!(f, "LLM provider not configured"),
             AppError::ShourtcutOverrideNotFound => write!(f, "Shourtcut override not found"),
             AppError::SttProviderNotConfigured => write!(f, "STT provider not configured"),
-            AppError::TranscriptionAlreadyRunning => write!(f, "Transcription already running"),
+            AppError::SttProviderAlreadyRunning => write!(f, "STT provider already running"),
             AppError::AtLeactOneAudioSourceMustBeEnabled => {
                 write!(f, "At least one audio source must be enabled")
             }
             AppError::TranscriptionConversationIdNotSet => {
                 write!(f, "Transcription conversation ID not set")
             }
-            AppError::LlmAlreadyRunning => write!(f, "LLM already running"),
+            AppError::LlmProviderAlreadyRunning => write!(f, "LLM provider already running"),
         }
     }
 }

@@ -4,7 +4,7 @@ use tauri::{AppHandle, Manager};
 use crate::application::shortcuts::get_all_shortcut_bindings;
 use crate::application::shortcuts::registry::register_all_shortcuts;
 use crate::db::shortcut_overrides as db_shortcut;
-use crate::domain::shortcuts::ShortcutBinding;
+use crate::domain::shortcuts::{ShortcutBinding, ShortcutOverride};
 use crate::errors::AppError;
 
 #[tauri::command]
@@ -21,7 +21,14 @@ pub async fn save_shortcut(
     enabled: bool,
 ) -> Result<(), AppError> {
     let pool = app.state::<SqlitePool>();
-    db_shortcut::save_override(&pool, &shortcut_id, key_override, enabled).await?;
+
+    let new_shortcut_override = ShortcutOverride {
+        id: shortcut_id.to_string(),
+        key_override,
+        enabled
+    };
+
+    db_shortcut::save(&pool, &new_shortcut_override).await?;
     register_all_shortcuts(&app).await?;
     Ok(())
 }
@@ -29,7 +36,7 @@ pub async fn save_shortcut(
 #[tauri::command]
 pub async fn delete_shortcut_override(app: AppHandle, shortcut_id: String) -> Result<(), AppError> {
     let pool = app.state::<SqlitePool>();
-    let deleted = db_shortcut::delete_override(&pool, &shortcut_id).await?;
+    let deleted = db_shortcut::delete(&pool, &shortcut_id).await?;
     if !deleted {
         return Err(AppError::ShourtcutOverrideNotFound);
     }

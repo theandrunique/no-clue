@@ -17,7 +17,7 @@ pub async fn get_all_shortcut_bindings(pool: &SqlitePool) -> Vec<ShortcutBinding
     let mut bindings = Vec::new();
 
     for def in get_shortcut_definitions() {
-        let override_ = db_shortcut::get_override(pool, def.id).await.ok().flatten();
+        let override_ = db_shortcut::get_by_id(pool, def.id).await.ok().flatten();
         let (key, enabled, is_custom) = match override_ {
             Some(o) => (
                 o.key_override

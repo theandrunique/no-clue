@@ -5,7 +5,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranscriptionResult {
     pub id: Uuid,
-    pub conversation_id: String,
+    pub conversation_id: Uuid,
     pub source: AudioSource,
     pub text: String,
     pub is_final: bool,
@@ -16,7 +16,7 @@ pub struct TranscriptionResult {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transcript {
     pub id: Uuid,
-    pub conversation_id: String,
+    pub conversation_id: Uuid,
     pub source: AudioSource,
     pub text: String,
     pub confidence: f64,

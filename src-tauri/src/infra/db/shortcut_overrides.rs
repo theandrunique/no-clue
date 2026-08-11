@@ -2,7 +2,7 @@ use sqlx::SqlitePool;
 
 use crate::domain::shortcuts::ShortcutOverride;
 
-pub async fn get_all_overrides(pool: &SqlitePool) -> Result<Vec<ShortcutOverride>, sqlx::Error> {
+pub async fn get_all(pool: &SqlitePool) -> Result<Vec<ShortcutOverride>, sqlx::Error> {
     sqlx::query_as::<_, ShortcutOverride>(
         "SELECT id, key_override, enabled FROM shortcut_overrides",
     )
@@ -10,7 +10,7 @@ pub async fn get_all_overrides(pool: &SqlitePool) -> Result<Vec<ShortcutOverride
     .await
 }
 
-pub async fn get_override(
+pub async fn get_by_id(
     pool: &SqlitePool,
     shortcut_id: &str,
 ) -> Result<Option<ShortcutOverride>, sqlx::Error> {
@@ -22,11 +22,9 @@ pub async fn get_override(
     .await
 }
 
-pub async fn save_override(
+pub async fn save(
     pool: &SqlitePool,
-    shortcut_id: &str,
-    key_override: Option<String>,
-    enabled: bool,
+    shortcut_override: &ShortcutOverride
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO shortcut_overrides (id, key_override, enabled)
@@ -35,18 +33,18 @@ pub async fn save_override(
             SET key_override = excluded.key_override,
                 enabled = excluded.enabled",
     )
-    .bind(shortcut_id)
-    .bind(key_override)
-    .bind(enabled)
+    .bind(&shortcut_override.id)
+    .bind(&shortcut_override.key_override)
+    .bind(&shortcut_override.enabled)
     .execute(pool)
     .await?;
 
     Ok(())
 }
 
-pub async fn delete_override(pool: &SqlitePool, shortcut_id: &str) -> Result<bool, sqlx::Error> {
+pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
     let res = sqlx::query("DELETE FROM shortcut_overrides WHERE id = ?")
-        .bind(shortcut_id)
+        .bind(id)
         .execute(pool)
         .await?;
 

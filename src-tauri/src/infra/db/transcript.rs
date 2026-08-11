@@ -1,4 +1,5 @@
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 use crate::domain::transcriptions::Transcript;
 
@@ -26,7 +27,7 @@ pub async fn create(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sq
 
 pub async fn get_by_conversation(
     pool: &SqlitePool,
-    conversation_id: &str,
+    conversation_id: &Uuid,
 ) -> Result<Vec<Transcript>, sqlx::Error> {
     sqlx::query_as::<_, Transcript>(
         "SELECT

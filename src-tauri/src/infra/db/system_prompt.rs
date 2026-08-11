@@ -1,4 +1,5 @@
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 use crate::domain::system_prompts::SystemPrompt;
 
@@ -12,9 +13,9 @@ pub async fn upsert(pool: &SqlitePool, prompt: &SystemPrompt) -> Result<(), sqlx
             updated_at
         ) VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name
-            prompt = excluded.prompt
-            created_at = excluded.created_at
+            name = excluded.name,
+            prompt = excluded.prompt,
+            created_at = excluded.created_at,
             updated_at = excluded.updated_at",
     )
     .bind(&prompt.id)
@@ -42,7 +43,7 @@ pub async fn get_all(pool: &SqlitePool) -> Result<Vec<SystemPrompt>, sqlx::Error
     .await
 }
 
-pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<SystemPrompt>, sqlx::Error> {
+pub async fn get_by_id(pool: &SqlitePool, id: &Uuid) -> Result<Option<SystemPrompt>, sqlx::Error> {
     sqlx::query_as::<_, SystemPrompt>(
         "SELECT id, name, prompt, created_at, updated_at
         FROM system_prompts
@@ -53,7 +54,7 @@ pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<SystemPromp
     .await
 }
 
-pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
+pub async fn delete(pool: &SqlitePool, id: &Uuid) -> Result<bool, sqlx::Error> {
     let result = sqlx::query("DELETE FROM system_prompts WHERE id = ?")
         .bind(id)
         .execute(pool)

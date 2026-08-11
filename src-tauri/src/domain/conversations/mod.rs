@@ -16,7 +16,7 @@ pub enum ChatStreamEvent {
     #[serde(rename = "message:chunk")]
     Chunk {
         #[serde(rename = "conversationId")]
-        conversation_id: String,
+        conversation_id: Uuid,
         content: String,
         #[serde(rename = "isFinish")]
         is_finish: bool,

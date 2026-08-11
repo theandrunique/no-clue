@@ -1,6 +1,8 @@
+use chrono::Utc;
 use sqlx::SqlitePool;
 use tauri::AppHandle;
 use tauri::Manager;
+use uuid::Uuid;
 
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
@@ -15,14 +17,14 @@ pub async fn create_conversation(app: AppHandle) -> Result<Conversation, AppErro
     tracing::trace!("create_conversation called");
     let pool = app.state::<SqlitePool>();
 
-    let timestamp = chrono::Utc::now();
+    let now = Utc::now();
     let new_conversation = Conversation {
-        id: uuid::Uuid::new_v4(),
+        id: Uuid::new_v4(),
         title: "New conversation".to_string(),
-        created_at: timestamp,
-        updated_at: timestamp,
+        created_at: now,
+        updated_at: now,
     };
-    conv_repo::create(&pool, &new_conversation).await?;
+    conv_repo::save(&pool, &new_conversation).await?;
 
     Ok(new_conversation)
 }
@@ -35,17 +37,17 @@ pub async fn get_conversations(app: AppHandle) -> Result<Vec<Conversation>, AppE
 }
 
 #[tauri::command]
-pub async fn get_conversation(app: AppHandle, id: &str) -> Result<Option<Conversation>, AppError> {
+pub async fn get_conversation(app: AppHandle, id: Uuid) -> Result<Option<Conversation>, AppError> {
     tracing::trace!(conversation_id = %id, "get_conversation called");
     let pool = app.state::<SqlitePool>();
-    Ok(conv_repo::get_by_id(&pool, id).await?)
+    Ok(conv_repo::get_by_id(&pool, &id).await?)
 }
 
 #[tauri::command]
-pub async fn delete_conversation(app: AppHandle, id: &str) -> Result<(), AppError> {
+pub async fn delete_conversation(app: AppHandle, id: Uuid) -> Result<(), AppError> {
     tracing::trace!(conversation_id = %id, "delete_conversation called");
     let pool = app.state::<SqlitePool>();
-    let result = conv_repo::delete(&pool, id).await?;
+    let result = conv_repo::delete(&pool, &id).await?;
     if !result {
         return Err(AppError::ConversationNotFound);
     }
@@ -53,20 +55,20 @@ pub async fn delete_conversation(app: AppHandle, id: &str) -> Result<(), AppErro
 }
 
 #[tauri::command]
-pub async fn get_messages(app: AppHandle, conversation_id: &str) -> Result<Vec<Message>, AppError> {
-    tracing::trace!(conversation_id, "get_messages called");
+pub async fn get_messages(app: AppHandle, conversation_id: Uuid) -> Result<Vec<Message>, AppError> {
+    tracing::trace!(%conversation_id, "get_messages called");
     let pool = app.state::<SqlitePool>();
-    let messages = msg_repo::get_by_conversation(&pool, conversation_id).await?;
+    let messages = msg_repo::get_by_conversation(&pool, &conversation_id).await?;
     Ok(messages)
 }
 
 #[tauri::command]
 pub async fn get_transcripts(
     app: AppHandle,
-    conversation_id: &str,
+    conversation_id: Uuid,
 ) -> Result<Vec<Transcript>, AppError> {
-    tracing::trace!(conversation_id = %conversation_id, "get_transcripts called");
+    tracing::trace!(%conversation_id, "get_transcripts called");
     let pool = app.state::<SqlitePool>();
-    let transcripts = transcript_repo::get_by_conversation(&pool, conversation_id).await?;
+    let transcripts = transcript_repo::get_by_conversation(&pool, &conversation_id).await?;
     Ok(transcripts)
 }

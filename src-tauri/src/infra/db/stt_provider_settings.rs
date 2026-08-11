@@ -12,7 +12,7 @@ pub async fn upsert(
         serde_json::to_string(settings).context("Failed to serialize SttProviderSettings")?;
 
     sqlx::query(
-        "INSERT INTO stt_providers_settings (id, settigns)
+        "INSERT INTO stt_providers_settings (id, settings)
          VALUES (?, ?)
          ON CONFLICT(id) DO UPDATE SET settings=excluded.settings",
     )
@@ -34,7 +34,7 @@ pub async fn get(
             .bind(provider)
             .fetch_optional(pool)
             .await
-            .context("Failed to fetch STT provider settigns")?;
+            .context("Failed to fetch STT provider settings")?;
 
     match row {
         Some((settings_json,)) => {

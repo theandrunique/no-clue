@@ -24,23 +24,23 @@ static STREAMING: AtomicBool = AtomicBool::new(false);
 pub async fn send_message(
     app: AppHandle,
     provider: String,
-    conversation_id: String,
+    conversation_id: Uuid,
     user_message: String,
     capture_screenshot: bool,
-    system_prompt_id: Option<String>,
+    system_prompt_id: Option<Uuid>,
 ) -> Result<(), AppError> {
     tracing::trace!(
-        provider = %provider,
-        conversation_id = %conversation_id,
+        provider,
+        %conversation_id,
+        %user_message,
         capture_screenshot,
-        system_prompt_id = ?system_prompt_id,
-        user_message = %user_message,
+        ?system_prompt_id,
         "send_message called"
     );
 
     if STREAMING.load(Ordering::SeqCst) {
         tracing::warn!("Already streaming, ignoring request");
-        return Err(AppError::LlmAlreadyRunning);
+        return Err(AppError::LlmProviderAlreadyRunning);
     }
 
     let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
@@ -59,7 +59,7 @@ pub async fn send_message(
     let screenshot_base64 = screenshot_result.map(|r| r.base64);
 
     let pool = app.state::<SqlitePool>();
-    if let Err(e) = msg_repo::create(
+    if let Err(e) = msg_repo::save(
         &pool,
         &Message {
             id: Uuid::new_v4(),
@@ -158,7 +158,7 @@ pub async fn send_message(
 
     tracing::trace!("Stream completed");
 
-    if let Err(e) = msg_repo::create(
+    if let Err(e) = msg_repo::save(
         &pool,
         &Message {
             id: Uuid::new_v4(),

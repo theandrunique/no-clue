@@ -23,12 +23,12 @@ struct TranscriptionSession {
 }
 
 static SESSION: LazyLock<Mutex<Option<TranscriptionSession>>> = LazyLock::new(|| Mutex::new(None));
-static CURRENT_CONVERSATION_ID: LazyLock<StdMutex<Option<String>>> =
+static CURRENT_CONVERSATION_ID: LazyLock<StdMutex<Option<Uuid>>> =
     LazyLock::new(|| StdMutex::new(None));
 
 #[tauri::command]
-pub async fn update_transcription_session(conversation_id: String) -> Result<(), String> {
-    tracing::trace!(conversation_id, "update_transcription_session called");
+pub async fn update_transcription_session(conversation_id: Uuid) -> Result<(), String> {
+    tracing::trace!(conversation_id = ?conversation_id, "update_transcription_session called");
     let mut current = CURRENT_CONVERSATION_ID.lock().map_err(|e| e.to_string())?;
     *current = Some(conversation_id);
     Ok(())
@@ -42,7 +42,7 @@ pub async fn start_transcription(
 ) -> Result<(), AppError> {
     let mut guard = SESSION.lock().await;
     if guard.is_some() {
-        return Err(AppError::TranscriptionAlreadyRunning);
+        return Err(AppError::SttProviderAlreadyRunning);
     }
     if !audio_config.capture_system_audio && !audio_config.capture_microphone {
         return Err(AppError::AtLeactOneAudioSourceMustBeEnabled);
@@ -60,7 +60,7 @@ pub async fn start_transcription(
         .await?
         .ok_or_else(|| AppError::SttProviderNotConfigured)?;
 
-    let mut provider = create_stt_provider(&settings);
+    let provider = create_stt_provider(&settings);
 
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn({

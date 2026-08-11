@@ -5,7 +5,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Message {
     pub id: Uuid,
-    pub conversation_id: String,
+    pub conversation_id: Uuid,
     pub role: MessageRole,
     pub content: String,
     pub screenshot_path: Option<String>,

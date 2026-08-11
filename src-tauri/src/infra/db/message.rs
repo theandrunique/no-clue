@@ -1,8 +1,9 @@
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 use crate::domain::messages::Message;
 
-pub async fn create(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Error> {
+pub async fn save(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO messages (
             id,
@@ -26,7 +27,7 @@ pub async fn create(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Er
 
 pub async fn get_by_conversation(
     pool: &SqlitePool,
-    conversation_id: &str,
+    conversation_id: &Uuid,
 ) -> Result<Vec<Message>, sqlx::Error> {
     sqlx::query_as::<_, Message>(
         "SELECT
@@ -37,7 +38,8 @@ pub async fn get_by_conversation(
             screenshot_path,
             created_at
         FROM messages
-        WHERE conversation_id = ? ORDER BY created_at ASC",
+        WHERE conversation_id = ?
+        ORDER BY created_at ASC",
     )
     .bind(conversation_id)
     .fetch_all(pool)
