@@ -27,9 +27,9 @@ pub async fn create_system_prompt(
 ) -> Result<SystemPrompt, AppError> {
     tracing::trace!(name = %name, "create_system_prompt called");
 
-    let now = chrono::Utc::now().timestamp();
+    let now = chrono::Utc::now();
     let new_prompt = SystemPrompt {
-        id: uuid::Uuid::new_v4().to_string(),
+        id: uuid::Uuid::new_v4(),
         name: name.to_string(),
         prompt: prompt.to_string(),
         created_at: now,

@@ -115,8 +115,8 @@ async fn run_transcription(
 async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
     let pool = app.state::<SqlitePool>();
 
-    let timestamp = chrono::Utc::now().timestamp_millis();
-    let id = Uuid::new_v4().to_string();
+    let created_at = chrono::Utc::now();
+    let id = Uuid::new_v4();
     let conversation_id = CURRENT_CONVERSATION_ID
         .lock()
         .map(|guard| guard.clone())
@@ -130,7 +130,7 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
         is_final: result.is_final,
         confidence: result.confidence,
         source: result.source.clone(),
-        timestamp,
+        created_at,
     };
 
     let _ = app.emit("transcription-result", &payload);

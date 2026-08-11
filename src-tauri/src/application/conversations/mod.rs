@@ -15,9 +15,9 @@ pub async fn create_conversation(app: AppHandle) -> Result<Conversation, AppErro
     tracing::trace!("create_conversation called");
     let pool = app.state::<SqlitePool>();
 
-    let timestamp = chrono::Utc::now().timestamp();
+    let timestamp = chrono::Utc::now();
     let new_conversation = Conversation {
-        id: uuid::Uuid::new_v4().to_string(),
+        id: uuid::Uuid::new_v4(),
         title: "New conversation".to_string(),
         created_at: timestamp,
         updated_at: timestamp,

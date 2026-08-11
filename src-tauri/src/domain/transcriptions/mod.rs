@@ -1,24 +1,26 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranscriptionResult {
-    pub id: String,
+    pub id: Uuid,
     pub conversation_id: String,
     pub source: AudioSource,
     pub text: String,
     pub is_final: bool,
     pub confidence: f64,
-    pub timestamp: i64,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transcript {
-    pub id: String,
+    pub id: Uuid,
     pub conversation_id: String,
     pub source: AudioSource,
     pub text: String,
     pub confidence: f64,
-    pub timestamp: i64,
+    pub created_at: DateTime<Utc>,
 }
 
 impl From<Transcript> for TranscriptionResult {
@@ -30,7 +32,7 @@ impl From<Transcript> for TranscriptionResult {
             text: t.text,
             is_final: true,
             confidence: t.confidence,
-            timestamp: t.timestamp,
+            created_at: t.created_at,
         }
     }
 }
@@ -43,7 +45,7 @@ impl From<TranscriptionResult> for Transcript {
             source: value.source,
             text: value.text,
             confidence: value.confidence,
-            timestamp: value.timestamp,
+            created_at: value.created_at,
         }
     }
 }

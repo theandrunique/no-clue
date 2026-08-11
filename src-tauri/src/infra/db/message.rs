@@ -10,7 +10,7 @@ pub async fn create(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Er
             role,
             content,
             screenshot_path,
-            timestamp
+            created_at
         ) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&message.id)
@@ -18,7 +18,7 @@ pub async fn create(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Er
     .bind(&message.role)
     .bind(&message.content)
     .bind(&message.screenshot_path)
-    .bind(&message.timestamp)
+    .bind(&message.created_at)
     .execute(pool)
     .await?;
     Ok(())
@@ -35,9 +35,9 @@ pub async fn get_by_conversation(
             role,
             content,
             screenshot_path,
-            timestamp
+            created_at
         FROM messages
-        WHERE conversation_id = ?1 ORDER BY timestamp ASC",
+        WHERE conversation_id = ? ORDER BY created_at ASC",
     )
     .bind(conversation_id)
     .fetch_all(pool)

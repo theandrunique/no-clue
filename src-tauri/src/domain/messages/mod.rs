@@ -1,13 +1,15 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Message {
-    pub id: String,
+    pub id: Uuid,
     pub conversation_id: String,
     pub role: MessageRole,
     pub content: String,
     pub screenshot_path: Option<String>,
-    pub timestamp: i64,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::Type)]

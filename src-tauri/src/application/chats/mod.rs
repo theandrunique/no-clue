@@ -62,12 +62,12 @@ pub async fn send_message(
     if let Err(e) = msg_repo::create(
         &pool,
         &Message {
-            id: Uuid::new_v4().to_string(),
+            id: Uuid::new_v4(),
             conversation_id: conversation_id.clone(),
             role: MessageRole::User,
             content: user_message.clone(),
             screenshot_path: screenshot_path.clone(),
-            timestamp: Utc::now().timestamp(),
+            created_at: Utc::now(),
         },
     )
     .await
@@ -161,12 +161,12 @@ pub async fn send_message(
     if let Err(e) = msg_repo::create(
         &pool,
         &Message {
-            id: Uuid::new_v4().to_string(),
+            id: Uuid::new_v4(),
             conversation_id: conversation_id.clone(),
             role: MessageRole::Assistant,
             content: assistant_response,
             screenshot_path: None,
-            timestamp: Utc::now().timestamp(),
+            created_at: Utc::now(),
         },
     )
     .await

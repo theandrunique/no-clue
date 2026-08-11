@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS messages (
     role TEXT NOT NULL,
     content TEXT NOT NULL,
     screenshot_path TEXT,
-    timestamp INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS transcripts (
     source TEXT NOT NULL,
     text TEXT NOT NULL,
     confidence REAL NOT NULL,
-    timestamp INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 

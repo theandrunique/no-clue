@@ -10,7 +10,7 @@ pub async fn create(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sq
             source,
             text,
             confidence,
-            timestamp
+            created_at
         ) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&transcript.id)
@@ -18,7 +18,7 @@ pub async fn create(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sq
     .bind(&transcript.source)
     .bind(&transcript.text)
     .bind(&transcript.confidence)
-    .bind(&transcript.timestamp)
+    .bind(&transcript.created_at)
     .execute(pool)
     .await?;
     Ok(())
@@ -35,10 +35,10 @@ pub async fn get_by_conversation(
             source,
             text,
             confidence,
-            timestamp
+            created_at
         FROM transcripts
         WHERE conversation_id = ?
-        ORDER BY timestamp ASC",
+        ORDER BY created_at ASC",
     )
     .bind(conversation_id)
     .fetch_all(pool)
