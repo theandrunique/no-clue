@@ -15,7 +15,7 @@ pub async fn create_pool(app_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> {
     let db_path = app_dir.join("no-clue.db");
     let db_url = format!("sqlite://{}", db_path.display());
 
-    tracing::info!(db_url, "Connecting to database");
+    tracing::info!(db_path = %db_path.display(), "Connecting to database");
 
     let options = SqliteConnectOptions::from_str(&db_url)?
         .create_if_missing(true)

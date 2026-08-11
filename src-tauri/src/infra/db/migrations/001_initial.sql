@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    role TEXT NOT NULL,
     content TEXT NOT NULL,
     screenshot_path TEXT,
     timestamp INTEGER NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS transcripts (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
-    source TEXT NOT NULL CHECK (source IN ('microphone', 'system')),
+    source TEXT NOT NULL,
     text TEXT NOT NULL,
     confidence REAL NOT NULL,
     timestamp INTEGER NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS system_prompts (
 
 CREATE TABLE IF NOT EXISTS llm_provider_settings (
     id TEXT PRIMARY KEY NOT NULL,
-    settigns TEXT NOT NULL
+    settings TEXT NOT NULL
 );
 
 INSERT OR IGNORE INTO llm_provider_settings (id, settings) VALUES ('fake', '{"type":"Fake"}');
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS stt_providers_settings (
     settings TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO stt_providers_settings (id, config) VALUES ('fake', '{"type":"Fake"}');
+INSERT OR IGNORE INTO stt_providers_settings (id, settings) VALUES ('fake', '{"type":"Fake"}');
 
 CREATE TABLE IF NOT EXISTS shortcut_overrides (
     id TEXT PRIMARY KEY NOT NULL,

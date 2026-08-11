@@ -55,27 +55,6 @@ pub enum AudioSource {
     Microphone,
 }
 
-impl std::fmt::Display for AudioSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AudioSource::System => write!(f, "system"),
-            AudioSource::Microphone => write!(f, "microphone"),
-        }
-    }
-}
-
-impl std::str::FromStr for AudioSource {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "system" => Ok(AudioSource::System),
-            "microphone" => Ok(AudioSource::Microphone),
-            _ => Err(format!("Unknown audio source: {}", s)),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioCaptureConfig {
     pub capture_system_audio: bool,
