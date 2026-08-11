@@ -9,7 +9,9 @@ pub use ai_tunnel::ai_tunnel_descriptor;
 pub use fake::fake_provider_descriptor;
 pub use ollama::ollama_descriptor;
 
-pub fn create_ai_provider(settings: &LlmProviderSettings) -> Result<Box<dyn LlmProvider>, String> {
+pub fn create_llm_provider(
+    settings: &LlmProviderSettings,
+) -> Result<Box<dyn LlmProvider>, anyhow::Error> {
     match settings {
         LlmProviderSettings::Fake => Ok(Box::new(fake::FakeProvider)),
         LlmProviderSettings::Ollama { base_url, model } => Ok(Box::new(ollama::OllamaProvider {
@@ -20,7 +22,7 @@ pub fn create_ai_provider(settings: &LlmProviderSettings) -> Result<Box<dyn LlmP
             model_info: None,
         })),
         LlmProviderSettings::AiTunnel { .. } => {
-            Err("AiTunnel provider is not implemented yet".to_string())
+            Err(anyhow::anyhow!("AiTunnel provider is not implemented yet"))
         }
     }
 }

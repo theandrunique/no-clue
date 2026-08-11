@@ -1,61 +1,44 @@
-use crate::{db::get_connection, domain::conversations::Conversation};
-use rusqlite::{params, Result};
+use sqlx::SqlitePool;
 
-pub fn create(conversation: &Conversation) -> Result<()> {
-    let conn = get_connection()?;
+use crate::domain::conversations::Conversation;
 
-    conn.execute(
-        "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-        params![
-            conversation.id,
-            conversation.title,
-            conversation.created_at,
-            conversation.updated_at
-        ],
-    )?;
-
+pub async fn create(pool: &SqlitePool, conversation: &Conversation) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
+    )
+    .bind(&conversation.id)
+    .bind(&conversation.title)
+    .bind(&conversation.created_at)
+    .bind(&conversation.updated_at)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
-pub fn get_all() -> Result<Vec<Conversation>> {
-    let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC",
-    )?;
-
-    let rows = stmt.query_map([], |row| {
-        Ok(Conversation {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            created_at: row.get(2)?,
-            updated_at: row.get(3)?,
-        })
-    })?;
-
-    rows.collect()
+pub async fn get_all(pool: &SqlitePool) -> Result<Vec<Conversation>, sqlx::Error> {
+    sqlx::query_as::<_, Conversation>(
+        "SELECT id, title, created_at, updated_at
+        FROM conversations
+        ORDER BY updated_at DESC",
+    )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn get_by_id(id: &str) -> Result<Option<Conversation>> {
-    let conn = get_connection()?;
-    let mut stmt =
-        conn.prepare("SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?1")?;
-
-    let mut rows = stmt.query(params![id])?;
-
-    if let Some(row) = rows.next()? {
-        Ok(Some(Conversation {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            created_at: row.get(2)?,
-            updated_at: row.get(3)?,
-        }))
-    } else {
-        Ok(None)
-    }
+pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<Conversation>, sqlx::Error> {
+    sqlx::query_as::<_, Conversation>(
+        "SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
 }
 
-pub fn delete(id: &str) -> Result<()> {
-    let conn = get_connection()?;
-    conn.execute("DELETE FROM conversations WHERE id = ?1", params![id])?;
-    Ok(())
+pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query("DELETE FROM conversations WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+
+    Ok(result.rows_affected() > 0)
 }

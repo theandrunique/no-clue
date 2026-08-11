@@ -1,13 +1,16 @@
-use crate::db::stt_provider as stt_provider_repo;
+use crate::db::stt_provider_settings as stt_provider_repo;
 use crate::db::transcript as transcript_repo;
 use crate::domain::stt::{SttProvider, SttTranscriptResult};
+use crate::domain::transcriptions::Transcript;
 use crate::domain::transcriptions::{AudioCaptureConfig, TranscriptionResult};
-use crate::error::log_err;
+use crate::errors::AppError;
 use crate::infra::audio_capture::start_capture_pipeline;
 use crate::infra::stt_providers::create_stt_provider;
 use futures_util::StreamExt;
+use sqlx::SqlitePool;
 use std::sync::LazyLock;
 use std::sync::Mutex as StdMutex;
+use tauri::Manager;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -36,31 +39,28 @@ pub async fn start_transcription(
     app: AppHandle,
     stt_provider: String,
     audio_config: AudioCaptureConfig,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let mut guard = SESSION.lock().await;
     if guard.is_some() {
-        return Err("Transcription already running".to_string());
+        return Err(AppError::TranscriptionAlreadyRunning);
     }
     if !audio_config.capture_system_audio && !audio_config.capture_microphone {
-        return Err("At least one audio source must be enabled".to_string());
+        return Err(AppError::AtLeactOneAudioSourceMustBeEnabled);
     }
-    if CURRENT_CONVERSATION_ID
+    let has_conversation = CURRENT_CONVERSATION_ID
         .lock()
-        .map_err(|e| e.to_string())?
-        .is_none()
-    {
-        return Err("No conversation ID set".to_string());
+        .map(|guard| guard.is_some())
+        .unwrap_or(false);
+    if !has_conversation {
+        return Err(AppError::TranscriptionConversationIdNotSet);
     }
 
-    let settings =
-        tokio::task::spawn_blocking(move || stt_provider_repo::get_stt_settings(&stt_provider))
-            .await
-            .map_err(|e| log_err(e, "get_stt_settings"))?
-            .map_err(|e| log_err(e, "get_stt_settings"))?
-            .ok_or_else(|| log_err("STT provider not configured", "get_stt_settings"))?;
+    let pool = app.state::<SqlitePool>();
+    let settings = stt_provider_repo::get(&pool, &stt_provider)
+        .await?
+        .ok_or_else(|| AppError::SttProviderNotConfigured)?;
 
-    let mut provider =
-        create_stt_provider(&settings).map_err(|e| log_err(e, "create_stt_provider"))?;
+    let mut provider = create_stt_provider(&settings);
 
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn({
@@ -113,6 +113,8 @@ async fn run_transcription(
 }
 
 async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
+    let pool = app.state::<SqlitePool>();
+
     let timestamp = chrono::Utc::now().timestamp_millis();
     let id = Uuid::new_v4().to_string();
     let conversation_id = CURRENT_CONVERSATION_ID
@@ -134,15 +136,9 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
     let _ = app.emit("transcription-result", &payload);
 
     if result.is_final {
-        let text = result.text;
-        let confidence = result.confidence;
-        let source = result.source;
-        tokio::spawn(async move {
-            let _ = tokio::task::spawn_blocking(move || {
-                transcript_repo::create(id, conversation_id, source, text, confidence, timestamp)
-            })
-            .await;
-        });
+        if let Err(e) = transcript_repo::create(&pool, &Transcript::from(payload)).await {
+            tracing::error!(error = %e, "Failed to save trancription");
+        }
     }
 }
 

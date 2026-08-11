@@ -11,7 +11,7 @@ pub struct TranscriptionResult {
     pub timestamp: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transcript {
     pub id: String,
     pub conversation_id: String,
@@ -35,7 +35,20 @@ impl From<Transcript> for TranscriptionResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl From<TranscriptionResult> for Transcript {
+    fn from(value: TranscriptionResult) -> Self {
+        Transcript {
+            id: value.id,
+            conversation_id: value.conversation_id,
+            source: value.source,
+            text: value.text,
+            confidence: value.confidence,
+            timestamp: value.timestamp,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 pub enum AudioSource {
     System,

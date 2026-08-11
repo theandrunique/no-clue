@@ -1,11 +1,15 @@
+use sqlx::SqlitePool;
+use tauri::{AppHandle, Manager};
+
 use crate::{
-    db::ai_provider as provider_repo,
+    db::llm_provider_settings as provider_repo,
     domain::{
         llm::{LlmProviderSettings, ModelInfo},
         providers::ProviderDescriptor,
     },
+    errors::AppError,
     infra::llm_providers::{
-        ai_tunnel_descriptor, create_ai_provider, fake_provider_descriptor, ollama_descriptor,
+        ai_tunnel_descriptor, create_llm_provider, fake_provider_descriptor, ollama_descriptor,
     },
 };
 
@@ -21,38 +25,35 @@ pub fn get_ai_providers() -> Vec<ProviderDescriptor> {
 
 #[tauri::command]
 pub async fn save_ai_provider_settings(
-    provider: String,
+    app: AppHandle,
+    provider: &str,
     settings: LlmProviderSettings,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     tracing::trace!(provider, "save_ai_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::upsert_provider(&provider, &settings))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
+    let pool = app.state::<SqlitePool>();
+    provider_repo::upsert(&pool, provider, &settings).await?;
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_ai_provider_settings(
-    provider: String,
-) -> Result<Option<LlmProviderSettings>, String> {
+    app: AppHandle,
+    provider: &str,
+) -> Result<Option<LlmProviderSettings>, AppError> {
     tracing::trace!(provider, "get_ai_provider_settings called");
-    tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
+    let pool = app.state::<SqlitePool>();
+    Ok(provider_repo::get(&pool, &provider).await?)
 }
 
 #[tauri::command]
-pub async fn get_model_info(provider: String) -> Result<ModelInfo, String> {
+pub async fn get_model_info(app: AppHandle, provider: &str) -> Result<ModelInfo, AppError> {
     tracing::trace!(provider, "get_model_info called");
-    let provider_clone = provider.clone();
-    let settings =
-        tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("Provider {} not configured", provider_clone))?;
 
-    let ai_provider = create_ai_provider(&settings)?;
-    ai_provider.get_model_info().await
+    let pool = app.state::<SqlitePool>();
+    let settings = provider_repo::get(&pool, &provider)
+        .await?
+        .ok_or_else(|| AppError::LlmProviderNotConfigured)?;
+
+    let ai_provider = create_llm_provider(&settings)?;
+    Ok(ai_provider.get_model_info().await?)
 }

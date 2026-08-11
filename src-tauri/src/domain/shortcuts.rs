@@ -21,7 +21,7 @@ pub struct ValidationRules {
     pub requires_modifier: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ShortcutOverride {
     pub id: String,
     pub key_override: Option<String>,

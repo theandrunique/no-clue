@@ -1,8 +1,9 @@
+use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::application::shortcuts::definitions::get_shortcut_definitions;
 use crate::db::shortcut_overrides as db_shortcut;
@@ -23,8 +24,9 @@ fn get_repeat_states() -> std::sync::MutexGuard<'static, Option<HashMap<String, 
     guard
 }
 
-pub fn execute_action(app: &AppHandle, shortcut_id: &str) {
-    if let Ok(Some(override_)) = db_shortcut::get_override(shortcut_id) {
+pub async fn execute_action(app: &AppHandle, shortcut_id: &str) {
+    let pool = app.state::<SqlitePool>();
+    if let Ok(Some(override_)) = db_shortcut::get_override(&pool, shortcut_id).await {
         if !override_.enabled {
             tracing::trace!("Shortcut {} is disabled", shortcut_id);
             return;
@@ -45,8 +47,8 @@ pub fn execute_action(app: &AppHandle, shortcut_id: &str) {
     run_backend_action(app, shortcut_id);
 }
 
-pub fn on_shortcut_pressed(app: &AppHandle, shortcut_id: &str) {
-    execute_action(app, shortcut_id);
+pub async fn on_shortcut_pressed(app: &AppHandle, shortcut_id: &str) {
+    execute_action(app, shortcut_id).await;
     start_repeat(app.clone(), shortcut_id.to_string());
 }
 

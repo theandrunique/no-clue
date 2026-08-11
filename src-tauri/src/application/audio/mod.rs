@@ -1,20 +1,20 @@
 use crate::{
-    error::log_err,
+    errors::AppError,
     infra::audio_capture::{list_input_devices, list_output_devices, AudioDevice, AudioInput},
 };
 use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub fn get_input_devices() -> Result<Vec<AudioDevice>, String> {
+pub fn get_input_devices() -> Result<Vec<AudioDevice>, AppError> {
     tracing::trace!("get_input_devices called");
-    list_input_devices().map_err(|e| log_err(e, "Failed to get input devices"))
+    Ok(list_input_devices()?)
 }
 
 #[tauri::command]
-pub fn get_output_devices() -> Result<Vec<AudioDevice>, String> {
+pub fn get_output_devices() -> Result<Vec<AudioDevice>, AppError> {
     tracing::trace!("get_output_devices called");
-    list_output_devices().map_err(|e| log_err(e, "Failed to get output devices"))
+    Ok(list_output_devices()?)
 }
 
 #[tauri::command]

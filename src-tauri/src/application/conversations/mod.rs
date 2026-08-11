@@ -1,13 +1,19 @@
+use sqlx::SqlitePool;
+use tauri::AppHandle;
+use tauri::Manager;
+
 use crate::db::conversation as conv_repo;
 use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
+use crate::domain::conversations::Conversation;
 use crate::domain::messages::Message;
 use crate::domain::transcriptions::Transcript;
-use crate::{domain::conversations::Conversation, error::log_err};
+use crate::errors::AppError;
 
 #[tauri::command]
-pub async fn create_conversation() -> Result<Conversation, String> {
+pub async fn create_conversation(app: AppHandle) -> Result<Conversation, AppError> {
     tracing::trace!("create_conversation called");
+    let pool = app.state::<SqlitePool>();
 
     let timestamp = chrono::Utc::now().timestamp();
     let new_conversation = Conversation {
@@ -16,67 +22,51 @@ pub async fn create_conversation() -> Result<Conversation, String> {
         created_at: timestamp,
         updated_at: timestamp,
     };
-
-    let conversation_to_save = new_conversation.clone();
-
-    tokio::task::spawn_blocking(move || conv_repo::create(&conversation_to_save))
-        .await
-        .map_err(|e| log_err(e, "create_conversation"))?
-        .map_err(|e| log_err(e, "create_conversation"))?;
+    conv_repo::create(&pool, &new_conversation).await?;
 
     Ok(new_conversation)
 }
 
 #[tauri::command]
-pub async fn get_conversations() -> Result<Vec<Conversation>, String> {
+pub async fn get_conversations(app: AppHandle) -> Result<Vec<Conversation>, AppError> {
     tracing::trace!("get_conversations called");
-    let conversations = tokio::task::spawn_blocking(|| conv_repo::get_all())
-        .await
-        .map_err(|e| log_err(e, "get_conversations"))?
-        .map_err(|e| log_err(e, "get_conversations"))?;
-    Ok(conversations)
+    let pool = app.state::<SqlitePool>();
+    Ok(conv_repo::get_all(&pool).await?)
 }
 
 #[tauri::command]
-pub async fn get_conversation(id: String) -> Result<Conversation, String> {
+pub async fn get_conversation(app: AppHandle, id: &str) -> Result<Option<Conversation>, AppError> {
     tracing::trace!(conversation_id = %id, "get_conversation called");
-    let id_clone = id.clone();
-    let result = tokio::task::spawn_blocking(move || conv_repo::get_by_id(&id_clone))
-        .await
-        .map_err(|e| log_err(e, "get_conversation"))?
-        .map_err(|e| log_err(e, "get_conversation"))?
-        .ok_or_else(|| log_err("Conversation not found", "get_conversation"))?;
-    Ok(result)
+    let pool = app.state::<SqlitePool>();
+    Ok(conv_repo::get_by_id(&pool, id).await?)
 }
 
 #[tauri::command]
-pub async fn delete_conversation(id: String) -> Result<(), String> {
+pub async fn delete_conversation(app: AppHandle, id: &str) -> Result<(), AppError> {
     tracing::trace!(conversation_id = %id, "delete_conversation called");
-    tokio::task::spawn_blocking(move || conv_repo::delete(&id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
+    let pool = app.state::<SqlitePool>();
+    let result = conv_repo::delete(&pool, id).await?;
+    if !result {
+        return Err(AppError::ConversationNotFound);
+    }
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_messages(conversation_id: String) -> Result<Vec<Message>, String> {
-    tracing::trace!(conversation_id = %conversation_id, "get_messages called");
-    let messages =
-        tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conversation_id))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?;
+pub async fn get_messages(app: AppHandle, conversation_id: &str) -> Result<Vec<Message>, AppError> {
+    tracing::trace!(conversation_id, "get_messages called");
+    let pool = app.state::<SqlitePool>();
+    let messages = msg_repo::get_by_conversation(&pool, conversation_id).await?;
     Ok(messages)
 }
 
 #[tauri::command]
-pub async fn get_transcripts(conversation_id: String) -> Result<Vec<Transcript>, String> {
+pub async fn get_transcripts(
+    app: AppHandle,
+    conversation_id: &str,
+) -> Result<Vec<Transcript>, AppError> {
     tracing::trace!(conversation_id = %conversation_id, "get_transcripts called");
-    let transcripts =
-        tokio::task::spawn_blocking(move || transcript_repo::get_by_conversation(&conversation_id))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?;
+    let pool = app.state::<SqlitePool>();
+    let transcripts = transcript_repo::get_by_conversation(&pool, conversation_id).await?;
     Ok(transcripts)
 }

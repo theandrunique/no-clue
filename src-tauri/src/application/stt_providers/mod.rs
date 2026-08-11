@@ -1,6 +1,10 @@
+use sqlx::SqlitePool;
+use tauri::{AppHandle, Manager};
+
 use crate::{
-    db::stt_provider as stt_provider_repo,
+    db::stt_provider_settings as stt_provider_repo,
     domain::{providers::ProviderDescriptor, stt::SttProviderSettings},
+    errors::AppError,
     infra::stt_providers::{deepgram_descriptor, fake_stt_descriptor},
 };
 
@@ -12,26 +16,22 @@ pub fn get_stt_providers() -> Vec<ProviderDescriptor> {
 
 #[tauri::command]
 pub async fn save_stt_provider_settings(
-    provider: String,
+    app: AppHandle,
+    provider: &str,
     settings: SttProviderSettings,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     tracing::trace!(provider, "save_stt_provider_settings called");
-    tokio::task::spawn_blocking(move || {
-        stt_provider_repo::upsert_stt_settings(&provider, &settings)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
+    let pool = app.state::<SqlitePool>();
+    stt_provider_repo::upsert(&pool, provider, &settings).await?;
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_stt_provider_settings(
-    provider: String,
-) -> Result<Option<SttProviderSettings>, String> {
+    app: AppHandle,
+    provider: &str,
+) -> Result<Option<SttProviderSettings>, AppError> {
     tracing::trace!(provider, "get_stt_provider_settings called");
-
-    tokio::task::spawn_blocking(move || stt_provider_repo::get_stt_settings(&provider))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
+    let pool = app.state::<SqlitePool>();
+    Ok(stt_provider_repo::get(&pool, provider).await?)
 }

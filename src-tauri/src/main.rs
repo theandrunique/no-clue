@@ -28,7 +28,7 @@ use tauri::Manager;
 
 mod application;
 mod domain;
-mod error;
+mod errors;
 mod infra;
 mod logging;
 mod presentation;
@@ -48,9 +48,19 @@ pub fn main() {
 
             logging::init_logging(&app_data_dir);
 
-            db::init_db(&app_data_dir).expect("Failed to initialize database");
+            let pool = tauri::async_runtime::block_on(async {
+                let pool = db::create_pool(&app_data_dir)
+                    .await
+                    .expect("Failed to create database pool");
+                db::run_migrations(&pool)
+                    .await
+                    .expect("Failed to run migrations");
+                pool
+            });
 
-            if let Err(e) = register_all_shortcuts(&app.handle()) {
+            app.manage(pool);
+
+            if let Err(e) = tauri::async_runtime::block_on(register_all_shortcuts(app.handle())) {
                 tracing::error!("Failed to register shortcuts: {}", e);
             }
 

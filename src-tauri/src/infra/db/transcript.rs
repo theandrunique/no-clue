@@ -1,55 +1,46 @@
-use crate::{
-    db::get_connection,
-    domain::transcriptions::{AudioSource, Transcript},
-};
-use rusqlite::{params, Result};
+use sqlx::SqlitePool;
 
-pub fn create(
-    id: String,
-    conversation_id: String,
-    source: AudioSource,
-    text: String,
-    confidence: f64,
-    timestamp: i64,
-) -> Result<Transcript> {
-    let conn = get_connection()?;
+use crate::domain::transcriptions::Transcript;
 
-    conn.execute(
-        "INSERT INTO transcripts (id, conversation_id, source, text, confidence, timestamp) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![id, conversation_id, source.to_string(), text, confidence, timestamp],
-    )?;
-
-    Ok(Transcript {
-        id,
-        conversation_id,
-        source,
-        text,
-        confidence,
-        timestamp,
-    })
+pub async fn create(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO transcripts (
+            id,
+            conversation_id,
+            source,
+            text,
+            confidence,
+            timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&transcript.id)
+    .bind(&transcript.conversation_id)
+    .bind(&transcript.source)
+    .bind(&transcript.text)
+    .bind(&transcript.confidence)
+    .bind(&transcript.timestamp)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
-pub fn get_by_conversation(conversation_id: &str) -> Result<Vec<Transcript>> {
-    let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT id, conversation_id, source, text, confidence, timestamp FROM transcripts WHERE conversation_id = ?1 ORDER BY timestamp ASC",
-    )?;
-
-    let rows = stmt.query_map(params![conversation_id], |row| {
-        let source_str: String = row.get(2)?;
-        let source = match source_str.to_lowercase().as_str() {
-            "microphone" => AudioSource::Microphone,
-            _ => AudioSource::System,
-        };
-        Ok(Transcript {
-            id: row.get(0)?,
-            conversation_id: row.get(1)?,
-            source: source,
-            text: row.get(3)?,
-            confidence: row.get(4)?,
-            timestamp: row.get(5)?,
-        })
-    })?;
-
-    rows.collect()
+pub async fn get_by_conversation(
+    pool: &SqlitePool,
+    conversation_id: &str,
+) -> Result<Vec<Transcript>, sqlx::Error> {
+    sqlx::query_as::<_, Transcript>(
+        "SELECT
+            id,
+            conversation_id,
+            source,
+            text,
+            confidence,
+            timestamp
+        FROM transcripts
+        WHERE conversation_id = ?
+        ORDER BY timestamp ASC",
+    )
+    .bind(conversation_id)
+    .fetch_all(pool)
+    .await
 }

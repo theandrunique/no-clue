@@ -1,3 +1,4 @@
+use anyhow::Context;
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
 use reqwest::Client;
@@ -53,7 +54,8 @@ impl LlmProvider for OllamaProvider {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, String> {
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, anyhow::Error>
+    {
         let client = Client::new();
         let messages = build_json_messages(&request);
 
@@ -75,7 +77,7 @@ impl LlmProvider for OllamaProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .context("Failed to do request")?;
 
         tracing::trace!(status = %res.status(), "Response status");
 
@@ -147,7 +149,7 @@ impl LlmProvider for OllamaProvider {
         Ok(Box::new(stream))
     }
 
-    async fn get_model_info(&self) -> Result<ModelInfo, String> {
+    async fn get_model_info(&self) -> Result<ModelInfo, anyhow::Error> {
         if let Some(ref info) = self.model_info {
             return Ok(info.clone());
         }
@@ -163,9 +165,12 @@ impl LlmProvider for OllamaProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .context("Failed to do request")?;
 
-        let data: OllamaModelShowResponse = response.json().await.map_err(|e| e.to_string())?;
+        let data: OllamaModelShowResponse = response
+            .json()
+            .await
+            .context("Failed to deserialize response")?;
 
         let context_window = data
             .model_info

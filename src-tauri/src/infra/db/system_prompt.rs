@@ -1,77 +1,63 @@
-use crate::{db::get_connection, domain::system_prompts::SystemPrompt};
-use rusqlite::{params, Result};
+use sqlx::SqlitePool;
 
-pub fn create(prompt: &SystemPrompt) -> Result<()> {
-    let conn = get_connection()?;
+use crate::domain::system_prompts::SystemPrompt;
 
-    conn.execute(
-        "INSERT INTO system_prompts (id, name, prompt, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![
-            prompt.id,
-            prompt.name,
-            prompt.prompt,
-            prompt.created_at,
-            prompt.updated_at
-        ],
-    )?;
-
+pub async fn upsert(pool: &SqlitePool, prompt: &SystemPrompt) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO system_prompts (
+            id,
+            name,
+            prompt,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name
+            prompt = excluded.prompt
+            created_at = excluded.created_at
+            updated_at = excluded.updated_at",
+    )
+    .bind(&prompt.id)
+    .bind(&prompt.name)
+    .bind(&prompt.prompt)
+    .bind(&prompt.created_at)
+    .bind(&prompt.updated_at)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
-pub fn get_all() -> Result<Vec<SystemPrompt>> {
-    let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT id, name, prompt, created_at, updated_at FROM system_prompts ORDER BY updated_at DESC",
-    )?;
-
-    let rows = stmt.query_map([], |row| {
-        Ok(SystemPrompt {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            prompt: row.get(2)?,
-            created_at: row.get(3)?,
-            updated_at: row.get(4)?,
-        })
-    })?;
-
-    rows.collect()
+pub async fn get_all(pool: &SqlitePool) -> Result<Vec<SystemPrompt>, sqlx::Error> {
+    sqlx::query_as::<_, SystemPrompt>(
+        "SELECT
+            id,
+            name,
+            prompt,
+            created_at,
+            updated_at
+        FROM system_prompts
+        ORDER BY updated_at DESC",
+    )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn get_by_id(id: &str) -> Result<Option<SystemPrompt>> {
-    let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT id, name, prompt, created_at, updated_at FROM system_prompts WHERE id = ?1",
-    )?;
-
-    let mut rows = stmt.query(params![id])?;
-
-    if let Some(row) = rows.next()? {
-        Ok(Some(SystemPrompt {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            prompt: row.get(2)?,
-            created_at: row.get(3)?,
-            updated_at: row.get(4)?,
-        }))
-    } else {
-        Ok(None)
-    }
+pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<SystemPrompt>, sqlx::Error> {
+    sqlx::query_as::<_, SystemPrompt>(
+        "SELECT id, name, prompt, created_at, updated_at
+        FROM system_prompts
+        WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
 }
 
-pub fn update(id: &str, name: &str, prompt: &str) -> Result<()> {
-    let conn = get_connection()?;
-    let now = chrono::Utc::now().timestamp();
+pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query("DELETE FROM system_prompts WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
 
-    conn.execute(
-        "UPDATE system_prompts SET name = ?1, prompt = ?2, updated_at = ?3 WHERE id = ?4",
-        params![name, prompt, now, id],
-    )?;
-
-    Ok(())
-}
-
-pub fn delete(id: &str) -> Result<()> {
-    let conn = get_connection()?;
-    conn.execute("DELETE FROM system_prompts WHERE id = ?1", params![id])?;
-    Ok(())
+    Ok(result.rows_affected() > 0)
 }

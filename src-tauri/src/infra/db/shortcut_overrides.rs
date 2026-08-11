@@ -1,51 +1,54 @@
-use rusqlite::Result;
+use sqlx::SqlitePool;
 
 use crate::domain::shortcuts::ShortcutOverride;
 
-pub fn get_all_overrides() -> Result<Vec<ShortcutOverride>> {
-    let conn = crate::db::get_connection()?;
-    let mut stmt = conn.prepare("SELECT id, key_override, enabled FROM shortcut_overrides")?;
-    let overrides = stmt
-        .query_map([], |row| {
-            Ok(ShortcutOverride {
-                id: row.get(0)?,
-                key_override: row.get(1)?,
-                enabled: row.get::<_, i32>(2)? == 1,
-            })
-        })?
-        .collect::<Result<Vec<_>>>()?;
-    Ok(overrides)
+pub async fn get_all_overrides(pool: &SqlitePool) -> Result<Vec<ShortcutOverride>, sqlx::Error> {
+    sqlx::query_as::<_, ShortcutOverride>(
+        "SELECT id, key_override, enabled FROM shortcut_overrides",
+    )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn get_override(shortcut_id: &str) -> Result<Option<ShortcutOverride>> {
-    let conn = crate::db::get_connection()?;
-    let mut stmt =
-        conn.prepare("SELECT id, key_override, enabled FROM shortcut_overrides WHERE id = ?")?;
-    let mut rows = stmt.query([shortcut_id])?;
-
-    if let Some(row) = rows.next()? {
-        Ok(Some(ShortcutOverride {
-            id: row.get(0)?,
-            key_override: row.get(1)?,
-            enabled: row.get::<_, i32>(2)? == 1,
-        }))
-    } else {
-        Ok(None)
-    }
+pub async fn get_override(
+    pool: &SqlitePool,
+    shortcut_id: &str,
+) -> Result<Option<ShortcutOverride>, sqlx::Error> {
+    sqlx::query_as::<_, ShortcutOverride>(
+        "SELECT id, key_override, enabled FROM shortcut_overrides WHERE id = ?",
+    )
+    .bind(shortcut_id)
+    .fetch_optional(pool)
+    .await
 }
 
-pub fn save_override(shortcut_id: &str, key_override: Option<String>, enabled: bool) -> Result<()> {
-    let conn = crate::db::get_connection()?;
-    conn.execute(
-        "INSERT INTO shortcut_overrides (id, key_override, enabled) VALUES (?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET key_override = excluded.key_override, enabled = excluded.enabled",
-        rusqlite::params![shortcut_id, key_override, enabled as i32],
-    )?;
+pub async fn save_override(
+    pool: &SqlitePool,
+    shortcut_id: &str,
+    key_override: Option<String>,
+    enabled: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO shortcut_overrides (id, key_override, enabled)
+        VALUES (?, ?, ?)
+        ON CONFLICT(id) DO UPDATE
+            SET key_override = excluded.key_override,
+                enabled = excluded.enabled",
+    )
+    .bind(shortcut_id)
+    .bind(key_override)
+    .bind(enabled)
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
 
-pub fn delete_override(shortcut_id: &str) -> Result<()> {
-    let conn = crate::db::get_connection()?;
-    conn.execute("DELETE FROM shortcut_overrides WHERE id = ?", [shortcut_id])?;
-    Ok(())
+pub async fn delete_override(pool: &SqlitePool, shortcut_id: &str) -> Result<bool, sqlx::Error> {
+    let res = sqlx::query("DELETE FROM shortcut_overrides WHERE id = ?")
+        .bind(shortcut_id)
+        .execute(pool)
+        .await?;
+
+    Ok(res.rows_affected() > 0)
 }

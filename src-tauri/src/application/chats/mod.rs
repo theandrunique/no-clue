@@ -1,16 +1,19 @@
-use crate::db::ai_provider as provider_repo;
+use crate::db::llm_provider_settings as provider_repo;
 use crate::db::message as msg_repo;
 use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
 use crate::domain::llm::LlmChatCompletionRequest;
 use crate::domain::llm::LlmChatCompletionStreamEvent;
+use crate::domain::messages::Message;
 use crate::domain::messages::MessageRole;
-use crate::error::log_err;
-use crate::infra::llm_providers::create_ai_provider;
+use crate::errors::AppError;
+use crate::infra::llm_providers::create_llm_provider;
 use crate::infra::screenshot::capture_screenshot as do_capture_screenshot;
 use crate::infra::screenshot::ScreenshotResult;
 use chrono::Utc;
+use sqlx::SqlitePool;
 use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::Manager;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
@@ -25,7 +28,7 @@ pub async fn send_message(
     user_message: String,
     capture_screenshot: bool,
     system_prompt_id: Option<String>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     tracing::trace!(
         provider = %provider,
         conversation_id = %conversation_id,
@@ -37,7 +40,7 @@ pub async fn send_message(
 
     if STREAMING.load(Ordering::SeqCst) {
         tracing::warn!("Already streaming, ignoring request");
-        return Err("Already streaming".to_string());
+        return Err(AppError::LlmAlreadyRunning);
     }
 
     let screenshot_result: Option<ScreenshotResult> = if capture_screenshot {
@@ -55,71 +58,44 @@ pub async fn send_message(
     let screenshot_path = screenshot_result.as_ref().map(|r| r.relative_path.clone());
     let screenshot_base64 = screenshot_result.map(|r| r.base64);
 
-    // Save user message immediately
-    let conv_id_clone = conversation_id.clone();
-    let user_msg_clone = user_message.clone();
-    let screenshot_clone = screenshot_path.clone();
-    if let Err(e) = tokio::task::spawn_blocking(move || {
-        msg_repo::create(
-            conv_id_clone,
-            Uuid::new_v4().to_string(),
-            MessageRole::User,
-            user_msg_clone,
-            screenshot_clone,
-            Utc::now().timestamp(),
-        )
-    })
+    let pool = app.state::<SqlitePool>();
+    if let Err(e) = msg_repo::create(
+        &pool,
+        &Message {
+            id: Uuid::new_v4().to_string(),
+            conversation_id: conversation_id.clone(),
+            role: MessageRole::User,
+            content: user_message.clone(),
+            screenshot_path: screenshot_path.clone(),
+            timestamp: Utc::now().timestamp(),
+        },
+    )
     .await
     {
         tracing::error!(error = %e, "Error saving user message");
     }
 
-    // Get provider settings and create provider instance
-    let provider_clone = provider.clone();
-    let provider_settings =
-        tokio::task::spawn_blocking(move || provider_repo::get_provider_settings(&provider_clone))
-            .await
-            .map_err(|e| log_err(e, "get_provider_settings"))?
-            .map_err(|e| log_err(e, "get_provider_settings"))?
-            .ok_or_else(|| {
-                log_err(
-                    format!("Provider '{}' not configured", provider),
-                    "get_provider_settings",
-                )
-            })?;
+    let provider_settings = provider_repo::get(&pool, &provider)
+        .await?
+        .ok_or_else(|| AppError::LlmProviderNotConfigured)?;
+    let llm_provider = create_llm_provider(&provider_settings)?;
 
-    let ai_provider =
-        create_ai_provider(&provider_settings).map_err(|e| log_err(e, "create_provider"))?;
+    let history = msg_repo::get_by_conversation(&pool, &conversation_id).await?;
 
-    // Get chat history for context
-    let conv_id_for_history = conversation_id.clone();
-    let history =
-        tokio::task::spawn_blocking(move || msg_repo::get_by_conversation(&conv_id_for_history))
-            .await
-            .map_err(|e| log_err(e, "get_chat_history"))?
-            .map_err(|e| log_err(e, "get_chat_history"))?;
-
-    // Get system prompt if provided
-    let system_prompt_text = if let Some(ref sp_id) = system_prompt_id {
-        let sp_id_clone = sp_id.clone();
-        tokio::task::spawn_blocking(move || system_prompt_repo::get_by_id(&sp_id_clone))
-            .await
-            .map_err(|e| log_err(e, "get_system_prompt"))?
-            .map_err(|e| log_err(e, "get_system_prompt"))?
-            .map(|sp| sp.prompt)
+    let system_prompt_text = if let Some(ref id) = system_prompt_id {
+        system_prompt_repo::get_by_id(&pool, &id)
+            .await?
+            .map(|x| x.prompt)
     } else {
         None
     };
 
-    // Build AI request
     let mut request = LlmChatCompletionRequest::new(history);
 
-    // Add system prompt
     if let Some(sp) = system_prompt_text {
         request = request.with_system_prompt(sp);
     }
 
-    // Add screenshot if captured (as base64)
     if let Some(b64) = screenshot_base64 {
         request = request.with_screenshot(b64);
     } else if capture_screenshot {
@@ -130,8 +106,7 @@ pub async fn send_message(
 
     let mut assistant_response = String::new();
 
-    // Stream from provider
-    let stream_result = ai_provider.stream_chat_completion(request).await;
+    let stream_result = llm_provider.stream_chat_completion(request).await;
 
     match stream_result {
         Ok(mut stream) => {
@@ -183,19 +158,17 @@ pub async fn send_message(
 
     tracing::trace!("Stream completed");
 
-    // Save assistant response
-    let conv_id_for_save = conversation_id.clone();
-    let assistant_final = assistant_response.clone();
-    if let Err(e) = tokio::task::spawn_blocking(move || {
-        msg_repo::create(
-            conv_id_for_save,
-            Uuid::new_v4().to_string(),
-            MessageRole::Assistant,
-            assistant_final,
-            None,
-            Utc::now().timestamp(),
-        )
-    })
+    if let Err(e) = msg_repo::create(
+        &pool,
+        &Message {
+            id: Uuid::new_v4().to_string(),
+            conversation_id: conversation_id.clone(),
+            role: MessageRole::Assistant,
+            content: assistant_response,
+            screenshot_path: None,
+            timestamp: Utc::now().timestamp(),
+        },
+    )
     .await
     {
         tracing::error!(error = %e, "Error saving assistant message");

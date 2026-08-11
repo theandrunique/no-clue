@@ -33,19 +33,19 @@ CREATE TABLE IF NOT EXISTS system_prompts (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS ai_providers (
+CREATE TABLE IF NOT EXISTS llm_provider_settings (
     id TEXT PRIMARY KEY NOT NULL,
-    config TEXT NOT NULL
+    settigns TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO ai_providers (id, config) VALUES ('fake', '{"type":"Fake"}');
+INSERT OR IGNORE INTO llm_provider_settings (id, settings) VALUES ('fake', '{"type":"Fake"}');
 
-CREATE TABLE IF NOT EXISTS stt_providers (
+CREATE TABLE IF NOT EXISTS stt_providers_settings (
     id TEXT PRIMARY KEY NOT NULL,
-    config TEXT NOT NULL
+    settings TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO stt_providers (id, config) VALUES ('fake', '{"type":"Fake"}');
+INSERT OR IGNORE INTO stt_providers_settings (id, config) VALUES ('fake', '{"type":"Fake"}');
 
 CREATE TABLE IF NOT EXISTS shortcut_overrides (
     id TEXT PRIMARY KEY NOT NULL,

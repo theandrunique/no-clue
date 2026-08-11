@@ -1,37 +1,43 @@
-use rusqlite::{Connection, Result};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{ConnectOptions, SqlitePool};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::str::FromStr;
 
-pub mod ai_provider;
 pub mod conversation;
+pub mod llm_provider_settings;
 pub mod message;
 pub mod shortcut_overrides;
-pub mod stt_provider;
+pub mod stt_provider_settings;
 pub mod system_prompt;
 pub mod transcript;
 
-static DB_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+pub async fn create_pool(app_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> {
+    let db_path = app_dir.join("no-clue.db");
+    let db_url = format!("sqlite://{}", db_path.display());
 
-pub fn get_connection() -> Result<Connection> {
-    let db_path = DB_PATH.lock().unwrap();
-    let path = db_path.as_ref().expect("Database path not set");
-    Connection::open(path)
+    tracing::info!(db_url, "Connecting to database");
+
+    let options = SqliteConnectOptions::from_str(&db_url)?
+        .create_if_missing(true)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+        .busy_timeout(std::time::Duration::from_secs(5))
+        .foreign_keys(true)
+        .log_statements(tracing::log::LevelFilter::Info);
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(options)
+        .await?;
+
+    Ok(pool)
 }
 
-pub fn init_db(app_data_dir: &std::path::Path) -> Result<()> {
-    let db_path = app_data_dir.join("no-clue.db");
-    {
-        let mut path = DB_PATH.lock().unwrap();
-        *path = Some(db_path.clone());
-    }
+pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    tracing::info!("Running migrations...");
 
-    let conn = Connection::open(&db_path)?;
+    sqlx::migrate!("src/infra/db/migrations").run(pool).await?;
 
-    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
-
-    let migration = include_str!("migrations/001_initial.sql");
-    conn.execute_batch(migration)?;
-
-    tracing::info!(db_path = %db_path.display(), "Database initialized");
+    tracing::info!("Migrations completed successfully");
     Ok(())
 }
