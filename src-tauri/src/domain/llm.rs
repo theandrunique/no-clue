@@ -9,12 +9,12 @@ pub trait LlmProvider: Send + Sync {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, anyhow::Error>;
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error>;
 
     async fn get_model_info(&self) -> Result<ModelInfo, anyhow::Error>;
 }
 
-pub enum LlmChatCompletionStreamEvent {
+pub enum LlmChatCompletionResult {
     Chunk {
         content: String,
         is_finish: bool,

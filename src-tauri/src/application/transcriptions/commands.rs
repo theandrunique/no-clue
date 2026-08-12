@@ -6,6 +6,7 @@ use crate::domain::transcriptions::{AudioCaptureConfig, TranscriptionResult};
 use crate::errors::AppError;
 use crate::infra::audio_capture::start_capture_pipeline;
 use crate::infra::stt_providers::create_stt_provider;
+use chrono::Utc;
 use futures_util::StreamExt;
 use sqlx::SqlitePool;
 use std::sync::LazyLock;
@@ -82,9 +83,9 @@ async fn run_transcription(
     app: AppHandle,
     mut provider: Box<dyn SttProvider>,
     config: AudioCaptureConfig,
-    token: CancellationToken,
+    ct: CancellationToken,
 ) {
-    let audio = match start_capture_pipeline(&config, token.child_token()) {
+    let audio = match start_capture_pipeline(&config, ct.child_token()) {
         Ok(stream) => stream,
         Err(e) => {
             tracing::error!(error = %e, "Failed to start audio capture");
@@ -105,7 +106,7 @@ async fn run_transcription(
             Some(result) = results.next() => {
                 handle_result(&app, result).await;
             }
-            _ = token.cancelled() => break,
+            _ = ct.cancelled() => break,
         }
     }
 
@@ -113,9 +114,10 @@ async fn run_transcription(
 }
 
 async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
+    tracing::trace!(?result, "STT transcription result");
     let pool = app.state::<SqlitePool>();
 
-    let created_at = chrono::Utc::now();
+    let now = Utc::now();
     let id = Uuid::new_v4();
     let conversation_id = CURRENT_CONVERSATION_ID
         .lock()
@@ -124,19 +126,19 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
         .unwrap_or_default();
 
     let payload = TranscriptionResult {
-        id: id.clone(),
-        conversation_id: conversation_id.clone(),
+        id: id,
+        conversation_id: conversation_id,
         text: result.text.clone(),
         is_final: result.is_final,
         confidence: result.confidence,
         source: result.source.clone(),
-        created_at,
+        created_at: now,
     };
 
     let _ = app.emit("transcription-result", &payload);
 
     if result.is_final {
-        if let Err(e) = transcript_repo::create(&pool, &Transcript::from(payload)).await {
+        if let Err(e) = transcript_repo::save(&pool, &Transcript::from(payload)).await {
             tracing::error!(error = %e, "Failed to save trancription");
         }
     }
@@ -150,9 +152,11 @@ async fn finish(app: AppHandle) {
 #[tauri::command]
 pub async fn stop_transcription(app: AppHandle) -> Result<(), String> {
     tracing::info!("stop_transcription called");
-    let _ = app.emit("transcription-stopping", ());
     if let Some(session) = SESSION.lock().await.as_ref() {
+        let _ = app.emit("transcription-stopping", ());
         session.cancellation_token.cancel();
+    } else {
+        tracing::warn!("Transcription was not running but stop was requested");
     }
     Ok(())
 }

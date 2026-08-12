@@ -43,7 +43,7 @@ impl SttProvider for FakeSttProvider {
         ];
 
         let stream = futures_util::stream::unfold(0u64, move |mut step| async move {
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            tokio::time::sleep(Duration::from_millis(5000)).await;
 
             let phrase_index = (step / 2) as usize % mock_phrases.len();
             let text = mock_phrases[phrase_index];

@@ -3,7 +3,7 @@ use crate::db::message as msg_repo;
 use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
 use crate::domain::llm::LlmChatCompletionRequest;
-use crate::domain::llm::LlmChatCompletionStreamEvent;
+use crate::domain::llm::LlmChatCompletionResult;
 use crate::domain::messages::Message;
 use crate::domain::messages::MessageRole;
 use crate::errors::AppError;
@@ -118,7 +118,7 @@ pub async fn send_message(
                 }
 
                 match event {
-                    LlmChatCompletionStreamEvent::Chunk {
+                    LlmChatCompletionResult::Chunk {
                         content,
                         is_finish,
                         usage,
@@ -136,7 +136,7 @@ pub async fn send_message(
                             },
                         );
                     }
-                    LlmChatCompletionStreamEvent::Error { code, message } => {
+                    LlmChatCompletionResult::Error { code, message } => {
                         tracing::error!(code = %code, message = %message, "Stream error");
                         let _ = app.emit(
                             "chat-stream",

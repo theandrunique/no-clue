@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::{
     domain::{
         conversations::TokenUsage,
-        llm::{LlmChatCompletionRequest, LlmChatCompletionStreamEvent, LlmProvider, ModelInfo},
+        llm::{LlmChatCompletionRequest, LlmChatCompletionResult, LlmProvider, ModelInfo},
         providers::{FieldDescriptor, FieldType, ProviderDescriptor},
     },
     infra::llm_providers::utils::{build_json_messages, truncate_json_body},
@@ -54,7 +54,7 @@ impl LlmProvider for OllamaProvider {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionStreamEvent> + Send + Unpin>, anyhow::Error>
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error>
     {
         let client = Client::new();
         let messages = build_json_messages(&request);
@@ -86,7 +86,7 @@ impl LlmProvider for OllamaProvider {
                 Ok(c) => c,
                 Err(e) => {
                     tracing::error!(error = %e, "Chunk error");
-                    return LlmChatCompletionStreamEvent::Error {
+                    return LlmChatCompletionResult::Error {
                         code: "reqwest".into(),
                         message: e.to_string(),
                     };
@@ -139,7 +139,7 @@ impl LlmProvider for OllamaProvider {
                 }
             }
 
-            LlmChatCompletionStreamEvent::Chunk {
+            LlmChatCompletionResult::Chunk {
                 content: result,
                 is_finish,
                 usage,

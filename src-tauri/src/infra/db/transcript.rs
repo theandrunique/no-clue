@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::domain::transcriptions::Transcript;
 
-pub async fn create(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sqlx::Error> {
+pub async fn save(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO transcripts (
             id,
