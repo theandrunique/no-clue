@@ -111,7 +111,7 @@ impl SttProvider for DeepgramProvider {
         let task = tokio::spawn(async move {
             let audio_task = tokio::spawn(async move {
                 while let Some(AudioChunk(audio_data)) = audio.next().await {
-                    let msg = Message::Binary(audio_data.into());
+                    let msg = Message::Binary(audio_data);
                     if let Err(e) = write.send(msg).await {
                         tracing::error!("Failed to send audio to Deepgram: {}", e);
                         break;
@@ -124,6 +124,11 @@ impl SttProvider for DeepgramProvider {
             while let Some(msg) = read.next().await {
                 match msg {
                     Ok(Message::Text(text)) => {
+                        tracing::trace!(
+                            message_len = text.len(),
+                            message = %text,
+                            "Deepgram WebSocket text message received"
+                        );
                         if let Some(result) = parse_deepgram_response(&text) {
                             if tx.send(result).await.is_err() {
                                 break;
@@ -160,8 +165,22 @@ impl SttProvider for DeepgramProvider {
 
 fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
     #[derive(Deserialize)]
-    struct Response {
-        channel: Channel,
+    struct DeepgramResponse {
+        #[serde(rename = "type")]
+        msg_type: Option<String>,
+        #[serde(rename = "is_final")]
+        is_final: Option<bool>,
+        channel_index: Option<ChannelIndex>,
+        channel: Option<Channel>,
+    }
+
+    #[derive(Deserialize)]
+    struct ChannelIndex {
+        #[serde(rename = "0")]
+        channel: usize,
+        #[serde(rename = "1")]
+        #[allow(dead_code)]
+        total: Option<usize>,
     }
 
     #[derive(Deserialize)]
@@ -175,14 +194,54 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
         confidence: Option<f64>,
     }
 
-    let parsed: Response = serde_json::from_str(text).ok()?;
-    let alternative = parsed.channel.alternatives.first()?;
-    let is_final = text.contains("\"is_final\":true");
+    let response: DeepgramResponse = match serde_json::from_str(text) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!(error = %e, message = %text, "Failed to parse Deepgram response");
+            return None;
+        }
+    };
 
-    Some(SttTranscriptResult {
-        text: alternative.transcript.clone(),
-        source: AudioSource::System,
-        confidence: alternative.confidence.unwrap_or(0.0),
-        is_final,
-    })
+    if response.msg_type.as_deref() == Some("Metadata") {
+        tracing::trace!("Deepgram metadata message received");
+        return None;
+    }
+
+    let is_final_result = response.is_final.unwrap_or(false);
+
+    let source = match response.channel_index {
+        Some(idx) if idx.channel == 0 => AudioSource::System,
+        Some(idx) if idx.channel == 1 => AudioSource::Microphone,
+        _ => {
+            tracing::warn!("Unexpected channel_index in response");
+            AudioSource::System
+        },
+    };
+
+    if let Some(channel) = response.channel {
+        if let Some(alt) = channel.alternatives.first() {
+            let transcript = alt.transcript.trim();
+            if transcript.is_empty() {
+                tracing::trace!("Empty Deepgram transcript skipped");
+                return None;
+            }
+
+            tracing::trace!(
+                text = transcript,
+                is_final = is_final_result,
+                source = ?source,
+                confidence = alt.confidence,
+                "Deepgram response received"
+            );
+
+            return Some(SttTranscriptResult {
+                text: transcript.to_string(),
+                is_final: is_final_result,
+                confidence: alt.confidence.unwrap_or(0.0),
+                source,
+            });
+        }
+    }
+
+    None
 }
