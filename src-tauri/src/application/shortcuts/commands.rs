@@ -25,7 +25,7 @@ pub async fn save_shortcut(
     let new_shortcut_override = ShortcutOverride {
         id: shortcut_id.to_string(),
         key_override,
-        enabled
+        enabled,
     };
 
     db_shortcut::save(&pool, &new_shortcut_override).await?;

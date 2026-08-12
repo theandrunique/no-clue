@@ -83,8 +83,7 @@ impl LlmProvider for FakeProvider {
     async fn stream_chat_completion(
         &self,
         _request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error>
-    {
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error> {
         let poem = r#"Here's a poem for you:
 
 ## The Code

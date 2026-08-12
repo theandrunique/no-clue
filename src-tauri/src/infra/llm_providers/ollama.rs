@@ -54,8 +54,7 @@ impl LlmProvider for OllamaProvider {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error>
-    {
+    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error> {
         let client = Client::new();
         let messages = build_json_messages(&request);
 

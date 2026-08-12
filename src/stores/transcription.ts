@@ -46,7 +46,7 @@ export const useTranscriptionStore = defineStore("transcription", () => {
     unlistenResult = await listen<TranscriptionResult>("transcription-result", (event) => {
       const payload = event.payload;
 
-      if (payload.isFinal) {
+      if (payload.is_final) {
         currentTranscript.value = null;
         transcripts.value.push(payload);
       } else {

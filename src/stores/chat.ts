@@ -59,7 +59,7 @@ export const useChatStore = defineStore("chat", () => {
           if (!streamingMessage.value) {
             streamingMessage.value = {
               id: crypto.randomUUID(),
-              conversationId: payload.conversationId,
+              conversation_id: payload.conversationId,
               role: "assistant",
               content: "",
               timestamp: Date.now(),
@@ -84,10 +84,10 @@ export const useChatStore = defineStore("chat", () => {
 
     const newMessage: Message = {
       id: crypto.randomUUID(),
-      conversationId,
+      conversation_id: conversationId,
       role: "user",
       content,
-      screenshotPath: undefined,
+      screenshot_path: undefined,
       timestamp: Date.now(),
     };
     messages.value.push(newMessage);

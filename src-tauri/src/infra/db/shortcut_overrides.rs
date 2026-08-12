@@ -24,7 +24,7 @@ pub async fn get_by_id(
 
 pub async fn save(
     pool: &SqlitePool,
-    shortcut_override: &ShortcutOverride
+    shortcut_override: &ShortcutOverride,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO shortcut_overrides (id, key_override, enabled)

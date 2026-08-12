@@ -4,6 +4,7 @@ use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
 use crate::domain::llm::LlmChatCompletionRequest;
 use crate::domain::llm::LlmChatCompletionResult;
+use crate::domain::llm::LlmProvider;
 use crate::domain::messages::Message;
 use crate::domain::messages::MessageRole;
 use crate::errors::AppError;
@@ -11,15 +12,17 @@ use crate::infra::llm_providers::create_llm_provider;
 use crate::infra::screenshot::capture_screenshot as do_capture_screenshot;
 use crate::infra::screenshot::ScreenshotResult;
 use chrono::Utc;
+use futures_util::StreamExt;
 use sqlx::SqlitePool;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::LazyLock;
 use tauri::Manager;
 use tauri::{AppHandle, Emitter};
+use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-static STREAMING: AtomicBool = AtomicBool::new(false);
+static SESSION: LazyLock<Mutex<Option<CancellationToken>>> = LazyLock::new(|| Mutex::new(None));
 
-// AI Chat
 #[tauri::command]
 pub async fn send_message(
     app: AppHandle,
@@ -38,7 +41,8 @@ pub async fn send_message(
         "send_message called"
     );
 
-    if STREAMING.load(Ordering::SeqCst) {
+    let mut guard = SESSION.lock().await;
+    if guard.is_some() {
         tracing::warn!("Already streaming, ignoring request");
         return Err(AppError::LlmProviderAlreadyRunning);
     }
@@ -102,21 +106,48 @@ pub async fn send_message(
         tracing::error!("capture_screenshot=true but no base64 available");
     }
 
-    STREAMING.store(true, Ordering::SeqCst);
+    let cancellation_token = CancellationToken::new();
+    tokio::spawn({
+        let app = app.clone();
+        let token = cancellation_token.clone();
+        async move {
+            run_chat_completion(app, conversation_id, request, llm_provider, token).await;
+        }
+    });
 
+    *guard = Some(cancellation_token);
+
+    Ok(())
+}
+
+async fn run_chat_completion(
+    app: AppHandle,
+    conversation_id: Uuid,
+    request: LlmChatCompletionRequest,
+    llm_provider: Box<dyn LlmProvider>,
+    ct: CancellationToken,
+) {
     let mut assistant_response = String::new();
 
-    let stream_result = llm_provider.stream_chat_completion(request).await;
+    let mut stream = match llm_provider.stream_chat_completion(request).await {
+        Ok(stream) => stream,
+        Err(err) => {
+            tracing::error!(error = ?err, "Provider error");
+            let _ = app.emit(
+                "chat-stream",
+                ChatStreamEvent::Error {
+                    code: "provider_error".to_string(),
+                    message: err.to_string(),
+                },
+            );
+            finish().await;
+            return;
+        }
+    };
 
-    match stream_result {
-        Ok(mut stream) => {
-            use futures_util::StreamExt;
-            while let Some(event) = stream.next().await {
-                if !STREAMING.load(Ordering::SeqCst) {
-                    tracing::info!("Stream stopped by user");
-                    break;
-                }
-
+    loop {
+        tokio::select! {
+            Some(event) = stream.next() => {
                 match event {
                     LlmChatCompletionResult::Chunk {
                         content,
@@ -131,55 +162,76 @@ pub async fn send_message(
                                 conversation_id: conversation_id.clone(),
                                 content: content,
                                 is_finish: is_finish,
-                                timestamp: Utc::now().timestamp(),
                                 usage: usage,
+                                timestamp: Utc::now(),
                             },
                         );
                     }
                     LlmChatCompletionResult::Error { code, message } => {
-                        tracing::error!(code = %code, message = %message, "Stream error");
+                        tracing::error!(code = %code, message = %message, "LLM provider stream error");
                         let _ = app.emit(
                             "chat-stream",
                             ChatStreamEvent::Error {
-                                code: code,
-                                message: message,
+                                code,
+                                message
                             },
                         );
                     }
                 }
-            }
-        }
-        Err(e) => {
-            tracing::error!(error = %e, "Provider error");
+            },
+            _ = ct.cancelled() => break,
         }
     }
 
-    STREAMING.store(false, Ordering::SeqCst);
+    let _ = app.emit(
+        "chat-stream",
+        ChatStreamEvent::Chunk {
+            conversation_id: conversation_id.clone(),
+            content: "".to_string(),
+            is_finish: true,
+            usage: None,
+            timestamp: Utc::now(),
+        },
+    );
 
     tracing::trace!("Stream completed");
 
-    if let Err(e) = msg_repo::save(
-        &pool,
-        &Message {
-            id: Uuid::new_v4(),
-            conversation_id: conversation_id.clone(),
-            role: MessageRole::Assistant,
-            content: assistant_response,
-            screenshot_path: None,
-            created_at: Utc::now(),
-        },
-    )
-    .await
-    {
-        tracing::error!(error = %e, "Error saving assistant message");
+    if !assistant_response.is_empty() {
+        let pool = app.state::<SqlitePool>();
+        if let Err(e) = msg_repo::save(
+            &pool,
+            &Message {
+                id: Uuid::new_v4(),
+                conversation_id: conversation_id.clone(),
+                role: MessageRole::Assistant,
+                content: assistant_response,
+                screenshot_path: None,
+                created_at: Utc::now(),
+            },
+        )
+        .await
+        {
+            tracing::error!(error = %e, "Error saving assistant message");
+        }
+    } else {
+        tracing::trace!("Assistant response was empty, not saving");
     }
+    finish().await
+}
 
-    Ok(())
+async fn finish() {
+    *SESSION.lock().await = None;
 }
 
 #[tauri::command]
 pub async fn stop_stream() -> Result<(), String> {
     tracing::trace!("stop_stream called");
-    STREAMING.store(false, Ordering::SeqCst);
+
+    if let Some(session) = SESSION.lock().await.as_ref() {
+        session.cancel();
+    } else {
+        tracing::warn!("LLM provider was not running but stop was requested");
+    }
+
     Ok(())
 }

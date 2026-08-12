@@ -1,6 +1,6 @@
 export interface Transcript {
   id: string;
-  conversationId: string;
+  conversation_id: string;
   source: "microphone" | "system";
   text: string;
   confidence: number;
@@ -9,34 +9,34 @@ export interface Transcript {
 
 export interface TranscriptionResult {
   id: string;
-  conversationId: string;
+  conversation_id: string;
   source: "microphone" | "system";
   text: string;
-  isFinal: boolean;
+  is_final: boolean;
   confidence: number;
   timestamp: number;
 }
 
 export interface Message {
   id: string;
-  conversationId: string;
+  conversation_id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  screenshotPath?: string;
+  screenshot_path?: string;
   timestamp: number;
 }
 
 export interface Conversation {
   id: string;
   title: string;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number;
+  updated_at: number;
 }
 
 export interface SystemPrompt {
   id: string;
   name: string;
   prompt: string;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number;
+  updated_at: number;
 }

@@ -21,7 +21,7 @@ pub enum ChatStreamEvent {
         #[serde(rename = "isFinish")]
         is_finish: bool,
         usage: Option<TokenUsage>,
-        timestamp: i64,
+        timestamp: DateTime<Utc>,
     },
     #[serde(rename = "message:error")]
     Error { code: String, message: String },
