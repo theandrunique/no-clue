@@ -4,26 +4,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::{conversations::TokenUsage, messages::Message};
 
+pub type LlmChatStream =
+    Box<dyn Stream<Item = Result<LlmChatCompletionChunk, anyhow::Error>> + Send + Unpin>;
+
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error>;
+    ) -> Result<LlmChatStream, anyhow::Error>;
 
     async fn get_model_info(&self) -> Result<ModelInfo, anyhow::Error>;
 }
 
-pub enum LlmChatCompletionResult {
-    Chunk {
-        content: String,
-        is_finish: bool,
-        usage: Option<TokenUsage>,
-    },
-    Error {
-        code: String,
-        message: String,
-    },
+pub struct LlmChatCompletionChunk {
+    pub content: String,
+    pub is_finish: bool,
+    pub usage: Option<TokenUsage>,
 }
 
 pub struct LlmChatCompletionRequest {

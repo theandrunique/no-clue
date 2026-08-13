@@ -3,7 +3,9 @@ use futures_util::Stream;
 use std::time::Instant;
 
 use crate::domain::{
-    llm::{LlmChatCompletionRequest, LlmChatCompletionResult, LlmProvider, ModelInfo},
+    llm::{
+        LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
+    },
     providers::ProviderDescriptor,
 };
 
@@ -36,7 +38,7 @@ impl FakeStream {
 }
 
 impl Stream for FakeStream {
-    type Item = LlmChatCompletionResult;
+    type Item = Result<LlmChatCompletionChunk, anyhow::Error>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -67,11 +69,11 @@ impl Stream for FakeStream {
             this.pos = end;
 
             let is_finish = this.pos >= this.chars.len();
-            std::task::Poll::Ready(Some(LlmChatCompletionResult::Chunk {
+            std::task::Poll::Ready(Some(Ok(LlmChatCompletionChunk {
                 content,
                 is_finish,
                 usage: None,
-            }))
+            })))
         } else {
             std::task::Poll::Ready(None)
         }
@@ -83,7 +85,7 @@ impl LlmProvider for FakeProvider {
     async fn stream_chat_completion(
         &self,
         _request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error> {
+    ) -> Result<LlmChatStream, anyhow::Error> {
         let poem = r#"Here's a poem for you:
 
 ## The Code

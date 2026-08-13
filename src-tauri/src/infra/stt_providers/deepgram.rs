@@ -215,7 +215,7 @@ fn parse_deepgram_response(text: &str) -> Option<SttTranscriptResult> {
         _ => {
             tracing::warn!("Unexpected channel_index in response");
             AudioSource::System
-        },
+        }
     };
 
     if let Some(channel) = response.channel {

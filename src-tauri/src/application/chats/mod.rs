@@ -3,7 +3,6 @@ use crate::db::message as msg_repo;
 use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
 use crate::domain::llm::LlmChatCompletionRequest;
-use crate::domain::llm::LlmChatCompletionResult;
 use crate::domain::llm::LlmProvider;
 use crate::domain::messages::Message;
 use crate::domain::messages::MessageRole;
@@ -149,31 +148,27 @@ async fn run_chat_completion(
         tokio::select! {
             Some(event) = stream.next() => {
                 match event {
-                    LlmChatCompletionResult::Chunk {
-                        content,
-                        is_finish,
-                        usage,
-                    } => {
-                        assistant_response.push_str(&content);
+                    Ok(chunk) => {
+                        assistant_response.push_str(&chunk.content);
 
                         let _ = app.emit(
                             "chat-stream",
                             ChatStreamEvent::Chunk {
                                 conversation_id: conversation_id.clone(),
-                                content: content,
-                                is_finish: is_finish,
-                                usage: usage,
+                                content: chunk.content,
+                                is_finish: chunk.is_finish,
+                                usage: chunk.usage,
                                 timestamp: Utc::now(),
                             },
                         );
-                    }
-                    LlmChatCompletionResult::Error { code, message } => {
-                        tracing::error!(code = %code, message = %message, "LLM provider stream error");
+                    },
+                    Err(e) => {
+                        tracing::error!(error = ?e, "LLM provider stream error");
                         let _ = app.emit(
                             "chat-stream",
                             ChatStreamEvent::Error {
-                                code,
-                                message
+                                code: "hz".to_string(),
+                                message: e.to_string()
                             },
                         );
                     }

@@ -1,13 +1,15 @@
 use anyhow::Context;
 use async_trait::async_trait;
-use futures_util::{Stream, StreamExt};
+use futures_util::StreamExt;
 use reqwest::Client;
 use serde::Deserialize;
 
 use crate::{
     domain::{
         conversations::TokenUsage,
-        llm::{LlmChatCompletionRequest, LlmChatCompletionResult, LlmProvider, ModelInfo},
+        llm::{
+            LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
+        },
         providers::{FieldDescriptor, FieldType, ProviderDescriptor},
     },
     infra::llm_providers::utils::{build_json_messages, truncate_json_body},
@@ -54,7 +56,7 @@ impl LlmProvider for OllamaProvider {
     async fn stream_chat_completion(
         &self,
         request: LlmChatCompletionRequest,
-    ) -> Result<Box<dyn Stream<Item = LlmChatCompletionResult> + Send + Unpin>, anyhow::Error> {
+    ) -> Result<LlmChatStream, anyhow::Error> {
         let client = Client::new();
         let messages = build_json_messages(&request);
 
@@ -85,10 +87,7 @@ impl LlmProvider for OllamaProvider {
                 Ok(c) => c,
                 Err(e) => {
                     tracing::error!(error = %e, "Chunk error");
-                    return LlmChatCompletionResult::Error {
-                        code: "reqwest".into(),
-                        message: e.to_string(),
-                    };
+                    return Err(e.into());
                 }
             };
             let text = String::from_utf8_lossy(&chunk);
@@ -138,11 +137,11 @@ impl LlmProvider for OllamaProvider {
                 }
             }
 
-            LlmChatCompletionResult::Chunk {
+            Ok(LlmChatCompletionChunk {
                 content: result,
                 is_finish,
                 usage,
-            }
+            })
         });
 
         Ok(Box::new(stream))
