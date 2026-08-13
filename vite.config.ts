@@ -17,7 +17,7 @@ export default defineConfig({
         fallback: "index.html"
       }),
       alias: {
-        $features: "./features"
+        $features: "./src/features"
       }
     })
   ]

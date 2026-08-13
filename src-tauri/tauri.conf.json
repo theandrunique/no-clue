@@ -16,7 +16,7 @@
         "title": "No-Clue Dashboard",
         "url": "/overview",
         "width": 900,
-        "height": 600,
+        "height": 500,
         "resizable": true,
         "fullscreen": false,
         "center": true

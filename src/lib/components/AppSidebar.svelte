@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { Logs, Settings } from "@lucide/svelte";
+  import { Bot, Logs, MessageCircle, Settings } from "@lucide/svelte";
   import type { Component } from "svelte";
   import { cn } from "$lib/utils";
   import { Button, Card } from "./ui";
@@ -13,6 +13,8 @@
 
   const navigation: NavItem[] = [
     { href: "/overview", label: "Overview", icon: Logs },
+    { href: "/conversations", label: "Conversations", icon: MessageCircle },
+    { href: "/system-prompts", label: "System Prompts", icon: Bot },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
