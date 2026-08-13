@@ -14,7 +14,7 @@
       {
         "label": "dashboard",
         "title": "No-Clue Dashboard",
-        "url": "/dashboard",
+        "url": "/overview",
         "width": 900,
         "height": 600,
         "resizable": true,
