@@ -12,20 +12,14 @@
   "app": {
     "windows": [
       {
-        "label": "overlay",
-        "url": "/",
+        "label": "dashboard",
+        "title": "No-Clue Dashboard",
+        "url": "/dashboard",
         "width": 900,
-        "height": 54,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "resizable": false,
-        "visibleOnAllWorkspaces": true,
-        "skipTaskbar": true,
-        "contentProtected": true,
-        "focus": false,
-        "acceptFirstMouse": true,
-        "shadow": false
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
       }
     ],
     "security": {
