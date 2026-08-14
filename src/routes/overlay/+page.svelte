@@ -3,7 +3,7 @@
   import { OverlayMenu } from "$features/overlay-menu";
 </script>
 
-<div class="h-screen flex flex-col gap-1">
+<div class="h-screen flex flex-col gap-1 overflow-hidden">
   <OverlayMenu />
 
   <OverlayDropdown />
