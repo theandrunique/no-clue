@@ -25,7 +25,6 @@
 </script>
 
 <div class="flex flex-col gap-3 border-r border-(--color-border) bg-(--bg-card) p-2">
-
   <Button onclick={() => invoke("start_overlay_session")}>
     <Play />
     Start

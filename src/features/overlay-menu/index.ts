@@ -1,1 +1,1 @@
-export { default as OverlayMenu } from "./OverlayMenu.svelte"
+export { default as OverlayMenu } from "./OverlayMenu.svelte";

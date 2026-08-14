@@ -1,1 +1,1 @@
-export { default as LlmChat } from "./LlmChat.svelte"
+export { default as LlmChat } from "./LlmChat.svelte";

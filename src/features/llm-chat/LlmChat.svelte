@@ -1,7 +1,4 @@
 <script lang="ts">
-
 </script>
 
-<div>
-  chat
-</div>
+<div>chat</div>

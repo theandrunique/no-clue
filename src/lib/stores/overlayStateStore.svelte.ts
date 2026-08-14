@@ -10,7 +10,7 @@ function createOverlayStateStore() {
 
   function toggleExpanded() {
     expanded = !expanded;
-    resizeWindow()
+    resizeWindow();
   }
 
   async function resizeWindow() {
@@ -23,8 +23,8 @@ function createOverlayStateStore() {
     get expanded() {
       return expanded;
     },
-    toggleExpanded,
-  }
+    toggleExpanded
+  };
 }
 
 export const overlayStateStore = createOverlayStateStore();

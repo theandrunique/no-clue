@@ -5,3 +5,4 @@ export { default as Checkbox } from "./Checkbox.svelte";
 export { Dialog } from "./Dialog";
 export { default as Loader } from "./Loader.svelte";
 export { default as Card } from "./Card.svelte";
+export { Tabs } from "./Tabs";
