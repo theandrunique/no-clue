@@ -6,7 +6,7 @@
   let { children } = $props();
 </script>
 
-<div class="flex h-screen">
+<div class="flex h-screen bg-(--bg-page)">
   <AppSidebar />
   {@render children()}
 

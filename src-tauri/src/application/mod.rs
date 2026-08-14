@@ -6,3 +6,4 @@ pub mod shortcuts;
 pub mod stt_providers;
 pub mod system_prompts;
 pub mod transcriptions;
+pub mod overlay;

@@ -3,8 +3,6 @@ use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-// Window management
-
 static OVERLAY_VISIBLE: AtomicBool = AtomicBool::new(true);
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -92,10 +90,9 @@ pub async fn set_overlay_visible(window: WebviewWindow, visible: bool) -> Result
     Ok(())
 }
 
-// Dashboard
 #[tauri::command]
 pub async fn open_dashboard(app: AppHandle) -> Result<(), String> {
-    tracing::info!("open_dashboard called");
+    tracing::trace!("open_dashboard called");
     if let Some(window) = app.get_webview_window("dashboard") {
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
