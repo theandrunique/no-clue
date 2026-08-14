@@ -8,7 +8,7 @@
     defaultOptions: {
       queries: {
         staleTime: 1 * 60 * 1000,
-        refetchInterval: 1 * 60 * 1000,
+        refetchInterval: 1 * 60 * 1000
       }
     }
   });

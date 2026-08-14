@@ -1,1 +1,1 @@
-export { default as SystemPromptsList } from "./SystemPromptsList.svelte"
+export { default as SystemPromptsList } from "./SystemPromptsList.svelte";

@@ -1,8 +1,8 @@
 <script>
   import { Card } from "$lib/components/ui";
-
 </script>
-<div class="flex-1 min-w-0">
+
+<div class="min-w-0 flex-1">
   <div>Settings</div>
 
   <Card>
@@ -19,5 +19,4 @@
   <Card>
     <div>Shourtcuts</div>
   </Card>
-
 </div>
