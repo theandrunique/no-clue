@@ -10,14 +10,14 @@
   let inputDevices = $derived(
     (inputDevicesQuery.data ?? []).map((device) => ({
       value: device.id,
-      label: device.name
+      label: device.is_default ? `${device.name} (Default)` : device.name
     }))
   );
 
   let outputDevices = $derived(
     (outputDevicesQuery.data ?? []).map((device) => ({
       value: device.id,
-      label: device.name
+      label: device.is_default ? `${device.name} (Default)` : device.name
     }))
   );
 

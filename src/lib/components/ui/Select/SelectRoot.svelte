@@ -69,13 +69,13 @@
 
 <Select.Root bind:value={value as never} {items} {disabled} type={type as never} {...rest}>
   <Select.Trigger {id} class={triggerClasses} aria-invalid={invalid ? "true" : undefined}>
-    <span class="flex gap-2">
+    <span class="flex gap-2 truncate">
       {#if loading}
         <span class="shrink-0 text-(--text-muted)">
           <Loader />
         </span>
       {/if}
-      <Select.Value class="text-nowrap" {placeholder} />
+      <Select.Value class="text-nowrap truncate" {placeholder} />
     </span>
 
     <span class="flex shrink-0 items-center gap-2 text-(--text-muted)">
