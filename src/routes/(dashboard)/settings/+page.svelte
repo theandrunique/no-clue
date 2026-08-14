@@ -1,14 +1,13 @@
 <script>
+  import { AudioSettings } from "$features/audio-settings";
   import { Card } from "$lib/components/ui";
 </script>
 
-<div class="min-w-0 flex-1">
-  <div>Settings</div>
+<div class="flex min-w-0 flex-1 flex-col gap-4 p-2 overflow-auto">
+  <h1 class="text-2xl font-semibold">Settings</h1>
 
   <Card>
-    <div>Audio</div>
-    <div>System</div>
-    <div>Microphone</div>
+    <AudioSettings />
   </Card>
 
   <Card>
