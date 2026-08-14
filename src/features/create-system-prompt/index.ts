@@ -1,1 +1,1 @@
-export { default as CreateSystemPromptModal } from "./CreateSystemPromptModal.svelte"
+export { default as CreateSystemPromptModal } from "./CreateSystemPromptModal.svelte";

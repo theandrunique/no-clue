@@ -75,7 +75,7 @@
           <Loader />
         </span>
       {/if}
-      <Select.Value class="text-nowrap truncate" {placeholder} />
+      <Select.Value class="truncate text-nowrap" {placeholder} />
     </span>
 
     <span class="flex shrink-0 items-center gap-2 text-(--text-muted)">

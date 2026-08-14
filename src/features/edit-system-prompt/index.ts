@@ -1,1 +1,1 @@
-export { default as EditSystemPromptModal } from "./EditSystemPromptModal.svelte"
+export { default as EditSystemPromptModal } from "./EditSystemPromptModal.svelte";
