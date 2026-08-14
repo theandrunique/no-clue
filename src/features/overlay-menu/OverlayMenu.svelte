@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
   import { overlayStateStore } from "$lib/stores/overlayStateStore.svelte";
-  import { ChevronDown, ChevronUp, Mic, X } from "@lucide/svelte";
+  import { Camera, ChevronDown, ChevronUp, Mic, X } from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
 </script>
 
@@ -20,6 +20,10 @@
 
     <Button variant="icon">
       <Mic />
+    </Button>
+
+    <Button variant="icon">
+      <Camera />
     </Button>
   </span>
 
