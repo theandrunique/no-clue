@@ -31,7 +31,6 @@ function createAudioStore() {
   save();
 
   function save() {
-    console.log("Saving");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }
 

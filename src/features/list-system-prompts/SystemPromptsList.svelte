@@ -23,7 +23,7 @@
   {#each query.data ?? [] as systemPrompt (systemPrompt.id)}
     <Card
       class="relative flex cursor-pointer flex-col"
-      ondblclick={() => activePromptStore.setActivePrompt(systemPrompt.id)}
+      ondblclick={() => activePromptStore.toggleActivePrompt(systemPrompt.id)}
     >
       <span class="truncate font-semibold">{systemPrompt.name}</span>
       <p class="line-clamp-3 flex-1 text-xs text-(--text-muted)">{systemPrompt.prompt}</p>
