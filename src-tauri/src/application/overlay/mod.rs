@@ -39,18 +39,18 @@ pub async fn start_overlay_session(app: AppHandle) -> Result<(), AppError> {
 
 #[tauri::command]
 pub async fn close_overlay_session(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("overlay") {
+        if let Err(e) = window.close() {
+            tracing::error!(error = ?e, "Failed to close overlay");
+        }
+    }
+        
     if let Some(window) = app.get_webview_window("dashboard") {
         if let Err(e) = window.show() {
             tracing::error!(error = ?e, "Failed to show dashboard");
         }
         if let Err(e) = window.set_focus() {
             tracing::error!(error = ?e, "Failed to focus dashboard");
-        }
-    }
-
-    if let Some(window) = app.get_webview_window("overlay") {
-        if let Err(e) = window.close() {
-            tracing::error!(error = ?e, "Failed to close overlay");
         }
     }
 }
