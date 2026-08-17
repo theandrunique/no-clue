@@ -146,9 +146,9 @@ async fn run_chat_completion(
 
     loop {
         tokio::select! {
-            Some(event) = stream.next() => {
+            event = stream.next() => {
                 match event {
-                    Ok(chunk) => {
+                    Some(Ok(chunk)) => {
                         assistant_response.push_str(&chunk.content);
 
                         let _ = app.emit(
@@ -162,7 +162,7 @@ async fn run_chat_completion(
                             },
                         );
                     },
-                    Err(e) => {
+                    Some(Err(e)) => {
                         tracing::error!(error = ?e, "LLM provider stream error");
                         let _ = app.emit(
                             "chat-stream",
@@ -171,7 +171,8 @@ async fn run_chat_completion(
                                 message: e.to_string()
                             },
                         );
-                    }
+                    },
+                    None => break,
                 }
             },
             _ = ct.cancelled() => break,

@@ -5,7 +5,7 @@ use crate::domain::providers::{FieldDescriptor, FieldType, ProviderDescriptor};
 use crate::domain::stt::{
     AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult,
 };
-use crate::domain::transcriptions::AudioSource;
+use crate::domain::transcripts::AudioSource;
 
 use async_trait::async_trait;
 use tokio::task::JoinHandle;

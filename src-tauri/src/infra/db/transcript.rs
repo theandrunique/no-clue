@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::domain::transcriptions::Transcript;
+use crate::domain::transcripts::Transcript;
 
 pub async fn save(pool: &SqlitePool, transcript: &Transcript) -> Result<(), sqlx::Error> {
     sqlx::query(

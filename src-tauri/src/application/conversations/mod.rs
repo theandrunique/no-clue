@@ -9,7 +9,7 @@ use crate::db::message as msg_repo;
 use crate::db::transcript as transcript_repo;
 use crate::domain::conversations::Conversation;
 use crate::domain::messages::Message;
-use crate::domain::transcriptions::Transcript;
+use crate::domain::transcripts::Transcript;
 use crate::errors::AppError;
 
 #[tauri::command]

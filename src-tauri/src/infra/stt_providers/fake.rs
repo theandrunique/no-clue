@@ -1,6 +1,6 @@
 use crate::domain::providers::ProviderDescriptor;
 use crate::domain::stt::{AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult};
-use crate::domain::transcriptions::AudioSource;
+use crate::domain::transcripts::AudioSource;
 use async_trait::async_trait;
 use std::time::Duration;
 

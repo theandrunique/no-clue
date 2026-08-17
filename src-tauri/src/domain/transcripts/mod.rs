@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TranscriptionResult {
+pub struct TranscriptResult {
     pub id: Uuid,
     pub conversation_id: Uuid,
     pub source: AudioSource,
@@ -23,9 +23,9 @@ pub struct Transcript {
     pub created_at: DateTime<Utc>,
 }
 
-impl From<Transcript> for TranscriptionResult {
+impl From<Transcript> for TranscriptResult {
     fn from(t: Transcript) -> Self {
-        TranscriptionResult {
+        TranscriptResult {
             id: t.id,
             conversation_id: t.conversation_id,
             source: t.source,
@@ -37,8 +37,8 @@ impl From<Transcript> for TranscriptionResult {
     }
 }
 
-impl From<TranscriptionResult> for Transcript {
-    fn from(value: TranscriptionResult) -> Self {
+impl From<TranscriptResult> for Transcript {
+    fn from(value: TranscriptResult) -> Self {
         Transcript {
             id: value.id,
             conversation_id: value.conversation_id,

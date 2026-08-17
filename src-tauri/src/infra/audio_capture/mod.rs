@@ -1,4 +1,4 @@
-use crate::domain::transcriptions::AudioSource;
+use crate::domain::transcripts::AudioSource;
 use anyhow::Result;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};

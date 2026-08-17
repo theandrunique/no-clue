@@ -1,8 +1,8 @@
 use crate::db::stt_provider_settings as stt_provider_repo;
 use crate::db::transcript as transcript_repo;
 use crate::domain::stt::{SttProvider, SttTranscriptResult};
-use crate::domain::transcriptions::Transcript;
-use crate::domain::transcriptions::{AudioCaptureConfig, TranscriptionResult};
+use crate::domain::transcripts::Transcript;
+use crate::domain::transcripts::{AudioCaptureConfig, TranscriptResult};
 use crate::errors::AppError;
 use crate::infra::audio_capture::start_capture_pipeline;
 use crate::infra::stt_providers::create_stt_provider;
@@ -125,7 +125,7 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
         .unwrap_or(None)
         .unwrap_or_default();
 
-    let payload = TranscriptionResult {
+    let payload = TranscriptResult {
         id: id,
         conversation_id: conversation_id,
         text: result.text.clone(),

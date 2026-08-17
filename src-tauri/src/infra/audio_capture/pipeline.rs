@@ -1,5 +1,5 @@
 use crate::domain::stt::{AudioChunk, AudioChunkStream};
-use crate::domain::transcriptions::AudioCaptureConfig;
+use crate::domain::transcripts::AudioCaptureConfig;
 use crate::infra::audio_capture::{AudioInput, AudioStream};
 use crate::infra::audio_processing::AudioProcessor;
 use async_channel::Sender;

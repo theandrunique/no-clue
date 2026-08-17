@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SelectField } from "$lib/components/form";
   import { useLlmProviders, useSttProviders } from "$lib/queries/providers";
+  import { providerSettingsStore } from "$lib/stores/providerSettingsStore.svelte";
 
   let llmProvidersQuery = useLlmProviders();
 
@@ -27,6 +28,7 @@
     type="single"
     items={llmProviders}
     loading={llmProvidersQuery.isPending}
+    bind:value={providerSettingsStore.llmProviderId}
   />
 
   <SelectField
@@ -34,5 +36,6 @@
     type="single"
     items={sttProviders}
     loading={sttProvidersQuery.isPending}
+    bind:value={providerSettingsStore.sttProviderId}
   />
 </div>

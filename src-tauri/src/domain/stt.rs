@@ -3,7 +3,7 @@ use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
-use crate::domain::transcriptions::AudioSource;
+use crate::domain::transcripts::AudioSource;
 
 /// Кусок захваченного звука в формате PCM16 (signed 16-bit LE), stereo interleaved
 /// ([L,R,L,R,...]), 16 кГц — именно то, что выдаёт audio_processing.
