@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { Bot, Logs, MessageCircle, Play, Settings } from "@lucide/svelte";
+  import { Bot, Logs, MessageSquare, Play, Settings } from "@lucide/svelte";
   import type { Component } from "svelte";
   import { cn } from "$lib/utils";
-  import { Button } from "./ui";
-  import { invoke } from "@tauri-apps/api/core";
+  import { overlaySessionService } from "$lib/services/overlaySession.svelte";
+  import { Button } from "$lib/components/ui";
 
   interface NavItem {
     href: string;
@@ -14,7 +14,7 @@
 
   const navigation: NavItem[] = [
     { href: "/overview", label: "Overview", icon: Logs },
-    { href: "/conversations", label: "Conversations", icon: MessageCircle },
+    { href: "/conversations", label: "Conversations", icon: MessageSquare },
     { href: "/system-prompts", label: "System Prompts", icon: Bot },
     { href: "/settings", label: "Settings", icon: Settings }
   ];
@@ -25,7 +25,7 @@
 </script>
 
 <div class="flex flex-col gap-3 border-r border-(--color-border) bg-(--bg-card) p-2">
-  <Button onclick={() => invoke("start_overlay_session")}>
+  <Button onclick={() => overlaySessionService.startNew()}>
     <Play />
     Start
   </Button>

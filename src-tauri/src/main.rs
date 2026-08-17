@@ -20,7 +20,7 @@ use crate::{
             update_system_prompt,
         },
         transcriptions::{start_transcription, stop_transcription, update_transcription_session},
-        overlay::{start_overlay_session, close_overlay_session}
+        overlay::{start_overlay_session, stop_overlay_session}
     },
     infra::db,
     utils::{open_dashboard, set_overlay_visible},
@@ -101,7 +101,7 @@ pub fn main() {
             delete_shortcut_override,
             get_model_info,
             start_overlay_session,
-            close_overlay_session,
+            stop_overlay_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

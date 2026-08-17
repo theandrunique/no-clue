@@ -1,17 +1,33 @@
+use std::sync::LazyLock;
+
 use anyhow::Context;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tokio::sync::Mutex;
+use uuid::Uuid;
 
-use crate::{application::conversations::create_conversation, errors::AppError};
+use crate::{errors::AppError};
+
+#[derive(PartialEq)]
+pub enum OverlayStatus {
+    Idle,
+    Active { conversation_id: Uuid },
+}
+
+static STATE: LazyLock<Mutex<OverlayStatus>> = LazyLock::new(|| Mutex::new(OverlayStatus::Idle));
 
 #[tauri::command]
-pub async fn start_overlay_session(app: AppHandle) -> Result<(), AppError> {
+pub async fn start_overlay_session(app: AppHandle, conversation_id: Uuid) -> Result<(), AppError> {
     tracing::trace!("start_overlay_session called");
-    let conversation = create_conversation(app.clone()).await?;
+
+    let mut state = STATE.lock().await;
+    if *state != OverlayStatus::Idle {
+        return Err(AppError::OverlayAlreadyRunning);
+    }
 
     WebviewWindowBuilder::new(
         &app,
         "overlay",
-        WebviewUrl::App(format!("/overlay?conversationId={}", &conversation.id).into()),
+        WebviewUrl::App(format!("/overlay/{}", &conversation_id).into()),
     )
     .title("No-Clue Overlay")
     .inner_size(500.0, 54.0)
@@ -34,17 +50,25 @@ pub async fn start_overlay_session(app: AppHandle) -> Result<(), AppError> {
         }
     }
 
+    *state = OverlayStatus::Active { conversation_id };
     Ok(())
 }
 
 #[tauri::command]
-pub async fn close_overlay_session(app: AppHandle) {
+pub async fn stop_overlay_session(app: AppHandle) -> Result<(), AppError> {
+    tracing::trace!("stop_overlay_session called");
+
+    let mut state = STATE.lock().await;
+    if matches!(*state, OverlayStatus::Idle) {
+        return Err(AppError::OverlayNotRunning);
+    }
+
     if let Some(window) = app.get_webview_window("overlay") {
         if let Err(e) = window.close() {
             tracing::error!(error = ?e, "Failed to close overlay");
         }
     }
-        
+
     if let Some(window) = app.get_webview_window("dashboard") {
         if let Err(e) = window.show() {
             tracing::error!(error = ?e, "Failed to show dashboard");
@@ -53,4 +77,7 @@ pub async fn close_overlay_session(app: AppHandle) {
             tracing::error!(error = ?e, "Failed to focus dashboard");
         }
     }
+
+    *state = OverlayStatus::Idle;
+    Ok(())
 }

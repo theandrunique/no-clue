@@ -14,6 +14,8 @@ pub enum AppError {
     ShourtcutOverrideNotFound,
     AtLeactOneAudioSourceMustBeEnabled,
     TranscriptionConversationIdNotSet,
+    OverlayAlreadyRunning,
+    OverlayNotRunning,
 }
 
 impl From<anyhow::Error> for AppError {
@@ -52,6 +54,8 @@ impl std::fmt::Display for AppError {
                 write!(f, "Transcription conversation ID not set")
             }
             AppError::LlmProviderAlreadyRunning => write!(f, "LLM provider already running"),
+            AppError::OverlayAlreadyRunning => write!(f, "Overlay already running"),
+            AppError::OverlayNotRunning => write!(f, "Overlay not running"),
         }
     }
 }

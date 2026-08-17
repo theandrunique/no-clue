@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
-  import { overlayStateStore } from "$lib/stores/overlayStateStore.svelte";
+  import { overlaySessionService } from "$lib/services/overlaySession.svelte";
+  import { overlayStateStore } from "$lib/stores/overlayState.svelte";
   import { Camera, ChevronDown, ChevronUp, Mic, X } from "@lucide/svelte";
-  import { invoke } from "@tauri-apps/api/core";
 </script>
 
 <Card
@@ -27,7 +27,7 @@
     </Button>
   </span>
 
-  <Button variant="icon" onclick={() => invoke("close_overlay_session")}>
+  <Button variant="icon" onclick={() => overlaySessionService.stop()}>
     <X />
   </Button>
 </Card>

@@ -1,10 +1,12 @@
 <script>
-  import { OverlayDropdown } from "$features/overlay-dropdown";
-  import { OverlayMenu } from "$features/overlay-menu";
+  import { Card } from "$lib/components/ui";
 </script>
 
 <div class="flex h-screen flex-col gap-1 overflow-hidden">
-  <OverlayMenu />
-
-  <OverlayDropdown />
+  <Card
+    class="flex h-[54px] items-center justify-between bg-(--bg-card)/50 px-1.5"
+    data-tauri-drag-region
+  >
+    Error: No conversation id was specified
+  </Card>
 </div>

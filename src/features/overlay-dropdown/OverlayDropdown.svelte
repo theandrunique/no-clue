@@ -1,9 +1,11 @@
 <script lang="ts">
   import { Card, Tabs } from "$lib/components/ui";
-  import { overlayStateStore } from "$lib/stores/overlayStateStore.svelte";
+  import { overlayStateStore } from "$lib/stores/overlayState.svelte";
   import { FileText, MessageSquare } from "@lucide/svelte";
   import { cubicInOut } from "svelte/easing";
   import { fly } from "svelte/transition";
+  import LlmChat from "./LlmChat.svelte";
+  import TranscriptionsList from "./TranscriptionsList.svelte";
 </script>
 
 {#if overlayStateStore.expanded}
@@ -15,8 +17,13 @@
           <Tabs.Trigger value="transcript"><FileText class="h-4 w-4" /> Transcript</Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="chat">chat</Tabs.Content>
-        <Tabs.Content value="transcript">transcriptions</Tabs.Content>
+        <Tabs.Content value="chat">
+          <LlmChat />
+        </Tabs.Content>
+
+        <Tabs.Content value="transcript">
+          <TranscriptionsList />
+        </Tabs.Content>
       </Tabs.Root>
     </Card>
   </div>
