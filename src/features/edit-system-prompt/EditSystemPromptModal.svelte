@@ -9,25 +9,22 @@
 
   let mutation = useUpdateSystemPrompt();
 
-  const { enhance, errors, form, constraints, reset } = superForm(
-    defaults(zod4(createSystemPromptSchema)),
-    {
-      SPA: true,
-      validators: zod4(createSystemPromptSchema),
-      onUpdate({ form: v }) {
-        if (!v.valid) return;
-        if (!editSystemPromptModal.status.systemPrompt) return;
+  const { enhance, errors, form, constraints, reset } = superForm(defaults(zod4(createSystemPromptSchema)), {
+    SPA: true,
+    validators: zod4(createSystemPromptSchema),
+    onUpdate({ form: v }) {
+      if (!v.valid) return;
+      if (!editSystemPromptModal.status.systemPrompt) return;
 
-        mutation.mutate(
-          { ...v.data, id: editSystemPromptModal.status.systemPrompt.id },
-          {
-            onSuccess: () => editSystemPromptModal.close()
-          }
-        );
-      },
-      resetForm: false
-    }
-  );
+      mutation.mutate(
+        { ...v.data, id: editSystemPromptModal.status.systemPrompt.id },
+        {
+          onSuccess: () => editSystemPromptModal.close()
+        }
+      );
+    },
+    resetForm: false
+  });
 
   $effect.pre(() => {
     if (editSystemPromptModal.status.isOpen) {
@@ -72,9 +69,7 @@
         />
 
         <div class="flex items-center justify-end gap-2">
-          <Button type="button" variant="secondary" onclick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
+          <Button type="button" variant="secondary" onclick={() => handleOpenChange(false)}>Cancel</Button>
 
           <Button disabled={mutation.isPending}>
             {mutation.isPending ? "Saving..." : "Update"}

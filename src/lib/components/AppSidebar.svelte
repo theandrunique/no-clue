@@ -32,11 +32,7 @@
 
   <nav class="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto">
     {#each navigation as item (item.href)}
-      <Button
-        variant="ghost"
-        href={item.href}
-        class={cn(isActive(item) ? "bg-(--button-bg-secondary-hover)" : "")}
-      >
+      <Button variant="ghost" href={item.href} class={cn(isActive(item) ? "bg-(--button-bg-secondary-hover)" : "")}>
         <item.icon />
         {item.label}
       </Button>

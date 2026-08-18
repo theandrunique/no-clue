@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
   import { useSystemPrompts } from "$lib/queries/systemPrompts";
-  import { activePromptStore } from "$lib/stores/acitvePromptStore.svelte";
+  import { activePromptStore } from "$lib/stores/acitvePrompt.svelte";
   import { editSystemPromptModal } from "$lib/stores/editSystemPromptModal.svelte";
   import { Check, SquarePen } from "@lucide/svelte";
 

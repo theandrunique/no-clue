@@ -5,10 +5,7 @@
   let { class: className, ...rest }: Dialog.OverlayProps = $props();
 
   let cls = $derived(
-    cn(
-      "dialog-overlay data-nested:hidden fixed inset-0 z-50 bg-(--bg-overlay) backdrop-blur-[2px]",
-      className
-    )
+    cn("dialog-overlay data-nested:hidden fixed inset-0 z-50 bg-(--bg-overlay) backdrop-blur-[2px]", className)
   );
 </script>
 

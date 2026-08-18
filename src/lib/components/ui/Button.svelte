@@ -8,12 +8,10 @@
       variant: {
         primary:
           "bg-(--button-bg-primary) hover:bg-(--button-bg-primary-hover) active:bg-(--button-bg-primary-active) text-(--text-on-primary)",
-        accent:
-          "bg-(--button-bg-accent) hover:bg-(--button-bg-accent-hover) active:bg-(--button-bg-accent-active)",
+        accent: "bg-(--button-bg-accent) hover:bg-(--button-bg-accent-hover) active:bg-(--button-bg-accent-active)",
         secondary:
           "bg-(--button-bg-secondary) hover:bg-(--button-bg-secondary-hover) active:bg-(--button-bg-secondary-active)",
-        ghost:
-          "bg-transparent hover:bg-(--button-bg-secondary-hover) active:bg-(--button-bg-secondary-active)",
+        ghost: "bg-transparent hover:bg-(--button-bg-secondary-hover) active:bg-(--button-bg-secondary-active)",
         icon: "bg-transparent hover:bg-(--button-bg-secondary-hover) active:bg-(--button-bg-secondary-active) p-(--button-padding-y)"
       }
     },

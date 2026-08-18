@@ -1,12 +1,16 @@
 import { conversationApi } from "$lib/api/conversation";
 import { llmProviderApi } from "$lib/api/llmProvider";
-import { activePromptStore } from "$lib/stores/acitvePromptStore.svelte";
-import { providerSettingsStore } from "$lib/stores/providerSettingsStore.svelte";
+import { activePromptStore } from "$lib/stores/acitvePrompt.svelte";
+import { providerSettingsStore } from "$lib/stores/providerSettings.svelte";
 import type { ChatStreamEvent, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { listen } from "@tauri-apps/api/event";
 
-function createLlmChatService() {
+function isoNow(): string {
+  return new Date().toISOString();
+}
+
+export function createLlmChatService() {
   let conversationId = $state<string | null>(null);
   let messages = $state<Message[]>([]);
   let isStreaming = $state(false);
@@ -79,7 +83,7 @@ function createLlmChatService() {
       role: "user",
       content: trimmed,
       screenshot_path: null,
-      created_at: new Date().toISOString()
+      created_at: isoNow()
     };
 
     const assistantPlaceholder: Message = {
@@ -88,7 +92,7 @@ function createLlmChatService() {
       role: "assistant",
       content: "",
       screenshot_path: null,
-      created_at: new Date().toISOString()
+      created_at: isoNow()
     };
 
     messages = [...messages, userMessage, assistantPlaceholder];
@@ -148,5 +152,3 @@ function createLlmChatService() {
     toggleCaptureScreenshot
   };
 }
-
-export const llmChatService = createLlmChatService();

@@ -1,14 +1,14 @@
 import { conversationApi } from "$lib/api/conversation";
 import { sttProviderApi } from "$lib/api/sttProvider";
-import { audioSettingsStore } from "$lib/stores/audioSettingsStore.svelte";
-import { providerSettingsStore } from "$lib/stores/providerSettingsStore.svelte";
+import { audioSettingsStore } from "$lib/stores/audioSettings.svelte";
+import { providerSettingsStore } from "$lib/stores/providerSettings.svelte";
 import type { TranscriptResult, Transcript } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { listen } from "@tauri-apps/api/event";
 
 type TranscriptionStatus = "idle" | "starting" | "listening" | "stopping";
 
-function createTranscriptionService() {
+export function createTranscriptionService() {
   let status = $state<TranscriptionStatus>("idle");
   let error = $state<string | null>(null);
   let conversationId = $state<string | null>(null);
@@ -131,5 +131,3 @@ function createTranscriptionService() {
     stop
   };
 }
-
-export const transcriptionService = createTranscriptionService();

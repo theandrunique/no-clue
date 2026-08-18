@@ -7,7 +7,6 @@ const WIDTH = 500;
 
 function createOverlayStateStore() {
   let expanded = $state(false);
-  let tab = $state("chat");
 
   function toggleExpanded() {
     expanded = !expanded;
@@ -21,16 +20,10 @@ function createOverlayStateStore() {
   }
 
   return {
-    get tab() {
-      return tab;
-    },
-    set tab(value) {
-      tab = value;
-    },
     get expanded() {
       return expanded;
     },
-    toggleExpanded,
+    toggleExpanded
   };
 }
 

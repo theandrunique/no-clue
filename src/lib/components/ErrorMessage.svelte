@@ -3,7 +3,6 @@
     error: string;
     onClear: () => void;
   } = $props();
-
 </script>
 
 <div

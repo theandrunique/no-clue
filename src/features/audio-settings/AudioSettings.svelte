@@ -2,7 +2,7 @@
   import SelectField from "$lib/components/form/SelectField.svelte";
   import { Checkbox } from "$lib/components/ui";
   import { useInputDevices, useOutputDevices } from "$lib/queries/audio";
-  import { audioSettingsStore } from "$lib/stores/audioSettingsStore.svelte";
+  import { audioSettingsStore } from "$lib/stores/audioSettings.svelte";
 
   let inputDevicesQuery = useInputDevices();
   let outputDevicesQuery = useOutputDevices();
@@ -66,10 +66,7 @@
       bind:value={getActiveInputDevice, setActiveInputDevice}
     />
 
-    <Checkbox
-      labelText="Capture microphone audio"
-      bind:checked={audioSettingsStore.capture_microphone}
-    />
+    <Checkbox labelText="Capture microphone audio" bind:checked={audioSettingsStore.capture_microphone} />
   </div>
 
   <SelectField

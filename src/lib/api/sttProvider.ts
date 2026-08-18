@@ -8,8 +8,7 @@ export const sttProviderApi = {
 
   stopTranscription: () => invoke("stop_transcription"),
 
-  updateSession: (conversationId: string) =>
-    invoke("update_transcription_session", { conversationId }),
+  updateSession: (conversationId: string) => invoke("update_transcription_session", { conversationId }),
 
   getProviders: () => invoke<ProviderDescriptor[]>("get_stt_providers")
 };

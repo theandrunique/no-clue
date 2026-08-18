@@ -28,10 +28,7 @@ export type LlmProviderSettings =
 export type SttProviderSettings =
   { type: "Fake" } | { type: "Deepgram"; api_key?: string; language?: string; model?: string };
 
-export function getFieldValue(
-  settings: LlmProviderSettings | SttProviderSettings,
-  key: string
-): string {
+export function getFieldValue(settings: LlmProviderSettings | SttProviderSettings, key: string): string {
   if ("Ollama" === settings.type) {
     if (key === "base_url") return settings.base_url || "";
     if (key === "model") return settings.model || "";

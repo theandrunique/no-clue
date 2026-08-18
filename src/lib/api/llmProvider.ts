@@ -12,5 +12,5 @@ export const llmProviderApi = {
 
   stopMessageStream: () => invoke("stop_stream"),
 
-  getProviders: () => invoke<ProviderDescriptor[]>("get_ai_providers"),
+  getProviders: () => invoke<ProviderDescriptor[]>("get_ai_providers")
 };

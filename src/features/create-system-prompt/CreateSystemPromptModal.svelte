@@ -9,21 +9,18 @@
 
   let mutation = useCreateSystemPrompt();
 
-  const { reset, enhance, errors, form, constraints } = superForm(
-    defaults(zod4(createSystemPromptSchema)),
-    {
-      SPA: true,
-      validators: zod4(createSystemPromptSchema),
-      onUpdate({ form: v }) {
-        if (!v.valid) return;
+  const { reset, enhance, errors, form, constraints } = superForm(defaults(zod4(createSystemPromptSchema)), {
+    SPA: true,
+    validators: zod4(createSystemPromptSchema),
+    onUpdate({ form: v }) {
+      if (!v.valid) return;
 
-        mutation.mutate(v.data, {
-          onSuccess: () => createSystemPromptModal.close()
-        });
-      },
-      resetForm: false
-    }
-  );
+      mutation.mutate(v.data, {
+        onSuccess: () => createSystemPromptModal.close()
+      });
+    },
+    resetForm: false
+  });
 
   $effect.pre(() => {
     if (createSystemPromptModal.isOpen) {
@@ -64,9 +61,7 @@
         />
 
         <div class="flex items-center justify-end gap-2">
-          <Button type="button" variant="secondary" onclick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
+          <Button type="button" variant="secondary" onclick={() => handleOpenChange(false)}>Cancel</Button>
 
           <Button disabled={mutation.isPending}>
             {mutation.isPending ? "Saving..." : "Create"}

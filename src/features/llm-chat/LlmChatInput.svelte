@@ -1,13 +1,19 @@
 <script lang="ts">
   import { Button, Input } from "$lib/components/ui";
-  import { llmChatService } from "$lib/services/llmChat.svelte";
   import { Send, Square } from "@lucide/svelte";
+
+  let props: {
+    isLoading: boolean;
+    isStreaming: boolean;
+    onSend: (message: string) => void;
+    onStop: () => void;
+  } = $props();
 
   let draft = $state("");
 
   function handleSend() {
-    if (llmChatService.isStreaming || !draft.trim()) return;
-    llmChatService.send(draft);
+    if (props.isStreaming || !draft.trim()) return;
+    props.onSend(draft);
     draft = "";
   }
 
@@ -20,19 +26,14 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-2">
-  <Input
-    bind:value={draft}
-    placeholder="Type a message..."
-    disabled={llmChatService.isLoading}
-    onkeydown={handleKeydown}
-  />
+  <Input bind:value={draft} placeholder="Type a message..." disabled={props.isLoading} onkeydown={handleKeydown} />
 
-  {#if llmChatService.isStreaming}
-    <Button variant="secondary" onclick={() => llmChatService.stop()}>
+  {#if props.isStreaming}
+    <Button variant="secondary" onclick={() => props.onStop()}>
       <Square class="size-4" />
     </Button>
   {:else}
-    <Button onclick={handleSend} disabled={!draft.trim() || llmChatService.isLoading}>
+    <Button onclick={handleSend} disabled={!draft.trim() || props.isLoading}>
       <Send class="size-4" />
     </Button>
   {/if}

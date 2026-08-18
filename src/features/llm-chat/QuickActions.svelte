@@ -1,6 +1,11 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui";
-  import { llmChatService } from "$lib/services/llmChat.svelte";
+
+  let props: {
+    isLoading?: boolean;
+    isStreaming?: boolean;
+    onSend: (v: string) => void;
+  } = $props();
 
   const QUICK_ACTIONS = [
     { id: "summarize", label: "Summarize", prompt: "Summarize this conversation" },
@@ -16,8 +21,8 @@
     <Button
       variant="secondary"
       class="shrink-0 px-3 py-1 text-sm"
-      onclick={() => llmChatService.send(action.prompt)}
-      disabled={llmChatService.isStreaming || llmChatService.isLoading}
+      onclick={() => props.onSend(action.prompt)}
+      disabled={props.isStreaming || props.isLoading}
     >
       {action.label}
     </Button>

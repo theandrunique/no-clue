@@ -19,13 +19,7 @@
     <label for={id} class="text-sm select-none">{label}</label>
   {/if}
 
-  <Select
-    bind:value={value as never}
-    type={type as never}
-    invalid={errors != undefined}
-    {id}
-    {...props}
-  />
+  <Select bind:value={value as never} type={type as never} invalid={errors != undefined} {id} {...props} />
 
   {#if errors}
     <p class="text-sm font-semibold text-(--text-error)" transition:fly={{ y: -5, duration: 200 }}>

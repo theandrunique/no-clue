@@ -15,10 +15,7 @@
 </script>
 
 <div
-  class={[
-    "max-w-[85%] rounded-(--radius) px-3 py-2 text-base whitespace-pre-wrap",
-    messageClasses(message)
-  ].join(" ")}
+  class={["max-w-[85%] rounded-(--radius) px-3 py-2 text-base whitespace-pre-wrap", messageClasses(message)].join(" ")}
 >
   {message.content}
 </div>
