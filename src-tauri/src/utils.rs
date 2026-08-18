@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-
-static OVERLAY_VISIBLE: AtomicBool = AtomicBool::new(true);
+use tauri::{AppHandle, LogicalPosition, Manager, Position};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Direction {
@@ -24,94 +21,67 @@ impl fmt::Display for Direction {
     }
 }
 
-pub fn move_overlay(app: AppHandle, direction: Direction, step: i32) -> Result<(), String> {
-    tracing::debug!(direction = %direction, step, "move_overlay called");
+pub fn move_overlay(app: AppHandle, direction: Direction, step: f64) -> Result<(), String> {
+    tracing::debug!(%direction, step, "move_overlay called");
 
-    let window = app
-        .get_webview_window("overlay")
-        .ok_or("Overlay window not found")?;
+    let window = app.get_webview_window("overlay").ok_or_else(|| {
+        tracing::error!("Overlay window not found");
+        "Overlay window not found".to_string()
+    })?;
 
     let (delta_x, delta_y) = match direction {
-        Direction::Up => (0, -step),
-        Direction::Down => (0, step),
-        Direction::Left => (-step, 0),
-        Direction::Right => (step, 0),
+        Direction::Up => (0.0, -step),
+        Direction::Down => (0.0, step),
+        Direction::Left => (-step, 0.0),
+        Direction::Right => (step, 0.0),
     };
 
-    if let Ok(position) = window.outer_position() {
-        let new_x = position.x + delta_x;
-        let new_y = position.y + delta_y;
-        window
-            .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                x: new_x,
-                y: new_y,
-            }))
-            .map_err(|e| e.to_string())?;
-    }
+    let position = window.outer_position().map_err(|e| {
+        tracing::error!(?e, "Failed to get window outer position");
+        "Failed to get window outer position".to_string()
+    })?;
+
+    let scale_factor = window.scale_factor().map_err(|e| {
+        tracing::error!(?e, "Failed to get window scale factor");
+        "Failed to get window scale factor".to_string()
+    })?;
+
+    let logical_pos = position.to_logical::<f64>(scale_factor);
+
+    let new_pos = LogicalPosition { x: logical_pos.x + delta_x, y: logical_pos.y + delta_y };
+
+    window.set_position(Position::Logical(new_pos)).map_err(|e| {
+        tracing::error!(?e, "Failed to set window position");
+        "Failed to set window position".to_string()
+    })?;
 
     Ok(())
 }
 
-pub fn toggle_overlay(app: &AppHandle) -> Result<bool, String> {
+pub fn toggle_overlay(app: &AppHandle) -> Result<(), String> {
     tracing::debug!("toggle_overlay called");
 
-    let is_visible = OVERLAY_VISIBLE.load(Ordering::SeqCst);
+    let window = app.get_webview_window("overlay").ok_or_else(|| {
+        tracing::error!("Overlay window not found");
+        "Overlay window not found".to_string()
+    })?;
 
-    let window = app
-        .get_webview_window("overlay")
-        .ok_or("Overlay window not found")?;
+    let is_visible = window.is_visible().map_err(|e| {
+        tracing::error!(?e, "Error getting is_visible");
+        "Error getting is_visible".to_string()
+    })?;
 
     if is_visible {
-        // скрываем - перемещаем за пределы экрана мгновенно
-        window
-            .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                x: -10000,
-                y: -10000,
-            }))
-            .map_err(|e| e.to_string())?;
-        OVERLAY_VISIBLE.store(false, Ordering::SeqCst);
+        if let Err(e) = window.hide() {
+            tracing::error!(?e, "Error hiding overlay window");
+            return Err("Error hiding overlay window".to_string());
+        }
     } else {
-        // показываем - возвращаем на центр
-        window.center().map_err(|e| e.to_string())?;
-        OVERLAY_VISIBLE.store(true, Ordering::SeqCst);
+        if let Err(e) = window.show() {
+            tracing::error!(?e, "Error showing overlay window");
+            return Err("Error showing overlay window".to_string());
+        }
     }
-
-    Ok(!is_visible)
-}
-
-#[tauri::command]
-pub async fn set_overlay_visible(window: WebviewWindow, visible: bool) -> Result<(), String> {
-    tracing::info!(visible, "set_overlay_visible called");
-    if visible {
-        window.show().map_err(|e| e.to_string())?;
-    } else {
-        window.hide().map_err(|e| e.to_string())?;
-    }
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn open_dashboard(app: AppHandle) -> Result<(), String> {
-    tracing::trace!("open_dashboard called");
-    if let Some(window) = app.get_webview_window("dashboard") {
-        window.show().map_err(|e| e.to_string())?;
-        window.set_focus().map_err(|e| e.to_string())?;
-        return Ok(());
-    }
-
-    WebviewWindowBuilder::new(
-        &app,
-        "dashboard",
-        WebviewUrl::App("/dashboard/conversations".into()),
-    )
-    .title("No-Clue Dashboard")
-    .inner_size(900.0, 700.0)
-    .center()
-    .decorations(true)
-    .resizable(true)
-    .content_protected(true)
-    .build()
-    .map_err(|e| e.to_string())?;
 
     Ok(())
 }

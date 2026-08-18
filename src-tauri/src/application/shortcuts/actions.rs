@@ -100,22 +100,22 @@ fn stop_repeat(shortcut_id: &str) {
 fn run_backend_action(app: &AppHandle, shortcut_id: &str) {
     match shortcut_id {
         "move_window_up" => {
-            if let Err(e) = move_overlay(app.clone(), Direction::Up, 10) {
+            if let Err(e) = move_overlay(app.clone(), Direction::Up, 10.0) {
                 tracing::warn!("Failed to move window up: {}", e);
             }
         }
         "move_window_down" => {
-            if let Err(e) = move_overlay(app.clone(), Direction::Down, 10) {
+            if let Err(e) = move_overlay(app.clone(), Direction::Down, 10.0) {
                 tracing::warn!("Failed to move window down: {}", e);
             }
         }
         "move_window_left" => {
-            if let Err(e) = move_overlay(app.clone(), Direction::Left, 10) {
+            if let Err(e) = move_overlay(app.clone(), Direction::Left, 10.0) {
                 tracing::warn!("Failed to move window left: {}", e);
             }
         }
         "move_window_right" => {
-            if let Err(e) = move_overlay(app.clone(), Direction::Right, 10) {
+            if let Err(e) = move_overlay(app.clone(), Direction::Right, 10.0) {
                 tracing::warn!("Failed to move window right: {}", e);
             }
         }

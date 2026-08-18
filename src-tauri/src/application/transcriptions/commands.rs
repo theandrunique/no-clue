@@ -10,7 +10,6 @@ use chrono::Utc;
 use futures_util::StreamExt;
 use sqlx::SqlitePool;
 use std::sync::LazyLock;
-use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
@@ -24,13 +23,12 @@ struct TranscriptionSession {
 }
 
 static SESSION: LazyLock<Mutex<Option<TranscriptionSession>>> = LazyLock::new(|| Mutex::new(None));
-static CURRENT_CONVERSATION_ID: LazyLock<StdMutex<Option<Uuid>>> =
-    LazyLock::new(|| StdMutex::new(None));
+static CURRENT_CONVERSATION_ID: LazyLock<Mutex<Option<Uuid>>> = LazyLock::new(|| Mutex::new(None));
 
 #[tauri::command]
 pub async fn update_transcription_session(conversation_id: Uuid) -> Result<(), String> {
     tracing::trace!(conversation_id = ?conversation_id, "update_transcription_session called");
-    let mut current = CURRENT_CONVERSATION_ID.lock().map_err(|e| e.to_string())?;
+    let mut current = CURRENT_CONVERSATION_ID.lock().await;
     *current = Some(conversation_id);
     Ok(())
 }
@@ -41,6 +39,7 @@ pub async fn start_transcription(
     stt_provider: String,
     audio_config: AudioCaptureConfig,
 ) -> Result<(), AppError> {
+    tracing::trace!(stt_provider, ?audio_config, "start_transcription called");
     let mut guard = SESSION.lock().await;
     if guard.is_some() {
         return Err(AppError::SttProviderAlreadyRunning);
@@ -48,11 +47,9 @@ pub async fn start_transcription(
     if !audio_config.capture_system_audio && !audio_config.capture_microphone {
         return Err(AppError::AtLeactOneAudioSourceMustBeEnabled);
     }
-    let has_conversation = CURRENT_CONVERSATION_ID
-        .lock()
-        .map(|guard| guard.is_some())
-        .unwrap_or(false);
-    if !has_conversation {
+    let has_conversation = CURRENT_CONVERSATION_ID.lock().await;
+
+    if !has_conversation.is_some() {
         return Err(AppError::TranscriptionConversationIdNotSet);
     }
 
@@ -119,11 +116,7 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
 
     let now = Utc::now();
     let id = Uuid::new_v4();
-    let conversation_id = CURRENT_CONVERSATION_ID
-        .lock()
-        .map(|guard| guard.clone())
-        .unwrap_or(None)
-        .unwrap_or_default();
+    let conversation_id = CURRENT_CONVERSATION_ID.lock().await.unwrap_or_default();
 
     let payload = TranscriptResult {
         id: id,

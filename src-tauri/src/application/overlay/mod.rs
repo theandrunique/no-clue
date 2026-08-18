@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::{errors::AppError};
+use crate::errors::AppError;
 
 #[derive(PartialEq)]
 pub enum OverlayStatus {

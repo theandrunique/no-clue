@@ -11,6 +11,7 @@ use crate::{
         llm_providers::{
             get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
         },
+        overlay::{start_overlay_session, stop_overlay_session},
         shortcuts::{
             delete_shortcut_override, get_shortcuts, register_all_shortcuts, save_shortcut,
         },
@@ -20,10 +21,8 @@ use crate::{
             update_system_prompt,
         },
         transcriptions::{start_transcription, stop_transcription, update_transcription_session},
-        overlay::{start_overlay_session, stop_overlay_session}
     },
     infra::db,
-    utils::{open_dashboard, set_overlay_visible},
 };
 use tauri::Manager;
 
@@ -68,8 +67,6 @@ pub fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            open_dashboard,
-            set_overlay_visible,
             create_conversation,
             delete_conversation,
             get_conversations,
