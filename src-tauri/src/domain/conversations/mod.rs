@@ -20,7 +20,11 @@ pub enum ChatStreamEvent {
         usage: Option<TokenUsage>,
         timestamp: DateTime<Utc>,
     },
-    Error { message: String },
+    Error {
+        conversation_id: Uuid,
+        code: String,
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

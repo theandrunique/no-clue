@@ -14,6 +14,7 @@
     isStreaming: boolean;
     onSend: (message: string) => void;
     onStop: () => void;
+    onRetry?: (userMessageId: string) => void;
   }
 
   let props: LlmChatProps = $props();
@@ -24,6 +25,23 @@
     void props.messages;
     if (listEl) listEl.scrollTop = listEl.scrollHeight;
   });
+
+  function retryHandler(index: number): (() => void) | undefined {
+    const msg = props.messages?.[index];
+    if (!msg || msg.role !== "assistant" || !props.onRetry) return undefined;
+
+    const retryable = msg.finish_reason?.type === "error" || msg.finish_reason?.type === "stopped_by_user";
+    if (!retryable) return undefined;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const prev = props.messages?.[i];
+      if (prev?.role === "user") {
+        const userMessageId = prev.id;
+        return () => props.onRetry!(userMessageId);
+      }
+    }
+    return undefined;
+  }
 </script>
 
 <div class="flex h-full flex-col gap-2 py-2">
@@ -39,8 +57,8 @@
     {:else if props.messages?.length === 0}
       <div class="flex h-full items-center justify-center text-(--text-muted)">No messages yet</div>
     {:else}
-      {#each props.messages as message (message.id)}
-        <LlmChatMessage {message} />
+      {#each props.messages as message, i (message.id)}
+        <LlmChatMessage {message} onRetry={retryHandler(i)} />
       {/each}
     {/if}
   </div>

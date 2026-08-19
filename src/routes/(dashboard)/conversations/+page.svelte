@@ -91,6 +91,7 @@
                 isStreaming={llmChatService.isStreaming}
                 onSend={(v) => llmChatService.send(v)}
                 onStop={() => llmChatService.stop()}
+                onRetry={(userMessageId) => llmChatService.retry(userMessageId)}
                 messages={llmChatService.messages}
                 error={llmChatService.error}
                 clearError={() => llmChatService.clearError()}

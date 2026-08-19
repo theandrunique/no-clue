@@ -14,12 +14,16 @@ export interface AudioDevice {
 
 export type MessageRole = "user" | "assistant" | "system";
 
+export type FinishReason =
+  { type: "done" } | { type: "cancelled" } | { type: "error"; payload: { message: string } };
+
 export interface Message {
   id: string;
   conversation_id: string;
   role: MessageRole;
   content: string;
   screenshot_path: string | null;
+  finish_reason: FinishReason | null;
   created_at: string;
 }
 
@@ -66,13 +70,17 @@ export interface ChatChunkPayload {
 }
 
 export interface ChatErrorPayload {
+  conversation_id: string;
   code: string;
   message: string;
 }
 
+export interface SendMessageResult {
+  user_message_id: string;
+}
+
 export type ChatStreamEvent =
-  | { type: "chunk"; payload: ChatChunkPayload }
-  | { type: "error"; payload: ChatErrorPayload };
+  { type: "chunk"; payload: ChatChunkPayload } | { type: "error"; payload: ChatErrorPayload };
 
 export interface AudioCaptureConfig {
   capture_system_audio: boolean;

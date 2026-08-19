@@ -3,7 +3,7 @@
 use crate::{
     application::{
         audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
-        chats::{send_message, stop_stream},
+        chats::{retry_generation, send_message, stop_stream},
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
             get_messages, get_transcripts,
@@ -74,6 +74,7 @@ pub fn main() {
             get_messages,
             get_transcripts,
             send_message,
+            retry_generation,
             stop_stream,
             start_transcription,
             stop_transcription,

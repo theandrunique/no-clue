@@ -18,19 +18,39 @@ export function createLlmChatService() {
   let error = $state<string | null>(null);
   let captureScreenshot = $state(false);
   let initialized = false;
+  let reloadOnFinish = false;
+
+  let lastParams = {
+    provider: "",
+    captureScreenshot: false,
+    systemPromptId: undefined as string | undefined
+  };
 
   function clearError() {
     error = null;
   }
 
+  async function loadMessages() {
+    if (!conversationId) return;
+    isLoading = true;
+    try {
+      messages = await conversationApi.getMessages(conversationId);
+    } catch (e) {
+      error = getErrorMessage(e);
+    } finally {
+      isLoading = false;
+    }
+  }
+
   function handleStreamEvent(event: ChatStreamEvent) {
     if (event.type === "error") {
+      if (conversationId && event.payload.conversation_id !== conversationId) return;
       isStreaming = false;
-      const last = messages[messages.length - 1];
-      if (last && last.role === "assistant" && last.content === "") {
-        messages = messages.filter((m) => m.id !== last.id);
-      }
-      error = event.payload.message || "Stream error";
+      reloadOnFinish = false;
+      const message = event.payload.message || "Stream error";
+      void loadMessages().then(() => {
+        error = message;
+      });
       return;
     }
 
@@ -44,19 +64,10 @@ export function createLlmChatService() {
 
     if (chunk.is_finish) {
       isStreaming = false;
-    }
-  }
-
-  async function loadMessages() {
-    if (!conversationId) return;
-    isLoading = true;
-    error = null;
-    try {
-      messages = await conversationApi.getMessages(conversationId);
-    } catch (e) {
-      error = getErrorMessage(e);
-    } finally {
-      isLoading = false;
+      if (reloadOnFinish) {
+        reloadOnFinish = false;
+        void loadMessages();
+      }
     }
   }
 
@@ -83,6 +94,7 @@ export function createLlmChatService() {
       role: "user",
       content: trimmed,
       screenshot_path: null,
+      finish_reason: null,
       created_at: isoNow()
     };
 
@@ -92,32 +104,79 @@ export function createLlmChatService() {
       role: "assistant",
       content: "",
       screenshot_path: null,
+      finish_reason: null,
       created_at: isoNow()
     };
 
     messages = [...messages, userMessage, assistantPlaceholder];
     isStreaming = true;
 
+    lastParams = {
+      provider: providerSettingsStore.llmProviderId,
+      captureScreenshot,
+      systemPromptId: activePromptStore.activePromptId ?? undefined
+    };
+
     try {
-      await llmProviderApi.sendMessage({
-        provider: providerSettingsStore.llmProviderId,
+      const result = await llmProviderApi.sendMessage({
+        provider: lastParams.provider,
         conversationId,
         userMessage: trimmed,
-        captureScreenshot,
-        systemPromptId: activePromptStore.activePromptId ?? undefined
+        captureScreenshot: lastParams.captureScreenshot,
+        systemPromptId: lastParams.systemPromptId
       });
+      userMessage.id = result.user_message_id;
     } catch (e) {
       isStreaming = false;
       messages = messages.filter((m) => m.id !== assistantPlaceholder.id);
+      await loadMessages();
+      error = getErrorMessage(e);
+    }
+  }
+
+  async function retry(userMessageId: string) {
+    if (isStreaming || !conversationId) return;
+
+    error = null;
+
+    const assistantPlaceholder: Message = {
+      id: `stream-${crypto.randomUUID()}`,
+      conversation_id: conversationId,
+      role: "assistant",
+      content: "",
+      screenshot_path: null,
+      finish_reason: null,
+      created_at: isoNow()
+    };
+
+    messages = [...messages, assistantPlaceholder];
+    isStreaming = true;
+    reloadOnFinish = true;
+
+    try {
+      await llmProviderApi.retryGeneration({
+        provider: lastParams.provider,
+        conversationId,
+        userMessageId,
+        captureScreenshot: lastParams.captureScreenshot,
+        systemPromptId: lastParams.systemPromptId
+      });
+    } catch (e) {
+      reloadOnFinish = false;
+      isStreaming = false;
+      messages = messages.filter((m) => m.id !== assistantPlaceholder.id);
+      await loadMessages();
       error = getErrorMessage(e);
     }
   }
 
   async function stop() {
     if (!isStreaming) return;
+    reloadOnFinish = true;
     try {
       await llmProviderApi.stopMessageStream();
     } catch (e) {
+      reloadOnFinish = false;
       error = getErrorMessage(e);
     }
   }
@@ -148,6 +207,7 @@ export function createLlmChatService() {
     clearError,
     init,
     send,
+    retry,
     stop,
     toggleCaptureScreenshot
   };

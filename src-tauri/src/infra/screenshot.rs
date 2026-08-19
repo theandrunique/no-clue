@@ -46,3 +46,18 @@ pub fn capture_screenshot(app: tauri::AppHandle) -> Result<ScreenshotResult, Str
         base64,
     })
 }
+
+pub fn read_screenshot_base64(
+    app: &tauri::AppHandle,
+    relative_path: &str,
+) -> Result<Option<String>, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let path = app_data_dir.join(relative_path);
+
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    Ok(Some(base64::engine::general_purpose::STANDARD.encode(&bytes)))
+}

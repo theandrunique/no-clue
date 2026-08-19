@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   Database: "Database error",
   SystemPromptNotFound: "System prompt not found",
   ConversationNotFound: "Conversation not found",
+  MessageNotFound: "Message not found",
   LlmProviderNotConfigured: "LLM provider is not configured",
   SttProviderNotConfigured: "STT provider is not configured",
   LlmProviderAlreadyRunning: "LLM provider is already running",
