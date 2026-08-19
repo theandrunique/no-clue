@@ -1,6 +1,6 @@
 import { conversationApi } from "$lib/api/conversation";
 import { llmProviderApi } from "$lib/api/llmProvider";
-import type { ChatStreamEvent, Message } from "$lib/types";
+import type { ChatStreamEventNew, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
 import { activePromptStore } from "$services/system-prompts/acitvePrompt.svelte";
@@ -42,32 +42,34 @@ export function createLlmChatService() {
     }
   }
 
-  function handleStreamEvent(event: ChatStreamEvent) {
-    if (event.type === "error") {
+  function handleStreamEvent(event: ChatStreamEventNew) {
+    if (event.type === "finish") {
       if (conversationId && event.payload.conversation_id !== conversationId) return;
       isStreaming = false;
-      reloadOnFinish = false;
-      const message = event.payload.message || "Stream error";
-      void loadMessages().then(() => {
-        error = message;
-      });
-      return;
-    }
-
-    const chunk = event.payload;
-    if (conversationId && chunk.conversation_id !== conversationId) return;
-
-    const last = messages[messages.length - 1];
-    if (isStreaming && last && last.role === "assistant") {
-      last.content += chunk.content;
-    }
-
-    if (chunk.is_finish) {
-      isStreaming = false;
-      if (reloadOnFinish) {
+      if (event.payload.finish_reason.type === "error") {
+        reloadOnFinish = false;
+        const message = event.payload.finish_reason.payload.message || "Stream error";
+        void loadMessages().then(() => {
+          error = message;
+        });
+      } else if (reloadOnFinish) {
         reloadOnFinish = false;
         void loadMessages();
       }
+      return;
+    }
+
+    if (event.type === "start") {
+      if (conversationId && event.payload.conversation_id !== conversationId) return;
+      return;
+    }
+
+    const payload = event.payload;
+    if (conversationId && payload.conversation_id !== conversationId) return;
+
+    const last = messages[messages.length - 1];
+    if (isStreaming && last && last.role === "assistant") {
+      last.content += payload.delta;
     }
   }
 
@@ -77,7 +79,7 @@ export function createLlmChatService() {
     if (initialized) return;
     initialized = true;
 
-    await listen<ChatStreamEvent>("chat-stream", (event) => {
+    await listen<ChatStreamEventNew>("chat-stream", (event) => {
       handleStreamEvent(event.payload);
     });
   }

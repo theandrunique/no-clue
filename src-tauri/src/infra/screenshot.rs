@@ -59,5 +59,7 @@ pub fn read_screenshot_base64(
     }
 
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-    Ok(Some(base64::engine::general_purpose::STANDARD.encode(&bytes)))
+    Ok(Some(
+        base64::engine::general_purpose::STANDARD.encode(&bytes),
+    ))
 }

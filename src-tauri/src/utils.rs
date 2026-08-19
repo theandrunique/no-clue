@@ -48,12 +48,17 @@ pub fn move_overlay(app: AppHandle, direction: Direction, step: f64) -> Result<(
 
     let logical_pos = position.to_logical::<f64>(scale_factor);
 
-    let new_pos = LogicalPosition { x: logical_pos.x + delta_x, y: logical_pos.y + delta_y };
+    let new_pos = LogicalPosition {
+        x: logical_pos.x + delta_x,
+        y: logical_pos.y + delta_y,
+    };
 
-    window.set_position(Position::Logical(new_pos)).map_err(|e| {
-        tracing::error!(?e, "Failed to set window position");
-        "Failed to set window position".to_string()
-    })?;
+    window
+        .set_position(Position::Logical(new_pos))
+        .map_err(|e| {
+            tracing::error!(?e, "Failed to set window position");
+            "Failed to set window position".to_string()
+        })?;
 
     Ok(())
 }

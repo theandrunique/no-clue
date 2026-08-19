@@ -60,26 +60,33 @@ export interface TokenUsage {
   total_tokens: number;
 }
 
-export interface ChatChunkPayload {
-  conversation_id: string;
-  content: string;
-  is_finish: boolean;
-  usage: TokenUsage | null;
-  timestamp: string;
-}
-
-export interface ChatErrorPayload {
-  conversation_id: string;
-  code: string;
-  message: string;
-}
-
 export interface SendMessageResult {
   user_message_id: string;
 }
 
-export type ChatStreamEvent =
-  { type: "chunk"; payload: ChatChunkPayload } | { type: "error"; payload: ChatErrorPayload };
+export interface ChatStreamStartPayload {
+  message_id: string;
+  conversation_id: string;
+}
+
+export interface ChatStreamChunkPayload {
+  message_id: string;
+  conversation_id: string;
+  delta: string;
+}
+
+export interface ChatStreamFinishPayload {
+  message_id: string;
+  conversation_id: string;
+  finish_reason: FinishReason;
+  created_at: string;
+  usage: TokenUsage | null;
+}
+
+export type ChatStreamEventNew =
+  | { type: "start"; payload: ChatStreamStartPayload }
+  | { type: "chunk"; payload: ChatStreamChunkPayload }
+  | { type: "finish"; payload: ChatStreamFinishPayload };
 
 export interface AudioCaptureConfig {
   capture_system_audio: boolean;

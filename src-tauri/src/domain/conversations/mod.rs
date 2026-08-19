@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::domain::messages::{FinishReason, TokenUsage};
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Conversation {
     pub id: Uuid,
@@ -11,25 +13,22 @@ pub struct Conversation {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-#[serde(tag = "type", content = "payload", rename_all="lowercase")]
+#[serde(tag = "type", content = "payload", rename_all = "lowercase")]
 pub enum ChatStreamEvent {
+    Start {
+        message_id: Uuid,
+        conversation_id: Uuid,
+    },
     Chunk {
+        message_id: Uuid,
         conversation_id: Uuid,
-        content: String,
-        is_finish: bool,
+        delta: String,
+    },
+    Finish {
+        message_id: Uuid,
+        conversation_id: Uuid,
+        finish_reason: FinishReason,
+        created_at: DateTime<Utc>,
         usage: Option<TokenUsage>,
-        timestamp: DateTime<Utc>,
     },
-    Error {
-        conversation_id: Uuid,
-        code: String,
-        message: String,
-    },
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct TokenUsage {
-    pub prompt_tokens: u64,
-    pub completion_tokens: u64,
-    pub total_tokens: u64,
 }

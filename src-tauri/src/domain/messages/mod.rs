@@ -54,3 +54,10 @@ impl<'r> Decode<'r, Sqlite> for FinishReason {
         Ok(serde_json::from_str(&text).unwrap_or(FinishReason::Done))
     }
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TokenUsage {
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub total_tokens: u64,
+}
