@@ -1,9 +1,9 @@
 <script lang="ts">
   import ErrorMessage from "$lib/components/ErrorMessage.svelte";
-  import LlmChatMessage from "$lib/components/LlmChatMessage.svelte";
   import { Loader } from "$lib/components/ui";
   import type { Message } from "$lib/types";
   import LlmChatInput from "./LlmChatInput.svelte";
+  import LlmChatMessage from "./LlmChatMessage.svelte";
   import QuickActions from "./QuickActions.svelte";
 
   interface LlmChatProps {
@@ -30,7 +30,7 @@
     const msg = props.messages?.[index];
     if (!msg || msg.role !== "assistant" || !props.onRetry) return undefined;
 
-    const retryable = msg.finish_reason?.type === "error" || msg.finish_reason?.type === "stopped_by_user";
+    const retryable = msg.finish_reason?.type === "error" || msg.finish_reason?.type === "cancelled";
     if (!retryable) return undefined;
 
     for (let i = index - 1; i >= 0; i--) {

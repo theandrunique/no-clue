@@ -1,9 +1,9 @@
 import { conversationApi } from "$lib/api/conversation";
 import { sttProviderApi } from "$lib/api/sttProvider";
-import { audioSettingsStore } from "$lib/stores/audioSettings.svelte";
-import { providerSettingsStore } from "$lib/stores/providerSettings.svelte";
 import type { TranscriptResult, Transcript } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
+import { audioSettingsStore } from "$services/settings/audioSettings.svelte";
+import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
 import { listen } from "@tauri-apps/api/event";
 
 type TranscriptionStatus = "idle" | "starting" | "listening" | "stopping";

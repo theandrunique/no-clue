@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
   import { useSystemPrompts } from "$lib/queries/systemPrompts";
-  import { activePromptStore } from "$lib/stores/acitvePrompt.svelte";
-  import { editSystemPromptModal } from "$lib/stores/editSystemPromptModal.svelte";
+  import { activePromptStore } from "$services/system-prompts/acitvePrompt.svelte";
+  import { editSystemPromptModal } from "$services/system-prompts/editSystemPromptModal.svelte";
   import { Check, SquarePen } from "@lucide/svelte";
 
   let query = useSystemPrompts();

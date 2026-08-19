@@ -3,8 +3,8 @@
   import { Bot, Logs, MessageSquare, Play, Settings } from "@lucide/svelte";
   import type { Component } from "svelte";
   import { cn } from "$lib/utils";
-  import { overlaySessionService } from "$lib/services/overlaySession.svelte";
   import { Button } from "$lib/components/ui";
+  import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
 
   interface NavItem {
     href: string;

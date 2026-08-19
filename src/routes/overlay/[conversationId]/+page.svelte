@@ -4,12 +4,12 @@
   import { OverlayMenu } from "$features/overlay-menu";
   import { TranscriptList } from "$features/transcript-list";
   import { Card, Tabs } from "$lib/components/ui";
-  import { createLlmChatService } from "$lib/services/llmChat.svelte";
-  import { createTranscriptionService } from "$lib/services/transcription.svelte";
-  import { overlayStateStore } from "$lib/stores/overlayState.svelte";
   import { FileText, MessageSquare } from "@lucide/svelte";
   import { cubicInOut } from "svelte/easing";
   import { fly } from "svelte/transition";
+  import { createLlmChatService } from "$services/llm-chat/llmChat.svelte";
+  import { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
+  import { overlayStateStore } from "$services/overlay/overlayState.svelte";
 
   const conversationId = $derived(page.params.conversationId);
   let tab = $state("chat");

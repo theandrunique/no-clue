@@ -14,8 +14,7 @@ export interface AudioDevice {
 
 export type MessageRole = "user" | "assistant" | "system";
 
-export type FinishReason =
-  { type: "done" } | { type: "cancelled" } | { type: "error"; payload: { message: string } };
+export type FinishReason = { type: "done" } | { type: "cancelled" } | { type: "error"; payload: { message: string } };
 
 export interface Message {
   id: string;

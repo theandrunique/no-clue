@@ -13,9 +13,9 @@
   }
 
   function resultClasses(result: TranscriptResult | Transcript) {
-    return result?.is_final
-      ? "border-(--color-border) bg-(--bg-card)"
-      : "border-(--color-border)/50 bg-(--bg-card)/50 opacity-70";
+    return "is_final" in result && !result.is_final
+      ? "border-(--color-border)/50 bg-(--bg-card)/50 opacity-70"
+      : "border-(--color-border) bg-(--bg-card)";
   }
 </script>
 

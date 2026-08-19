@@ -1,8 +1,8 @@
 <script lang="ts">
   import ErrorMessage from "$lib/components/ErrorMessage.svelte";
-  import TranscriptResult from "$lib/components/TranscriptResult.svelte";
   import { Loader } from "$lib/components/ui";
   import type { Transcript, TranscriptResult as TranscriptResultType } from "$lib/types";
+  import TranscriptResult from "./TranscriptResult.svelte";
 
   let {
     error,

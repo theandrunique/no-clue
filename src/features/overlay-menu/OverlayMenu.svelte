@@ -1,16 +1,18 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
-  import { createLlmChatService } from "$lib/services/llmChat.svelte";
-  import { overlaySessionService } from "$lib/services/overlaySession.svelte";
-  import { createTranscriptionService } from "$lib/services/transcription.svelte";
-  import { overlayStateStore } from "$lib/stores/overlayState.svelte";
+  import type { createLlmChatService } from "$services/llm-chat/llmChat.svelte";
+  import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
+  import { overlayStateStore } from "$services/overlay/overlayState.svelte";
+  import type { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
   import { Camera, CameraOff, ChevronDown, ChevronUp, Mic, MicOff, X } from "@lucide/svelte";
 
-  let { llmChatService, transcriptionService }: {
-    llmChatService: ReturnType<typeof createLlmChatService>,
-    transcriptionService: ReturnType<typeof createTranscriptionService>,
+  let {
+    llmChatService,
+    transcriptionService
+  }: {
+    llmChatService: ReturnType<typeof createLlmChatService>;
+    transcriptionService: ReturnType<typeof createTranscriptionService>;
   } = $props();
-
 </script>
 
 <Card class="flex h-[54px] items-center justify-between bg-(--bg-card)/50 px-1.5" data-tauri-drag-region>

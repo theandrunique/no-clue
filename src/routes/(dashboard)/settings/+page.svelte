@@ -1,6 +1,5 @@
 <script>
-  import { AudioSettings } from "$features/audio-settings";
-  import { ProvidersSettings } from "$features/providers-settings";
+  import { AudioSettings, ProvidersSettings } from "$features/settings";
   import { Card } from "$lib/components/ui";
 </script>
 

@@ -1,7 +1,7 @@
 <script>
-  import { SystemPromptsList } from "$features/list-system-prompts";
+  import { SystemPromptsList } from "$features/system-prompts";
   import { Button } from "$lib/components/ui";
-  import { createSystemPromptModal } from "$lib/stores/createSystemPromptModal.svelte";
+  import { createSystemPromptModal } from "$services/system-prompts/createSystemPromptModal.svelte";
   import { Plus } from "@lucide/svelte";
 </script>
 

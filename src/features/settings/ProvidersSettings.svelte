@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SelectField } from "$lib/components/form";
   import { useLlmProviders, useSttProviders } from "$lib/queries/providers";
-  import { providerSettingsStore } from "$lib/stores/providerSettings.svelte";
+  import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
 
   let llmProvidersQuery = useLlmProviders();
 

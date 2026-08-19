@@ -1,9 +1,9 @@
 import { conversationApi } from "$lib/api/conversation";
 import { llmProviderApi } from "$lib/api/llmProvider";
-import { activePromptStore } from "$lib/stores/acitvePrompt.svelte";
-import { providerSettingsStore } from "$lib/stores/providerSettings.svelte";
 import type { ChatStreamEvent, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
+import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
+import { activePromptStore } from "$services/system-prompts/acitvePrompt.svelte";
 import { listen } from "@tauri-apps/api/event";
 
 function isoNow(): string {

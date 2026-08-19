@@ -2,7 +2,7 @@
   import SelectField from "$lib/components/form/SelectField.svelte";
   import { Checkbox } from "$lib/components/ui";
   import { useInputDevices, useOutputDevices } from "$lib/queries/audio";
-  import { audioSettingsStore } from "$lib/stores/audioSettings.svelte";
+  import { audioSettingsStore } from "$services/settings/audioSettings.svelte";
 
   let inputDevicesQuery = useInputDevices();
   let outputDevicesQuery = useOutputDevices();

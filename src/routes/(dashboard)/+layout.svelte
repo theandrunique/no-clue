@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { CreateSystemPromptModal } from "$features/create-system-prompt";
-  import { EditSystemPromptModal } from "$features/edit-system-prompt";
+  import { CreateSystemPromptModal, EditSystemPromptModal } from "$features/system-prompts";
   import AppSidebar from "$lib/components/AppSidebar.svelte";
 
   let { children } = $props();

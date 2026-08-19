@@ -4,9 +4,9 @@
   import { TranscriptList } from "$features/transcript-list";
   import { Button, Card, Tabs } from "$lib/components/ui";
   import { useConversation, useDeleteConversation } from "$lib/queries/conversations";
-  import { createLlmChatService } from "$lib/services/llmChat.svelte";
-  import { overlaySessionService } from "$lib/services/overlaySession.svelte";
-  import { createTranscriptionService } from "$lib/services/transcription.svelte";
+  import { createLlmChatService } from "$services/llm-chat/llmChat.svelte";
+  import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
+  import { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
   import { FileText, MessageSquare, Play, Trash2 } from "@lucide/svelte";
 
   let selectedId = $state<string | null>(null);
