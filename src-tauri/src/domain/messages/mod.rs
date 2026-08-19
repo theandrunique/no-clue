@@ -10,6 +10,16 @@ pub struct Message {
     pub content: String,
     pub screenshot_path: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub finish_reason: Option<FinishReason>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+pub enum FinishReason {
+    Done,
+    Cancelled,
+    Error { message: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::Type)]

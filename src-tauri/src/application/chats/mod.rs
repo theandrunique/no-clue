@@ -62,25 +62,11 @@ pub async fn send_message(
     let screenshot_base64 = screenshot_result.map(|r| r.base64);
 
     let pool = app.state::<SqlitePool>();
-    if let Err(e) = msg_repo::save(
-        &pool,
-        &Message {
-            id: Uuid::new_v4(),
-            conversation_id: conversation_id.clone(),
-            role: MessageRole::User,
-            content: user_message.clone(),
-            screenshot_path: screenshot_path.clone(),
-            created_at: Utc::now(),
-        },
-    )
-    .await
-    {
-        tracing::error!(error = %e, "Error saving user message");
-    }
 
     let provider_settings = provider_repo::get(&pool, &provider)
         .await?
         .ok_or_else(|| AppError::LlmProviderNotConfigured)?;
+
     let llm_provider = create_llm_provider(&provider_settings)?;
 
     let history = msg_repo::get_by_conversation(&pool, &conversation_id).await?;
@@ -104,6 +90,19 @@ pub async fn send_message(
     } else if capture_screenshot {
         tracing::error!("capture_screenshot=true but no base64 available");
     }
+
+    let message = Message {
+        id: Uuid::new_v4(),
+        conversation_id: conversation_id.clone(),
+        role: MessageRole::User,
+        content: user_message.clone(),
+        screenshot_path: screenshot_path.clone(),
+        created_at: Utc::now(),
+        finish_reason: None,
+        error: None,
+    };
+
+    msg_repo::save(&pool, &message).await?;
 
     let cancellation_token = CancellationToken::new();
     tokio::spawn({
@@ -130,14 +129,11 @@ async fn run_chat_completion(
 
     let mut stream = match llm_provider.stream_chat_completion(request).await {
         Ok(stream) => stream,
-        Err(err) => {
-            tracing::error!(error = ?err, "Provider error");
+        Err(error) => {
+            tracing::error!(?error, "Provider error");
             let _ = app.emit(
                 "chat-stream",
-                ChatStreamEvent::Error {
-                    code: "provider_error".to_string(),
-                    message: err.to_string(),
-                },
+                ChatStreamEvent::Error { message: error.to_string() },
             );
             finish().await;
             return;
@@ -166,10 +162,7 @@ async fn run_chat_completion(
                         tracing::error!(error = ?e, "LLM provider stream error");
                         let _ = app.emit(
                             "chat-stream",
-                            ChatStreamEvent::Error {
-                                code: "hz".to_string(),
-                                message: e.to_string()
-                            },
+                            ChatStreamEvent::Error { message: e.to_string() },
                         );
                     },
                     None => break,
@@ -179,16 +172,16 @@ async fn run_chat_completion(
         }
     }
 
-    let _ = app.emit(
-        "chat-stream",
-        ChatStreamEvent::Chunk {
-            conversation_id: conversation_id.clone(),
-            content: "".to_string(),
-            is_finish: true,
-            usage: None,
-            timestamp: Utc::now(),
-        },
-    );
+    // let _ = app.emit(
+    //     "chat-stream",
+    //     ChatStreamEvent::Chunk {
+    //         conversation_id: conversation_id.clone(),
+    //         content: "".to_string(),
+    //         is_finish: true,
+    //         usage: None,
+    //         timestamp: Utc::now(),
+    //     },
+    // );
 
     tracing::trace!("Stream completed");
 
