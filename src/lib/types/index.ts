@@ -58,9 +58,9 @@ export interface TokenUsage {
 }
 
 export interface ChatChunkPayload {
-  conversationId: string;
+  conversation_id: string;
   content: string;
-  isFinish: boolean;
+  is_finish: boolean;
   usage: TokenUsage | null;
   timestamp: string;
 }
@@ -71,8 +71,8 @@ export interface ChatErrorPayload {
 }
 
 export type ChatStreamEvent =
-  | { event_type: "message:chunk"; payload: ChatChunkPayload }
-  | { event_type: "message:error"; payload: ChatErrorPayload };
+  | { type: "chunk"; payload: ChatChunkPayload }
+  | { type: "error"; payload: ChatErrorPayload };
 
 export interface AudioCaptureConfig {
   capture_system_audio: boolean;

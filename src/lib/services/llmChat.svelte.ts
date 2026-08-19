@@ -24,7 +24,7 @@ export function createLlmChatService() {
   }
 
   function handleStreamEvent(event: ChatStreamEvent) {
-    if (event.event_type === "message:error") {
+    if (event.type === "error") {
       isStreaming = false;
       const last = messages[messages.length - 1];
       if (last && last.role === "assistant" && last.content === "") {
@@ -35,14 +35,14 @@ export function createLlmChatService() {
     }
 
     const chunk = event.payload;
-    if (conversationId && chunk.conversationId !== conversationId) return;
+    if (conversationId && chunk.conversation_id !== conversationId) return;
 
     const last = messages[messages.length - 1];
     if (isStreaming && last && last.role === "assistant") {
       last.content += chunk.content;
     }
 
-    if (chunk.isFinish) {
+    if (chunk.is_finish) {
       isStreaming = false;
     }
   }

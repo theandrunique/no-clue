@@ -11,19 +11,15 @@ pub struct Conversation {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-#[serde(tag = "event_type", content = "payload")]
+#[serde(tag = "type", content = "payload", rename_all="lowercase")]
 pub enum ChatStreamEvent {
-    #[serde(rename = "message:chunk")]
     Chunk {
-        #[serde(rename = "conversationId")]
         conversation_id: Uuid,
         content: String,
-        #[serde(rename = "isFinish")]
         is_finish: bool,
         usage: Option<TokenUsage>,
         timestamp: DateTime<Utc>,
     },
-    #[serde(rename = "message:error")]
     Error { code: String, message: String },
 }
 
