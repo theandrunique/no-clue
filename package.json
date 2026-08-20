@@ -39,6 +39,7 @@
     "zod": "^4.4.3"
   },
   "dependencies": {
+    "@humanspeak/svelte-markdown": "^1.8.7",
     "@lucide/svelte": "^1.31.0",
     "@tanstack/svelte-query": "^6.1.38",
     "@tauri-apps/api": "^2.11.1",
