@@ -1,10 +1,17 @@
-use crate::domain::stt::{AudioChunk, AudioChunkStream};
-use crate::domain::transcripts::AudioCaptureConfig;
-use crate::infra::audio_capture::{AudioInput, AudioStream};
-use crate::infra::audio_processing::AudioProcessor;
 use async_channel::Sender;
 use futures_util::StreamExt;
 use tokio_util::sync::CancellationToken;
+
+use crate::{
+    domain::{
+        stt::{AudioChunk, AudioChunkStream},
+        transcripts::AudioCaptureConfig,
+    },
+    infra::{
+        audio_capture::{AudioInput, AudioStream},
+        audio_processing::AudioProcessor,
+    },
+};
 
 const TARGET_SAMPLE_RATE: u32 = 16000;
 const CHUNK_DURATION_MS: u32 = 100;

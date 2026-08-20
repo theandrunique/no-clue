@@ -1,7 +1,9 @@
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{ConnectOptions, SqlitePool};
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
+
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    ConnectOptions, SqlitePool,
+};
 
 pub mod conversation;
 pub mod llm_provider_settings;

@@ -1,10 +1,11 @@
+use futures_util::StreamExt;
+use tauri::{AppHandle, Emitter};
+
 use crate::{
     domain::events,
     errors::AppError,
     infra::audio_capture::{list_input_devices, list_output_devices, AudioDevice, AudioInput},
 };
-use futures_util::StreamExt;
-use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub fn get_input_devices() -> Result<Vec<AudioDevice>, AppError> {

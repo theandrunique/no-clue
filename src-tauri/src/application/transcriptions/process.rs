@@ -1,17 +1,20 @@
-use crate::application::transcriptions::{CURRENT_CONVERSATION_ID, finish};
-use crate::db::transcript as transcript_repo;
-use crate::domain::events;
-use crate::domain::stt::{SttProvider, SttTranscriptResult};
-use crate::domain::transcripts::Transcript;
-use crate::domain::transcripts::{AudioCaptureConfig, TranscriptResult};
-use crate::infra::audio_capture::start_capture_pipeline;
 use chrono::Utc;
 use futures_util::StreamExt;
 use sqlx::SqlitePool;
-use tauri::Manager;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
+
+use crate::{
+    application::transcriptions::{finish, CURRENT_CONVERSATION_ID},
+    db::transcript as transcript_repo,
+    domain::{
+        events,
+        stt::{SttProvider, SttTranscriptResult},
+        transcripts::{AudioCaptureConfig, Transcript, TranscriptResult},
+    },
+    infra::audio_capture::start_capture_pipeline,
+};
 
 pub async fn run_transcription(
     app: AppHandle,

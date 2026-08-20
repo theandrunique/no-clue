@@ -1,5 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use tauri::Manager;
+
 use crate::{
     application::{
         audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
@@ -24,7 +26,6 @@ use crate::{
     },
     infra::db,
 };
-use tauri::Manager;
 
 mod application;
 mod domain;

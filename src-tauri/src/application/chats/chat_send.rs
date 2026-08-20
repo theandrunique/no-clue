@@ -1,17 +1,16 @@
-use crate::application::chats::generation::start_generation;
-use crate::db::conversation as conversation_repo;
-use crate::db::message as msg_repo;
-use crate::domain::messages::MessageRole;
-use crate::infra::screenshot::capture_screenshot as do_capture_screenshot;
-use crate::infra::screenshot::ScreenshotResult;
 use chrono::Utc;
 use sqlx::SqlitePool;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{application::chats::SESSION, domain::messages::Message, errors::AppError};
+use crate::{
+    application::chats::{generation::start_generation, SESSION},
+    db::{conversation as conversation_repo, message as msg_repo},
+    domain::messages::{Message, MessageRole},
+    errors::AppError,
+    infra::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult},
+};
 
 #[tauri::command]
 pub async fn send_message(

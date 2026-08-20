@@ -1,14 +1,13 @@
-mod update_transcription_session;
+mod process;
 mod start_transcription;
 mod stop_transcription;
+mod update_transcription_session;
 
-mod process;
-
-pub use update_transcription_session::update_transcription_session;
 pub use start_transcription::start_transcription;
 pub use stop_transcription::stop_transcription;
+pub use update_transcription_session::update_transcription_session;
 
-use std::{sync::LazyLock};
+use std::sync::LazyLock;
 
 use tauri::{AppHandle, Emitter};
 use tokio::{sync::Mutex, task::JoinHandle};

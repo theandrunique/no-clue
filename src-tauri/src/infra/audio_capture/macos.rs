@@ -1,4 +1,11 @@
-use super::{AudioDevice, AudioSource};
+use std::{
+    sync::{
+        atomic::{AtomicBool, AtomicU32, Ordering},
+        Arc, Mutex,
+    },
+    task::{Poll, Waker},
+};
+
 use anyhow::Result;
 use ca::aggregate_device_keys as agg_keys;
 use cidre::{arc, av, cat, cf, core_audio as ca, ns, os};
@@ -7,10 +14,9 @@ use ringbuf::{
     traits::{Consumer, Producer, Split},
     HeapCons, HeapProd, HeapRb,
 };
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
-use std::task::{Poll, Waker};
 use tracing::error;
+
+use super::{AudioDevice, AudioSource};
 
 pub fn get_input_devices() -> Result<Vec<AudioDevice>> {
     let mut devices = Vec::new();

@@ -1,11 +1,12 @@
 use sqlx::SqlitePool;
 use tauri::{AppHandle, Manager};
 
-use crate::application::shortcuts::get_all_shortcut_bindings;
-use crate::application::shortcuts::registry::register_all_shortcuts;
-use crate::db::shortcut_overrides as db_shortcut;
-use crate::domain::shortcuts::{ShortcutBinding, ShortcutOverride};
-use crate::errors::AppError;
+use crate::{
+    application::shortcuts::{get_all_shortcut_bindings, registry::register_all_shortcuts},
+    db::shortcut_overrides as db_shortcut,
+    domain::shortcuts::{ShortcutBinding, ShortcutOverride},
+    errors::AppError,
+};
 
 #[tauri::command]
 pub async fn get_shortcuts(app: AppHandle) -> Vec<ShortcutBinding> {

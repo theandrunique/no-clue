@@ -1,15 +1,16 @@
-use crate::application::transcriptions::CURRENT_CONVERSATION_ID;
-use crate::application::transcriptions::SESSION;
-use crate::application::transcriptions::TranscriptionSession;
-use crate::application::transcriptions::process::run_transcription;
-use crate::db::stt_provider_settings as stt_provider_repo;
-use crate::domain::transcripts::{AudioCaptureConfig};
-use crate::errors::AppError;
-use crate::infra::stt_providers::create_stt_provider;
 use sqlx::SqlitePool;
-use tauri::Manager;
-use tauri::{AppHandle};
+use tauri::{AppHandle, Manager};
 use tokio_util::sync::CancellationToken;
+
+use crate::{
+    application::transcriptions::{
+        process::run_transcription, TranscriptionSession, CURRENT_CONVERSATION_ID, SESSION,
+    },
+    db::stt_provider_settings as stt_provider_repo,
+    domain::transcripts::AudioCaptureConfig,
+    errors::AppError,
+    infra::stt_providers::create_stt_provider,
+};
 
 #[tauri::command]
 pub async fn start_transcription(

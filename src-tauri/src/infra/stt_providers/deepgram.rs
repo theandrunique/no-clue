@@ -1,17 +1,17 @@
+use async_trait::async_trait;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
-
-use crate::domain::providers::{FieldDescriptor, FieldType, ProviderDescriptor};
-use crate::domain::stt::{
-    AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult,
-};
-use crate::domain::transcripts::AudioSource;
-
-use async_trait::async_trait;
 use tokio::task::JoinHandle;
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{client::IntoClientRequest, Message},
+};
+
+use crate::domain::{
+    providers::{FieldDescriptor, FieldType, ProviderDescriptor},
+    stt::{AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
+    transcripts::AudioSource,
+};
 
 pub fn deepgram_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {

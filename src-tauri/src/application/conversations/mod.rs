@@ -1,16 +1,13 @@
 use chrono::Utc;
 use sqlx::SqlitePool;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
-use crate::db::conversation as conv_repo;
-use crate::db::message as msg_repo;
-use crate::db::transcript as transcript_repo;
-use crate::domain::conversations::Conversation;
-use crate::domain::messages::Message;
-use crate::domain::transcripts::Transcript;
-use crate::errors::AppError;
+use crate::{
+    db::{conversation as conv_repo, message as msg_repo, transcript as transcript_repo},
+    domain::{conversations::Conversation, messages::Message, transcripts::Transcript},
+    errors::AppError,
+};
 
 #[tauri::command]
 pub async fn create_conversation(app: AppHandle) -> Result<Conversation, AppError> {

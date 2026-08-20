@@ -1,14 +1,21 @@
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
+
 use sqlx::SqlitePool;
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::application::shortcuts::definitions::get_shortcut_definitions;
-use crate::db::shortcut_overrides as db_shortcut;
-use crate::domain::events;
-use crate::utils::{move_overlay, toggle_overlay, Direction};
+use crate::{
+    application::shortcuts::definitions::get_shortcut_definitions,
+    db::shortcut_overrides as db_shortcut,
+    domain::events,
+    utils::{move_overlay, toggle_overlay, Direction},
+};
 
 struct RepeatState {
     running: AtomicBool,

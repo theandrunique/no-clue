@@ -1,8 +1,12 @@
-use crate::domain::providers::ProviderDescriptor;
-use crate::domain::stt::{AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult};
-use crate::domain::transcripts::AudioSource;
-use async_trait::async_trait;
 use std::time::Duration;
+
+use async_trait::async_trait;
+
+use crate::domain::{
+    providers::ProviderDescriptor,
+    stt::{AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
+    transcripts::AudioSource,
+};
 
 pub fn fake_stt_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {

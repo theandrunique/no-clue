@@ -1,7 +1,6 @@
 use tauri::{AppHandle, Emitter};
 
-use crate::application::transcriptions::SESSION;
-use crate::domain::events;
+use crate::{application::transcriptions::SESSION, domain::events};
 
 #[tauri::command]
 pub async fn stop_transcription(app: AppHandle) -> Result<(), String> {

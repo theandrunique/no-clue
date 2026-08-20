@@ -8,8 +8,11 @@ use crate::{
     domain::{
         llm::{
             LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
-        }, messages::TokenUsage, providers::{FieldDescriptor, FieldType, ProviderDescriptor},
-    }, infra::llm_providers::utils::{build_json_messages, truncate_json_body},
+        },
+        messages::TokenUsage,
+        providers::{FieldDescriptor, FieldType, ProviderDescriptor},
+    },
+    infra::llm_providers::utils::{build_json_messages, truncate_json_body},
 };
 
 pub fn ollama_descriptor() -> ProviderDescriptor {

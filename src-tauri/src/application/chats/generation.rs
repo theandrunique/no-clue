@@ -1,21 +1,25 @@
-use crate::application::chats::SESSION;
-use crate::db::llm_provider_settings as provider_repo;
-use crate::db::message as msg_repo;
-use crate::db::system_prompt as system_prompt_repo;
-use crate::domain::conversations::ChatStreamEvent;
-use crate::domain::events;
-use crate::domain::llm::LlmChatCompletionRequest;
-use crate::domain::llm::LlmProvider;
-use crate::domain::messages::{FinishReason, Message, MessageRole, TokenUsage};
-use crate::errors::AppError;
-use crate::infra::llm_providers::create_llm_provider;
 use chrono::Utc;
 use futures_util::StreamExt;
 use sqlx::SqlitePool;
-use tauri::Manager;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
+
+use crate::{
+    application::chats::SESSION,
+    db::{
+        llm_provider_settings as provider_repo, message as msg_repo,
+        system_prompt as system_prompt_repo,
+    },
+    domain::{
+        conversations::ChatStreamEvent,
+        events,
+        llm::{LlmChatCompletionRequest, LlmProvider},
+        messages::{FinishReason, Message, MessageRole, TokenUsage},
+    },
+    errors::AppError,
+    infra::llm_providers::create_llm_provider,
+};
 
 pub async fn start_generation(
     app: AppHandle,
@@ -49,7 +53,13 @@ pub async fn start_generation(
         Ok(setup) => setup,
         Err(error) => {
             tracing::error!(%error, "Failed to build generation request");
-            emit_generation_error(&app, conversation_id, assistant_message_id, error.to_string()).await;
+            emit_generation_error(
+                &app,
+                conversation_id,
+                assistant_message_id,
+                error.to_string(),
+            )
+            .await;
             *SESSION.lock().await = None;
             return;
         }

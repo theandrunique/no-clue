@@ -1,23 +1,26 @@
-use super::{AudioDevice, AudioSource};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    task::{Poll, Waker},
+    thread,
+};
+
 use anyhow::{anyhow, Result};
 use futures_util::Stream;
 use libpulse_binding as pulse;
 use libpulse_simple_binding as psimple;
-use std::cell::RefCell;
-use std::collections::VecDeque;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use std::task::{Poll, Waker};
-use std::thread;
-use tracing::error;
-use tracing::warn;
-
 use psimple::Simple;
-use pulse::context::introspect::Introspector;
-use pulse::context::Context;
-use pulse::mainloop::standard::Mainloop;
-use pulse::sample::{Format, Spec};
-use pulse::stream::Direction;
+use pulse::{
+    context::{introspect::Introspector, Context},
+    mainloop::standard::Mainloop,
+    sample::{Format, Spec},
+    stream::Direction,
+};
+use tracing::{error, warn};
+
+use super::{AudioDevice, AudioSource};
 
 const DEFAULT_SAMPLE_RATE: u32 = 44_100;
 

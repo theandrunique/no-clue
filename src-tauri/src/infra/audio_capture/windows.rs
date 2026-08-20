@@ -1,13 +1,17 @@
-use super::{AudioDevice, AudioSource};
+use std::{
+    collections::VecDeque,
+    sync::{mpsc, Arc, Mutex},
+    task::{Poll, Waker},
+    thread,
+    time::Duration,
+};
+
 use anyhow::Result;
 use futures_util::Stream;
-use std::collections::VecDeque;
-use std::sync::{mpsc, Arc, Mutex};
-use std::task::{Poll, Waker};
-use std::thread;
-use std::time::Duration;
 use tracing::error;
 use wasapi::{DeviceEnumerator, Direction, SampleType, StreamMode, WaveFormat};
+
+use super::{AudioDevice, AudioSource};
 
 pub fn get_input_devices() -> Result<Vec<AudioDevice>> {
     let enumerator = DeviceEnumerator::new()?;

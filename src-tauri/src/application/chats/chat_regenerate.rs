@@ -1,15 +1,14 @@
-use crate::application::chats::generation::start_generation;
-use crate::db::conversation as conversation_repo;
-use crate::db::message as msg_repo;
-use crate::infra::screenshot::capture_screenshot as do_capture_screenshot;
-use crate::infra::screenshot::read_screenshot_base64;
 use sqlx::SqlitePool;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{application::chats::SESSION, errors::AppError};
+use crate::{
+    application::chats::{generation::start_generation, SESSION},
+    db::{conversation as conversation_repo, message as msg_repo},
+    errors::AppError,
+    infra::screenshot::{capture_screenshot as do_capture_screenshot, read_screenshot_base64},
+};
 
 #[tauri::command]
 pub async fn retry_generation(

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{messages::{Message, TokenUsage}};
+use crate::domain::messages::{Message, TokenUsage};
 
 pub type LlmChatStream =
     Box<dyn Stream<Item = Result<LlmChatCompletionChunk, anyhow::Error>> + Send + Unpin>;

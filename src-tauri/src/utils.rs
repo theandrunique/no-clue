@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, LogicalPosition, Manager, Position};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

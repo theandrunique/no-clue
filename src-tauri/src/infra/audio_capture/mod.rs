@@ -1,8 +1,10 @@
-use crate::domain::transcripts::AudioSource;
+use std::pin::Pin;
+
 use anyhow::Result;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
-use std::pin::Pin;
+
+use crate::domain::transcripts::AudioSource;
 
 #[cfg(target_os = "macos")]
 mod macos;

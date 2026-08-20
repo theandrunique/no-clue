@@ -1,6 +1,7 @@
+use std::time::Instant;
+
 use async_trait::async_trait;
 use futures_util::Stream;
-use std::time::Instant;
 
 use crate::domain::{
     llm::{
