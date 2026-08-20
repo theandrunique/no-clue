@@ -1,9 +1,7 @@
 pub mod audio;
 pub mod chats;
 pub mod conversations;
-pub mod llm_providers;
 pub mod overlay;
 pub mod shortcuts;
-pub mod stt_providers;
 pub mod system_prompts;
 pub mod transcriptions;

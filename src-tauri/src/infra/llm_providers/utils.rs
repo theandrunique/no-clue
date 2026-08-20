@@ -1,4 +1,4 @@
-use crate::domain::{llm::LlmChatCompletionRequest, messages::MessageRole};
+use crate::domain::{chat::MessageRole, llm::LlmChatCompletionRequest};
 
 pub fn build_json_messages(request: &LlmChatCompletionRequest) -> Vec<serde_json::Value> {
     let mut messages: Vec<serde_json::Value> = Vec::new();

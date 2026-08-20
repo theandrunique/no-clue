@@ -61,3 +61,24 @@ pub struct TokenUsage {
     pub completion_tokens: u64,
     pub total_tokens: u64,
 }
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(tag = "type", content = "payload", rename_all = "lowercase")]
+pub enum ChatStreamEvent {
+    Start {
+        message_id: Uuid,
+        conversation_id: Uuid,
+    },
+    Chunk {
+        message_id: Uuid,
+        conversation_id: Uuid,
+        delta: String,
+    },
+    Finish {
+        message_id: Uuid,
+        conversation_id: Uuid,
+        finish_reason: FinishReason,
+        created_at: DateTime<Utc>,
+        usage: Option<TokenUsage>,
+    },
+}

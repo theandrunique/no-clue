@@ -3,7 +3,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     db::stt_provider_settings as stt_provider_repo,
-    domain::{providers::ProviderDescriptor, stt::SttProviderSettings},
+    domain::{provider_schema::ProviderDescriptor, stt::SttProviderSettings},
     errors::AppError,
     infra::stt_providers::{deepgram_descriptor, fake_stt_descriptor},
 };

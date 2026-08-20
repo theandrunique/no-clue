@@ -1,4 +1,4 @@
-use crate::domain::providers::{FieldDescriptor, FieldType, ProviderDescriptor};
+use crate::domain::provider_schema::{FieldDescriptor, FieldType, ProviderDescriptor};
 
 pub fn ai_tunnel_descriptor() -> ProviderDescriptor {
     ProviderDescriptor {

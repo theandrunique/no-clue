@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::domain::messages::Message;
+use crate::domain::chat::Message;
 
 pub async fn save(pool: &SqlitePool, message: &Message) -> Result<(), sqlx::Error> {
     sqlx::query(

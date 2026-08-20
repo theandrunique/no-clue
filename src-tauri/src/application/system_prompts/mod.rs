@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
-use crate::{db::system_prompt as repo, domain::system_prompts::SystemPrompt, errors::AppError};
+use crate::{db::system_prompt as repo, domain::system_prompt::SystemPrompt, errors::AppError};
 
 #[tauri::command]
 pub async fn get_system_prompts(app: AppHandle) -> Result<Vec<SystemPrompt>, AppError> {

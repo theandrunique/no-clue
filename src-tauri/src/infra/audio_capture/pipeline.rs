@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     domain::{
         stt::{AudioChunk, AudioChunkStream},
-        transcripts::AudioCaptureConfig,
+        transcript::AudioCaptureConfig,
     },
     infra::{
         audio_capture::{AudioInput, AudioStream},

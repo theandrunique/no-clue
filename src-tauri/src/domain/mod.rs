@@ -1,9 +1,9 @@
-pub mod conversations;
+pub mod chat;
+pub mod conversation;
 pub mod events;
 pub mod llm;
-pub mod messages;
-pub mod providers;
+pub mod provider_schema;
 pub mod shortcuts;
 pub mod stt;
-pub mod system_prompts;
-pub mod transcripts;
+pub mod system_prompt;
+pub mod transcript;

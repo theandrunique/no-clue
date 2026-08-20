@@ -4,7 +4,7 @@ use anyhow::Result;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::transcripts::AudioSource;
+use crate::domain::transcript::AudioSource;
 
 #[cfg(target_os = "macos")]
 mod macos;

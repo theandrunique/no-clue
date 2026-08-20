@@ -5,24 +5,26 @@ use tauri::Manager;
 use crate::{
     application::{
         audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
-        chats::{retry_generation, send_message, stop_stream},
+        chats::{
+            get_ai_provider_settings, get_ai_providers, get_messages, get_model_info,
+            retry_generation, save_ai_provider_settings, send_message, stop_stream,
+        },
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
-            get_messages, get_transcripts,
-        },
-        llm_providers::{
-            get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
         },
         overlay::{start_overlay_session, stop_overlay_session},
         shortcuts::{
             delete_shortcut_override, get_shortcuts, register_all_shortcuts, save_shortcut,
         },
-        stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings},
         system_prompts::{
             create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
             update_system_prompt,
         },
-        transcriptions::{start_transcription, stop_transcription, update_transcription_session},
+        transcriptions::{
+            get_stt_provider_settings, get_stt_providers, get_transcripts,
+            save_stt_provider_settings, start_transcription, stop_transcription,
+            update_transcription_session,
+        },
     },
     infra::db,
 };

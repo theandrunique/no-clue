@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::domain::system_prompts::SystemPrompt;
+use crate::domain::system_prompt::SystemPrompt;
 
 pub async fn upsert(pool: &SqlitePool, prompt: &SystemPrompt) -> Result<(), sqlx::Error> {
     sqlx::query(

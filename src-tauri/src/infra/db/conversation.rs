@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::domain::conversations::Conversation;
+use crate::domain::conversation::Conversation;
 
 pub async fn save(pool: &SqlitePool, conversation: &Conversation) -> Result<(), sqlx::Error> {
     sqlx::query(

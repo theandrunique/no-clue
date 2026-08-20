@@ -7,7 +7,7 @@ use crate::{
         process::run_transcription, TranscriptionSession, CURRENT_CONVERSATION_ID, SESSION,
     },
     db::stt_provider_settings as stt_provider_repo,
-    domain::transcripts::AudioCaptureConfig,
+    domain::transcript::AudioCaptureConfig,
     errors::AppError,
     infra::stt_providers::create_stt_provider,
 };

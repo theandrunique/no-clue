@@ -3,9 +3,9 @@ use std::time::Duration;
 use async_trait::async_trait;
 
 use crate::domain::{
-    providers::ProviderDescriptor,
+    provider_schema::ProviderDescriptor,
     stt::{AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
-    transcripts::AudioSource,
+    transcript::AudioSource,
 };
 
 pub fn fake_stt_descriptor() -> ProviderDescriptor {

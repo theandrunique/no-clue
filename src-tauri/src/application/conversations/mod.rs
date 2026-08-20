@@ -3,11 +3,7 @@ use sqlx::SqlitePool;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
-use crate::{
-    db::{conversation as conv_repo, message as msg_repo, transcript as transcript_repo},
-    domain::{conversations::Conversation, messages::Message, transcripts::Transcript},
-    errors::AppError,
-};
+use crate::{db::conversation as conv_repo, domain::conversation::Conversation, errors::AppError};
 
 #[tauri::command]
 pub async fn create_conversation(app: AppHandle) -> Result<Conversation, AppError> {
@@ -49,23 +45,4 @@ pub async fn delete_conversation(app: AppHandle, id: Uuid) -> Result<(), AppErro
         return Err(AppError::ConversationNotFound);
     }
     Ok(())
-}
-
-#[tauri::command]
-pub async fn get_messages(app: AppHandle, conversation_id: Uuid) -> Result<Vec<Message>, AppError> {
-    tracing::trace!(%conversation_id, "get_messages called");
-    let pool = app.state::<SqlitePool>();
-    let messages = msg_repo::get_by_conversation(&pool, &conversation_id).await?;
-    Ok(messages)
-}
-
-#[tauri::command]
-pub async fn get_transcripts(
-    app: AppHandle,
-    conversation_id: Uuid,
-) -> Result<Vec<Transcript>, AppError> {
-    tracing::trace!(%conversation_id, "get_transcripts called");
-    let pool = app.state::<SqlitePool>();
-    let transcripts = transcript_repo::get_by_conversation(&pool, &conversation_id).await?;
-    Ok(transcripts)
 }

@@ -8,9 +8,9 @@ use tokio_tungstenite::{
 };
 
 use crate::domain::{
-    providers::{FieldDescriptor, FieldType, ProviderDescriptor},
+    provider_schema::{FieldDescriptor, FieldType, ProviderDescriptor},
     stt::{AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
-    transcripts::AudioSource,
+    transcript::AudioSource,
 };
 
 pub fn deepgram_descriptor() -> ProviderDescriptor {

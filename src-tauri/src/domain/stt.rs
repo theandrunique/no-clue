@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::transcripts::AudioSource;
+use crate::domain::transcript::AudioSource;
 
 /// Кусок захваченного звука в формате PCM16 (signed 16-bit LE), stereo interleaved
 /// ([L,R,L,R,...]), 16 кГц — именно то, что выдаёт audio_processing.

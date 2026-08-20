@@ -5,7 +5,7 @@ use crate::{
     db::llm_provider_settings as provider_repo,
     domain::{
         llm::{LlmProviderSettings, ModelInfo},
-        providers::ProviderDescriptor,
+        provider_schema::ProviderDescriptor,
     },
     errors::AppError,
     infra::llm_providers::{

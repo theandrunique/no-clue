@@ -11,7 +11,7 @@ use crate::{
     domain::{
         events,
         stt::{SttProvider, SttTranscriptResult},
-        transcripts::{AudioCaptureConfig, Transcript, TranscriptResult},
+        transcript::{AudioCaptureConfig, Transcript, TranscriptResult},
     },
     infra::audio_capture::start_capture_pipeline,
 };

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     application::chats::{generation::start_generation, SESSION},
     db::{conversation as conversation_repo, message as msg_repo},
-    domain::messages::{Message, MessageRole},
+    domain::chat::{Message, MessageRole},
     errors::AppError,
     infra::screenshot::{capture_screenshot as do_capture_screenshot, ScreenshotResult},
 };

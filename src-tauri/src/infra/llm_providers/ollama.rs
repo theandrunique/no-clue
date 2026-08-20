@@ -6,11 +6,11 @@ use serde::Deserialize;
 
 use crate::{
     domain::{
+        chat::TokenUsage,
         llm::{
             LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
         },
-        messages::TokenUsage,
-        providers::{FieldDescriptor, FieldType, ProviderDescriptor},
+        provider_schema::{FieldDescriptor, FieldType, ProviderDescriptor},
     },
     infra::llm_providers::utils::{build_json_messages, truncate_json_body},
 };

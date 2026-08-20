@@ -12,10 +12,9 @@ use crate::{
         system_prompt as system_prompt_repo,
     },
     domain::{
-        conversations::ChatStreamEvent,
+        chat::{ChatStreamEvent, FinishReason, Message, MessageRole, TokenUsage},
         events,
         llm::{LlmChatCompletionRequest, LlmProvider},
-        messages::{FinishReason, Message, MessageRole, TokenUsage},
     },
     errors::AppError,
     infra::llm_providers::create_llm_provider,

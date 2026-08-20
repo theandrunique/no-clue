@@ -7,7 +7,7 @@ use crate::domain::{
     llm::{
         LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
     },
-    providers::ProviderDescriptor,
+    provider_schema::ProviderDescriptor,
 };
 
 pub fn fake_provider_descriptor() -> ProviderDescriptor {
