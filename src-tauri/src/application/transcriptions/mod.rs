@@ -15,6 +15,8 @@ use tokio::{sync::Mutex, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+use crate::domain::events;
+
 struct TranscriptionSession {
     cancellation_token: CancellationToken,
     task: JoinHandle<()>,
@@ -25,5 +27,5 @@ static CURRENT_CONVERSATION_ID: LazyLock<Mutex<Option<Uuid>>> = LazyLock::new(||
 
 async fn finish(app: AppHandle) {
     *SESSION.lock().await = None;
-    let _ = app.emit("transcription-stopped", ());
+    let _ = app.emit(events::TRANSCRIPTION_STOPPED, ());
 }

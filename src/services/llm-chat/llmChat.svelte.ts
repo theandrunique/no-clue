@@ -1,10 +1,10 @@
 import { conversationApi } from "$lib/api/conversation";
 import { llmProviderApi } from "$lib/api/llmProvider";
-import type { ChatStreamEventNew, Message } from "$lib/types";
+import { Events, listenEvent } from "$lib/events";
+import type { ChatStreamEvent, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
-import { activePromptStore } from "$services/system-prompts/acitvePrompt.svelte";
-import { listen } from "@tauri-apps/api/event";
+import { activePromptStore } from "$services/system-prompts/activePrompt.svelte";
 
 function isoNow(): string {
   return new Date().toISOString();
@@ -42,7 +42,7 @@ export function createLlmChatService() {
     }
   }
 
-  function handleStreamEvent(event: ChatStreamEventNew) {
+  function handleStreamEvent(event: ChatStreamEvent) {
     if (event.type === "finish") {
       if (conversationId && event.payload.conversation_id !== conversationId) return;
       isStreaming = false;
@@ -79,9 +79,7 @@ export function createLlmChatService() {
     if (initialized) return;
     initialized = true;
 
-    await listen<ChatStreamEventNew>("chat-stream", (event) => {
-      handleStreamEvent(event.payload);
-    });
+    await listenEvent(Events.chatStream, handleStreamEvent);
   }
 
   async function send(text: string) {
@@ -120,14 +118,14 @@ export function createLlmChatService() {
     };
 
     try {
-      const result = await llmProviderApi.sendMessage({
+      const newMessage = await llmProviderApi.sendMessage({
         provider: lastParams.provider,
         conversationId,
         userMessage: trimmed,
         captureScreenshot: lastParams.captureScreenshot,
         systemPromptId: lastParams.systemPromptId
       });
-      userMessage.id = result.user_message_id;
+      userMessage.id = newMessage.id;
     } catch (e) {
       isStreaming = false;
       messages = messages.filter((m) => m.id !== assistantPlaceholder.id);

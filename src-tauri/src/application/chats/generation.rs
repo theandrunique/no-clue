@@ -3,6 +3,7 @@ use crate::db::llm_provider_settings as provider_repo;
 use crate::db::message as msg_repo;
 use crate::db::system_prompt as system_prompt_repo;
 use crate::domain::conversations::ChatStreamEvent;
+use crate::domain::events;
 use crate::domain::llm::LlmChatCompletionRequest;
 use crate::domain::llm::LlmProvider;
 use crate::domain::messages::{FinishReason, Message, MessageRole, TokenUsage};
@@ -28,7 +29,7 @@ pub async fn start_generation(
     let assistant_message_id = Uuid::new_v4();
 
     let _ = app.emit(
-        "chat-stream",
+        events::CHAT_STREAM,
         ChatStreamEvent::Start {
             message_id: assistant_message_id,
             conversation_id,
@@ -115,7 +116,7 @@ async fn emit_generation_error(
     message: String,
 ) {
     let _ = app.emit(
-        "chat-stream",
+        events::CHAT_STREAM,
         ChatStreamEvent::Finish {
             message_id,
             conversation_id,
@@ -182,7 +183,7 @@ async fn run_chat_completion(
                             }
 
                             let _ = app.emit(
-                                "chat-stream",
+                                events::CHAT_STREAM,
                                 ChatStreamEvent::Chunk {
                                     message_id: assistant_message_id,
                                     conversation_id,
@@ -233,7 +234,7 @@ async fn run_chat_completion(
     tracing::trace!(?finish_reason, "Stream completed");
 
     let _ = app.emit(
-        "chat-stream",
+        events::CHAT_STREAM,
         ChatStreamEvent::Finish {
             message_id: assistant_message_id,
             conversation_id,

@@ -7,6 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::application::shortcuts::definitions::get_shortcut_definitions;
 use crate::db::shortcut_overrides as db_shortcut;
+use crate::domain::events;
 use crate::utils::{move_overlay, toggle_overlay, Direction};
 
 struct RepeatState {
@@ -42,7 +43,7 @@ pub async fn execute_action(app: &AppHandle, shortcut_id: &str) {
         return;
     };
 
-    let _ = app.emit("shortcut-triggered", shortcut_id);
+    let _ = app.emit(events::SHORTCUT_TRIGGERED, shortcut_id);
 
     run_backend_action(app, shortcut_id);
 }

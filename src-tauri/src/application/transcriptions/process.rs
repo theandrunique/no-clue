@@ -1,5 +1,6 @@
 use crate::application::transcriptions::{CURRENT_CONVERSATION_ID, finish};
 use crate::db::transcript as transcript_repo;
+use crate::domain::events;
 use crate::domain::stt::{SttProvider, SttTranscriptResult};
 use crate::domain::transcripts::Transcript;
 use crate::domain::transcripts::{AudioCaptureConfig, TranscriptResult};
@@ -64,7 +65,7 @@ async fn handle_result(app: &AppHandle, result: SttTranscriptResult) {
         created_at: now,
     };
 
-    let _ = app.emit("transcription-result", &payload);
+    let _ = app.emit(events::TRANSCRIPTION_RESULT, &payload);
 
     if result.is_final {
         if let Err(e) = transcript_repo::save(&pool, &Transcript::from(payload)).await {

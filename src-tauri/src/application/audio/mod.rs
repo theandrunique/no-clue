@@ -1,4 +1,5 @@
 use crate::{
+    domain::events,
     errors::AppError,
     infra::audio_capture::{list_input_devices, list_output_devices, AudioDevice, AudioInput},
 };
@@ -41,7 +42,7 @@ pub async fn test_system_audio(
             }
             Err(e) => {
                 tracing::error!("Failed to create AudioInput: {}", e);
-                let _ = app_clone.emit("test-stream-error", format!("Failed: {}", e));
+                let _ = app_clone.emit(events::TEST_STREAM_ERROR, format!("Failed: {}", e));
                 return;
             }
         };
@@ -53,7 +54,7 @@ pub async fn test_system_audio(
 
         let max_samples = (sample_rate as u64 * duration_secs) as usize;
 
-        let _ = app_clone.emit("test-stream-started", sample_rate);
+        let _ = app_clone.emit(events::TEST_STREAM_STARTED, sample_rate);
 
         let mut collected = 0;
         let mut count = 0usize;
@@ -72,7 +73,7 @@ pub async fn test_system_audio(
 
             if count % (sample_rate as usize) == 0 {
                 let _ = app_clone.emit(
-                    "test-stream-progress",
+                    events::TEST_STREAM_PROGRESS,
                     (count / (sample_rate as usize), collected),
                 );
             }
@@ -83,7 +84,7 @@ pub async fn test_system_audio(
             count,
             collected
         );
-        let _ = app_clone.emit("test-stream-stopped", (count, collected));
+        let _ = app_clone.emit(events::TEST_STREAM_STOPPED, (count, collected));
     });
 
     tracing::trace!("returning from test_system_audio command");
@@ -114,7 +115,7 @@ pub async fn test_microphone_audio(
             }
             Err(e) => {
                 tracing::error!("Failed to create microphone AudioInput: {}", e);
-                let _ = app_clone.emit("test-mic-error", format!("Failed: {}", e));
+                let _ = app_clone.emit(events::TEST_MIC_ERROR, format!("Failed: {}", e));
                 return;
             }
         };
@@ -126,7 +127,7 @@ pub async fn test_microphone_audio(
 
         let max_samples = (sample_rate as u64 * duration_secs) as usize;
 
-        let _ = app_clone.emit("test-mic-started", sample_rate);
+        let _ = app_clone.emit(events::TEST_MIC_STARTED, sample_rate);
 
         let mut collected = 0;
         let mut count = 0usize;
@@ -145,7 +146,7 @@ pub async fn test_microphone_audio(
 
             if count % (sample_rate as usize) == 0 {
                 let _ = app_clone.emit(
-                    "test-mic-progress",
+                    events::TEST_MIC_PROGRESS,
                     (count / (sample_rate as usize), collected),
                 );
             }
@@ -156,7 +157,7 @@ pub async fn test_microphone_audio(
             count,
             collected
         );
-        let _ = app_clone.emit("test-mic-stopped", (count, collected));
+        let _ = app_clone.emit(events::TEST_MIC_STOPPED, (count, collected));
     });
 
     tracing::trace!("returning from test_microphone_audio command");

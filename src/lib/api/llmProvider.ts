@@ -1,5 +1,5 @@
+import type { Message } from "$lib/types";
 import type { ProviderDescriptor } from "$lib/types/providers";
-import type { SendMessageResult } from "$lib/types";
 import { invoke } from "@tauri-apps/api/core";
 
 export const llmProviderApi = {
@@ -9,7 +9,7 @@ export const llmProviderApi = {
     userMessage: string;
     captureScreenshot: boolean;
     systemPromptId?: string;
-  }) => invoke<SendMessageResult>("send_message", request),
+  }) => invoke<Message>("send_message", request),
 
   retryGeneration: (request: {
     provider: string;
@@ -17,7 +17,7 @@ export const llmProviderApi = {
     userMessageId: string;
     captureScreenshot: boolean;
     systemPromptId?: string;
-  }) => invoke<SendMessageResult>("retry_generation", request),
+  }) => invoke("retry_generation", request),
 
   stopMessageStream: () => invoke("stop_stream"),
 

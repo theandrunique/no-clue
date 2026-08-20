@@ -4,7 +4,7 @@
   import type { Message } from "$lib/types";
   import LlmChatInput from "./LlmChatInput.svelte";
   import LlmChatMessage from "./LlmChatMessage.svelte";
-  import QuickActions from "./QuickActions.svelte";
+  import LlmChatQuickActions from "./LlmChatQuickActions.svelte";
 
   interface LlmChatProps {
     error?: string | null;
@@ -63,7 +63,11 @@
     {/if}
   </div>
 
-  <QuickActions isStreaming={props.isStreaming} isLoading={props.isLoading ?? false} onSend={(v) => props.onSend(v)} />
+  <LlmChatQuickActions
+    isStreaming={props.isStreaming}
+    isLoading={props.isLoading ?? false}
+    onSend={(v) => props.onSend(v)}
+  />
 
   <LlmChatInput
     isStreaming={props.isStreaming}

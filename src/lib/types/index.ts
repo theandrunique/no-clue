@@ -60,10 +60,6 @@ export interface TokenUsage {
   total_tokens: number;
 }
 
-export interface SendMessageResult {
-  user_message_id: string;
-}
-
 export interface ChatStreamStartPayload {
   message_id: string;
   conversation_id: string;
@@ -83,7 +79,7 @@ export interface ChatStreamFinishPayload {
   usage: TokenUsage | null;
 }
 
-export type ChatStreamEventNew =
+export type ChatStreamEvent =
   | { type: "start"; payload: ChatStreamStartPayload }
   | { type: "chunk"; payload: ChatStreamChunkPayload }
   | { type: "finish"; payload: ChatStreamFinishPayload };

@@ -1,4 +1,5 @@
 pub mod conversations;
+pub mod events;
 pub mod llm;
 pub mod messages;
 pub mod providers;

@@ -1,10 +1,10 @@
 import { conversationApi } from "$lib/api/conversation";
 import { sttProviderApi } from "$lib/api/sttProvider";
+import { Events, listenEvent } from "$lib/events";
 import type { TranscriptResult, Transcript } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { audioSettingsStore } from "$services/settings/audioSettings.svelte";
 import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
-import { listen } from "@tauri-apps/api/event";
 
 type TranscriptionStatus = "idle" | "starting" | "listening" | "stopping";
 
@@ -58,10 +58,8 @@ export function createTranscriptionService() {
     if (initialized) return;
     initialized = true;
 
-    await listen<TranscriptResult>("transcription-result", (event) => {
-      handleResult(event.payload);
-    });
-    await listen("transcription-stopped", () => {
+    await listenEvent(Events.transcriptionResult, handleResult);
+    await listenEvent(Events.transcriptionStopped, () => {
       status = "idle";
       clearError();
     });
