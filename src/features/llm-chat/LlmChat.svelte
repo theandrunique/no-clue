@@ -49,7 +49,7 @@
     <ErrorMessage error={props.error} onClear={() => props.clearError?.()} />
   {/if}
 
-  <div bind:this={listEl} class="flex-1 min-h-0 pr-1 mx-auto">
+  <div bind:this={listEl} class="mx-auto min-h-0 flex-1 pr-1">
     {#if props.isLoading}
       <div class="flex h-full items-center justify-center">
         <Loader />
@@ -57,7 +57,7 @@
     {:else if props.messages?.length === 0}
       <div class="flex h-full items-center justify-center text-(--text-muted)">No messages yet</div>
     {:else}
-      <div class="h-full flex flex-col gap-8 overflow-y-auto max-w-200 px-8">
+      <div class="flex h-full max-w-200 flex-col gap-8 overflow-y-auto px-8">
         {#each props.messages as message, i (message.id)}
           <LlmChatMessage {message} onRetry={retryHandler(i)} />
         {/each}

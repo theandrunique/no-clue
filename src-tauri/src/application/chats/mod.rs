@@ -15,7 +15,7 @@ pub use chat_regenerate::retry_generation;
 pub use chat_send::send_message;
 pub use get_messages::get_messages;
 pub use llm_providers::{
-    get_ai_provider_settings, get_ai_providers, get_model_info, save_ai_provider_settings,
+    get_llm_provider_settings, get_llm_providers, get_model_info, save_llm_provider_settings,
 };
 
 static SESSION: LazyLock<Mutex<Option<CancellationToken>>> = LazyLock::new(|| Mutex::new(None));

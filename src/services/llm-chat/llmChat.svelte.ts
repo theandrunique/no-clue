@@ -1,5 +1,4 @@
-import { conversationApi } from "$lib/api/conversation";
-import { llmProviderApi } from "$lib/api/llmProvider";
+import { chatApi } from "$lib/api/chat";
 import { Events, listenEvent } from "$lib/events";
 import type { ChatStreamEvent, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
@@ -34,7 +33,7 @@ export function createLlmChatService() {
     if (!conversationId) return;
     isLoading = true;
     try {
-      messages = await conversationApi.getMessages(conversationId);
+      messages = await chatApi.getMessages(conversationId);
     } catch (e) {
       error = getErrorMessage(e);
     } finally {
@@ -118,7 +117,7 @@ export function createLlmChatService() {
     };
 
     try {
-      const newMessage = await llmProviderApi.sendMessage({
+      const newMessage = await chatApi.sendMessage({
         provider: lastParams.provider,
         conversationId,
         userMessage: trimmed,
@@ -154,7 +153,7 @@ export function createLlmChatService() {
     reloadOnFinish = true;
 
     try {
-      await llmProviderApi.retryGeneration({
+      await chatApi.retryGeneration({
         provider: lastParams.provider,
         conversationId,
         userMessageId,
@@ -174,7 +173,7 @@ export function createLlmChatService() {
     if (!isStreaming) return;
     reloadOnFinish = true;
     try {
-      await llmProviderApi.stopMessageStream();
+      await chatApi.stopMessageStream();
     } catch (e) {
       reloadOnFinish = false;
       error = getErrorMessage(e);

@@ -16,22 +16,6 @@ export function useConversation(id: () => string | null) {
   }));
 }
 
-export function useMessages(id: () => string) {
-  return createQuery(() => ({
-    queryKey: ["conversations", id(), "messages"],
-    queryFn: () => conversationApi.getMessages(id()),
-    enabled: !!id()
-  }));
-}
-
-export function useTranscripts(id: () => string) {
-  return createQuery(() => ({
-    queryKey: ["conversations", id(), "transcripts"],
-    queryFn: () => conversationApi.getTranscripts(id()),
-    enabled: !!id()
-  }));
-}
-
 export function useCreateConversation() {
   const qc = useQueryClient();
 

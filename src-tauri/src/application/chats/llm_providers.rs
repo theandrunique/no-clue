@@ -14,8 +14,8 @@ use crate::{
 };
 
 #[tauri::command]
-pub fn get_ai_providers() -> Vec<ProviderDescriptor> {
-    tracing::trace!("get_ai_providers called");
+pub fn get_llm_providers() -> Vec<ProviderDescriptor> {
+    tracing::trace!("get_llm_providers called");
     vec![
         fake_provider_descriptor(),
         ollama_descriptor(),
@@ -24,7 +24,7 @@ pub fn get_ai_providers() -> Vec<ProviderDescriptor> {
 }
 
 #[tauri::command]
-pub async fn save_ai_provider_settings(
+pub async fn save_llm_provider_settings(
     app: AppHandle,
     provider: &str,
     settings: LlmProviderSettings,
@@ -36,7 +36,7 @@ pub async fn save_ai_provider_settings(
 }
 
 #[tauri::command]
-pub async fn get_ai_provider_settings(
+pub async fn get_llm_provider_settings(
     app: AppHandle,
     provider: &str,
 ) -> Result<Option<LlmProviderSettings>, AppError> {

@@ -22,7 +22,7 @@
   {#if message.role === "user"}
     <div class="flex justify-end">
       <div
-        class="max-w-[85%] rounded-(--radius) px-3 py-2 text-base whitespace-pre-wrap bg-(--color-primary) text-(text-on-primary)"
+        class="text-(text-on-primary) max-w-[85%] rounded-(--radius) bg-(--color-primary) px-3 py-2 text-base whitespace-pre-wrap"
       >
         {#if message.content}
           {message.content}
@@ -34,13 +34,13 @@
   {/if}
 
   {#if errorText(message)}
-    <div class="flex justify-start mt-2">
+    <div class="mt-2 flex justify-start">
       <ErrorMessage error={errorText(message)!} />
     </div>
   {/if}
 
   {#if message.role === "assistant"}
-    <div class="flex items-center justify-start gap-1 mt-2">
+    <div class="mt-2 flex items-center justify-start gap-1">
       <Button variant="icon">
         <Copy class="size-3.5" />
       </Button>

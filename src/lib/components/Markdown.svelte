@@ -1,11 +1,13 @@
 <script lang="ts">
-    import SvelteMarkdown from '@humanspeak/svelte-markdown'
+  import SvelteMarkdown from "@humanspeak/svelte-markdown";
 
-    let { source, streaming }: {
-      source: string;
-      streaming: boolean;
-    } = $props();
-
+  let {
+    source,
+    streaming
+  }: {
+    source: string;
+    streaming: boolean;
+  } = $props();
 </script>
 
 <SvelteMarkdown {source} {streaming} />
