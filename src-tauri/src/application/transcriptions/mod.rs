@@ -4,6 +4,7 @@ mod start_transcription;
 mod stop_transcription;
 mod stt_providers;
 mod update_transcription_session;
+mod transcription_actor;
 
 pub use get_transcripts::get_transcripts;
 pub use start_transcription::start_transcription;

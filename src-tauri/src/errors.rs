@@ -9,14 +9,15 @@ pub enum AppError {
     ConversationNotFound,
     MessageNotFound,
     LlmProviderNotConfigured,
-    SttProviderNotConfigured,
     LlmProviderAlreadyRunning,
-    SttProviderAlreadyRunning,
     ShourtcutOverrideNotFound,
-    AtLeactOneAudioSourceMustBeEnabled,
-    TranscriptionConversationIdNotSet,
     OverlayAlreadyRunning,
     OverlayNotRunning,
+
+    SttProviderNotConfigured,
+    SttProviderAlreadyRunning,
+    AtLeactOneAudioSourceMustBeEnabled,
+    TranscriptionConversationIdNotSet,
 }
 
 impl From<anyhow::Error> for AppError {
