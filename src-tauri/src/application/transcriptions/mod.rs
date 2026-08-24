@@ -1,35 +1,71 @@
 mod get_transcripts;
-mod process;
-mod start_transcription;
-mod stop_transcription;
 mod stt_providers;
-mod update_transcription_session;
 mod transcription_actor;
+mod transcription_handle;
+mod worker;
 
 pub use get_transcripts::get_transcripts;
-pub use start_transcription::start_transcription;
-pub use stop_transcription::stop_transcription;
+use serde::Serialize;
 pub use stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings};
-pub use update_transcription_session::update_transcription_session;
-
-use std::sync::LazyLock;
-
 use tauri::{AppHandle, Emitter};
-use tokio::{sync::Mutex, task::JoinHandle};
-use tokio_util::sync::CancellationToken;
+use tokio::sync::oneshot;
+pub use transcription_handle::TranscriptionHandle;
 use uuid::Uuid;
 
-use crate::domain::events;
+use crate::{
+    application::transcriptions::worker::WorkerEvent,
+    domain::transcript::{AudioCaptureConfig, TranscriptResult},
+    errors::AppError,
+};
 
-struct TranscriptionSession {
-    cancellation_token: CancellationToken,
-    task: JoinHandle<()>,
+pub trait TranscriptionOutput: Send + Sync + 'static {
+    fn on_status_changed(&self, status: TranscriptionStatus);
+    fn on_transcription_result(&self, result: &TranscriptResult);
+    fn on_error(&self, error: String);
 }
 
-static SESSION: LazyLock<Mutex<Option<TranscriptionSession>>> = LazyLock::new(|| Mutex::new(None));
-static CURRENT_CONVERSATION_ID: LazyLock<Mutex<Option<Uuid>>> = LazyLock::new(|| Mutex::new(None));
+pub struct TauriTranscriptionOutput {
+    pub app: AppHandle,
+}
 
-async fn finish(app: AppHandle) {
-    *SESSION.lock().await = None;
-    let _ = app.emit(events::TRANSCRIPTION_STOPPED, ());
+impl TranscriptionOutput for TauriTranscriptionOutput {
+    fn on_status_changed(&self, status: TranscriptionStatus) {
+        let _ = self.app.emit("transcription-status", status);
+    }
+
+    fn on_transcription_result(&self, result: &TranscriptResult) {
+        let _ = self.app.emit("transcription-result", result);
+    }
+
+    fn on_error(&self, error: String) {
+        let _ = self.app.emit("transcription-error", error);
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TranscriptionStatus {
+    Idle,
+    Starting,
+    Running,
+    Stopping,
+}
+
+pub enum TranscriptionActorCommand {
+    Start {
+        stt_provider: String,
+        audio_config: AudioCaptureConfig,
+        reply: oneshot::Sender<Result<(), AppError>>,
+    },
+    Stop {
+        reply: oneshot::Sender<Result<(), AppError>>,
+    },
+    SwitchConversation {
+        conversation_id: Uuid,
+        reply: oneshot::Sender<Result<(), AppError>>,
+    },
+    GetState {
+        reply: oneshot::Sender<TranscriptionStatus>,
+    },
+    WorkerUpdate(WorkerEvent),
 }

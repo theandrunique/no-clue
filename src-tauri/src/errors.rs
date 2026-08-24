@@ -15,9 +15,10 @@ pub enum AppError {
     OverlayNotRunning,
 
     SttProviderNotConfigured,
-    SttProviderAlreadyRunning,
+    TranscriptionAlreadyRunning,
     AtLeactOneAudioSourceMustBeEnabled,
     TranscriptionConversationIdNotSet,
+    TranscriptionActorDead,
 }
 
 impl From<anyhow::Error> for AppError {
@@ -49,7 +50,7 @@ impl std::fmt::Display for AppError {
             AppError::LlmProviderNotConfigured => write!(f, "LLM provider not configured"),
             AppError::ShourtcutOverrideNotFound => write!(f, "Shourtcut override not found"),
             AppError::SttProviderNotConfigured => write!(f, "STT provider not configured"),
-            AppError::SttProviderAlreadyRunning => write!(f, "STT provider already running"),
+            AppError::TranscriptionAlreadyRunning => write!(f, "STT provider already running"),
             AppError::AtLeactOneAudioSourceMustBeEnabled => {
                 write!(f, "At least one audio source must be enabled")
             }
@@ -59,6 +60,7 @@ impl std::fmt::Display for AppError {
             AppError::LlmProviderAlreadyRunning => write!(f, "LLM provider already running"),
             AppError::OverlayAlreadyRunning => write!(f, "Overlay already running"),
             AppError::OverlayNotRunning => write!(f, "Overlay not running"),
+            AppError::TranscriptionActorDead => write!(f, "Transcription actor is dead"),
         }
     }
 }

@@ -1,4 +1,4 @@
-import type { AudioCaptureConfig, Transcript } from "$lib/types";
+import type { TranscriptionStatus, AudioCaptureConfig, Transcript } from "$lib/types";
 import type { ProviderDescriptor } from "$lib/types/providers";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -9,6 +9,8 @@ export const transcriptionApi = {
   stopTranscription: () => invoke("stop_transcription"),
 
   updateSession: (conversationId: string) => invoke("update_transcription_session", { conversationId }),
+
+  getCurrentState: () => invoke<TranscriptionStatus>("get_current_state"),
 
   getTranscripts: (conversationId: string) => invoke<Transcript[]>("get_transcripts", { conversationId }),
 

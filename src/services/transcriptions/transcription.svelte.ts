@@ -1,18 +1,15 @@
 import { transcriptionApi } from "$lib/api/transcription";
 import { Events, listenEvent } from "$lib/events";
-import type { TranscriptResult, Transcript } from "$lib/types";
+import type { TranscriptResult, Transcript, TranscriptionStatus } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
 import { audioSettingsStore } from "$services/settings/audioSettings.svelte";
 import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
-
-type TranscriptionStatus = "idle" | "starting" | "listening" | "stopping";
 
 export function createTranscriptionService() {
   let status = $state<TranscriptionStatus>("idle");
   let error = $state<string | null>(null);
   let conversationId = $state<string | null>(null);
   let liveResults = $state<TranscriptResult[]>([]);
-  let initialized = false;
 
   function clearError() {
     error = null;
@@ -54,22 +51,25 @@ export function createTranscriptionService() {
   async function init(id: string) {
     conversationId = id;
     await loadInitialTranscripts();
-    if (initialized) return;
-    initialized = true;
 
     await listenEvent(Events.transcriptionResult, handleResult);
-    await listenEvent(Events.transcriptionStopped, () => {
-      status = "idle";
-      clearError();
+    await listenEvent(Events.transcriptionStatus, (s) => {
+      status = s;
     });
+    await listenEvent(Events.transcriptionError, (e) => {
+      console.error(e);
+      error = e;
+    });
+
+    try {
+      status = await transcriptionApi.getCurrentState();
+    } catch (e) {
+      error = getErrorMessage(e);
+    }
   }
 
   async function start() {
-    if (status !== "idle") return;
     if (!conversationId) return;
-
-    status = "starting";
-    error = null;
 
     try {
       await transcriptionApi.updateSession(conversationId);
@@ -82,29 +82,24 @@ export function createTranscriptionService() {
           microphone_device_id: audioSettingsStore.microphone_device_id
         }
       });
-      status = "listening";
     } catch (e) {
-      status = "idle";
       error = getErrorMessage(e);
     }
   }
 
   async function stop() {
-    if (status !== "listening") return;
-    status = "stopping";
     try {
       await transcriptionApi.stopTranscription();
     } catch (e) {
-      status = "listening";
       error = getErrorMessage(e);
     }
   }
 
   async function toggle() {
-    if (status === "idle") {
-      await start();
-    } else {
+    if (status === "starting" || status === "running" || status === "stopping") {
       await stop();
+    } else {
+      await start();
     }
   }
 
@@ -113,7 +108,7 @@ export function createTranscriptionService() {
       return status;
     },
     get isRecording() {
-      return status === "starting" || status === "listening" || status === "stopping";
+      return status === "starting" || status === "running" || status === "stopping";
     },
     get error() {
       return error;
@@ -123,8 +118,8 @@ export function createTranscriptionService() {
     },
     clearError,
     init,
-    toggle,
     start,
-    stop
+    stop,
+    toggle
   };
 }

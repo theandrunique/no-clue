@@ -54,6 +54,8 @@ export interface TranscriptResult {
   created_at: string;
 }
 
+export type TranscriptionStatus = "idle" | "starting" | "running" | "stopping";
+
 export interface TokenUsage {
   prompt_tokens: number;
   completion_tokens: number;

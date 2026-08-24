@@ -20,13 +20,16 @@ use crate::{
             create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
             update_system_prompt,
         },
+        transcriptions::TranscriptionHandle,
         transcriptions::{
             get_stt_provider_settings, get_stt_providers, get_transcripts,
-            save_stt_provider_settings, start_transcription, stop_transcription,
-            update_transcription_session,
+            save_stt_provider_settings,
         },
     },
     infra::db,
+    presentation::transcriptions::{
+        get_current_state, start_transcription, stop_transcription, update_transcription_session,
+    },
 };
 
 mod application;
@@ -34,7 +37,7 @@ mod domain;
 mod errors;
 mod infra;
 mod logging;
-mod presentation;
+pub mod presentation;
 mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -63,6 +66,8 @@ pub fn main() {
 
             app.manage(pool);
 
+            app.manage(TranscriptionHandle::new(app.handle().clone()));
+
             if let Err(e) = tauri::async_runtime::block_on(register_all_shortcuts(app.handle())) {
                 tracing::error!("Failed to register shortcuts: {}", e);
             }
@@ -82,6 +87,7 @@ pub fn main() {
             start_transcription,
             stop_transcription,
             update_transcription_session,
+            get_current_state,
             save_stt_provider_settings,
             get_stt_provider_settings,
             get_stt_providers,
