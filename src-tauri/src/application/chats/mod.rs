@@ -9,6 +9,7 @@ mod chat_send;
 mod generation;
 mod get_messages;
 mod llm_providers;
+mod chat_actor;
 
 pub use cancel_generation::stop_stream;
 pub use chat_regenerate::retry_generation;
