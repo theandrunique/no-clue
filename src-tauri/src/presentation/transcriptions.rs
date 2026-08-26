@@ -36,6 +36,6 @@ pub async fn update_transcription_session(
 pub async fn get_current_state(
     handle: State<'_, TranscriptionHandle>,
 ) -> Result<TranscriptionStatus, AppError> {
-    tracing::trace!("update_transcription_session called");
+    tracing::trace!("get_current_state called");
     handle.get_current_status().await
 }

@@ -19,7 +19,7 @@ export const chatApi = {
     systemPromptId?: string;
   }) => invoke("retry_generation", request),
 
-  stopMessageStream: () => invoke("stop_stream"),
+  stopMessageStream: (conversationId: string) => invoke("stop_generation", { conversationId }),
 
   getMessages: (conversationId: string) => invoke<Message[]>("get_messages", { conversationId }),
 

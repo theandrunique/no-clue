@@ -10,6 +10,7 @@ pub enum AppError {
     MessageNotFound,
     LlmProviderNotConfigured,
     LlmProviderAlreadyRunning,
+    ChatActorDead,
     ShourtcutOverrideNotFound,
     OverlayAlreadyRunning,
     OverlayNotRunning,
@@ -61,6 +62,7 @@ impl std::fmt::Display for AppError {
             AppError::OverlayAlreadyRunning => write!(f, "Overlay already running"),
             AppError::OverlayNotRunning => write!(f, "Overlay not running"),
             AppError::TranscriptionActorDead => write!(f, "Transcription actor is dead"),
+            AppError::ChatActorDead => write!(f, "Chat actor is dead"),
         }
     }
 }

@@ -170,10 +170,10 @@ export function createLlmChatService() {
   }
 
   async function stop() {
-    if (!isStreaming) return;
+    if (!isStreaming || !conversationId) return;
     reloadOnFinish = true;
     try {
-      await chatApi.stopMessageStream();
+      await chatApi.stopMessageStream(conversationId);
     } catch (e) {
       reloadOnFinish = false;
       error = getErrorMessage(e);
