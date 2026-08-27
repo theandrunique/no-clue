@@ -20,7 +20,9 @@ pub async fn start_generation(
     actor_tx: mpsc::Sender<ChatActorCommand>,
 ) {
     let _ = actor_tx
-        .send(ChatActorCommand::GenerationEvent(ChatGenerationEvent::Started))
+        .send(ChatActorCommand::GenerationEvent(
+            ChatGenerationEvent::Started,
+        ))
         .await;
 
     run_chat_completion(request, llm_provider, actor_tx, token).await;
@@ -125,9 +127,11 @@ async fn run_chat_completion(
     }
 
     let _ = actor_tx
-        .send(ChatActorCommand::GenerationEvent(ChatGenerationEvent::Finished {
-            finish_reason,
-            usage,
-        }))
+        .send(ChatActorCommand::GenerationEvent(
+            ChatGenerationEvent::Finished {
+                finish_reason,
+                usage,
+            },
+        ))
         .await;
 }

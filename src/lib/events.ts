@@ -1,15 +1,10 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { ChatStreamEvent, TranscriptionStatus, TranscriptResult } from "$lib/types";
+import type { ChatStreamEvent, TranscriptionStreamEvent } from "$lib/types";
 
 export const Events = {
   chatStream: "chat-stream",
-
-  transcriptionResult: "transcription-result",
-  transcriptionError: "transcription-error",
-  transcriptionStatus: "transcription-status",
-
+  transcriptionStream: "transcription-stream",
   shortcutTriggered: "shortcut-triggered",
-
   testStreamError: "test-stream-error",
   testStreamStarted: "test-stream-started",
   testStreamProgress: "test-stream-progress",
@@ -22,9 +17,7 @@ export const Events = {
 
 export interface EventMap {
   [Events.chatStream]: ChatStreamEvent;
-  [Events.transcriptionResult]: TranscriptResult;
-  [Events.transcriptionError]: string;
-  [Events.transcriptionStatus]: TranscriptionStatus;
+  [Events.transcriptionStream]: TranscriptionStreamEvent;
   [Events.shortcutTriggered]: string;
   [Events.testStreamError]: string;
   [Events.testStreamStarted]: number;

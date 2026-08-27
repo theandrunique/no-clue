@@ -52,13 +52,15 @@ export function createTranscriptionService() {
     conversationId = id;
     await loadInitialTranscripts();
 
-    await listenEvent(Events.transcriptionResult, handleResult);
-    await listenEvent(Events.transcriptionStatus, (s) => {
-      status = s;
-    });
-    await listenEvent(Events.transcriptionError, (e) => {
-      console.error(e);
-      error = e;
+    await listenEvent(Events.transcriptionStream, (e) => {
+      if (e.type === "result") {
+        handleResult(e.payload.transcript);
+      } else if (e.type === "status") {
+        status = e.payload.status;
+      } else if (e.type === "error") {
+        console.error(e.payload.error);
+        error = e.payload.error;
+      }
     });
 
     try {

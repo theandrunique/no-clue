@@ -96,7 +96,6 @@ impl TranscriptionActor {
             }
             WorkerEvent::Result(result) => {
                 tracing::trace!(?result, "Transcription result received from worker");
-                let pool = self.app.state::<SqlitePool>();
 
                 let payload = TranscriptResult {
                     id: Uuid::new_v4(),
@@ -111,6 +110,7 @@ impl TranscriptionActor {
                 self.output.on_transcription_result(&payload);
 
                 if result.is_final {
+                    let pool = self.app.state::<SqlitePool>();
                     if let Err(e) = db::transcript::save(&pool, &Transcript::from(payload)).await {
                         tracing::error!(error = %e, "Failed to save trancription");
                     }
@@ -118,6 +118,9 @@ impl TranscriptionActor {
             }
             WorkerEvent::Error(e) => {
                 tracing::error!(?e, "Worker error");
+                self.status = TranscriptionStatus::Idle;
+                self.output.on_status_changed(self.status.clone());
+                self.cancellation_token = None;
                 self.output.on_error(e);
             }
             WorkerEvent::Finished => {

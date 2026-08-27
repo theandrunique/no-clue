@@ -58,8 +58,13 @@ pub async fn run_transcription(
 
     loop {
         tokio::select! {
-            Some(result) = results.next() => {
-                let _ = actor_tx.send(TranscriptionActorCommand::WorkerUpdate(WorkerEvent::Result(result))).await;
+            result = results.next() => {
+                match result {
+                    Some(r) => {
+                        let _ = actor_tx.send(TranscriptionActorCommand::WorkerUpdate(WorkerEvent::Result(r))).await;
+                    },
+                    None => break,
+                }
             }
             _ = ct.cancelled() => {
                 break;

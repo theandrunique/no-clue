@@ -5,7 +5,7 @@ mod transcription_handle;
 mod worker;
 
 pub use get_transcripts::get_transcripts;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 pub use stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     application::transcriptions::worker::WorkerEvent,
-    domain::transcript::{AudioCaptureConfig, TranscriptResult},
+    domain::transcript::{AudioCaptureConfig, TranscriptResult, TranscriptionStreamEvent},
     errors::AppError,
 };
 
@@ -30,19 +30,30 @@ pub struct TauriTranscriptionOutput {
 
 impl TranscriptionOutput for TauriTranscriptionOutput {
     fn on_status_changed(&self, status: TranscriptionStatus) {
-        let _ = self.app.emit("transcription-status", status);
+        let _ = self.app.emit(
+            "transcription-stream",
+            TranscriptionStreamEvent::Status { status },
+        );
     }
 
     fn on_transcription_result(&self, result: &TranscriptResult) {
-        let _ = self.app.emit("transcription-result", result);
+        let _ = self.app.emit(
+            "transcription-stream",
+            TranscriptionStreamEvent::Result {
+                transcript: result.clone(),
+            },
+        );
     }
 
     fn on_error(&self, error: String) {
-        let _ = self.app.emit("transcription-error", error);
+        let _ = self.app.emit(
+            "transcription-stream",
+            TranscriptionStreamEvent::Error { error },
+        );
     }
 }
 
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TranscriptionStatus {
     Idle,

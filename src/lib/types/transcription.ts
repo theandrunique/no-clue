@@ -20,3 +20,8 @@ export interface TranscriptResult {
 }
 
 export type TranscriptionStatus = "idle" | "starting" | "running" | "stopping";
+
+export type TranscriptionStreamEvent =
+  | { type: "status"; payload: { status: TranscriptionStatus } }
+  | { type: "result"; payload: { transcript: TranscriptResult } }
+  | { type: "error"; payload: { error: string } };

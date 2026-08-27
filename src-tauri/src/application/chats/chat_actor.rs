@@ -111,7 +111,9 @@ pub enum ChatActorCommand {
 
 pub enum ChatGenerationEvent {
     Started,
-    Chunk { delta: String },
+    Chunk {
+        delta: String,
+    },
     Finished {
         finish_reason: FinishReason,
         usage: Option<TokenUsage>,

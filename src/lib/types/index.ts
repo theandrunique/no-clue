@@ -1,7 +1,13 @@
 export type { SystemPrompt } from "./systemPrompts";
 export type { Conversation } from "./conversation";
 export type { Message, MessageRole, TokenUsage, FinishReason, ChatStreamEvent } from "./chat";
-export type { Transcript, TranscriptResult, TranscriptionStatus, AudioSource } from "./transcription";
+export type {
+  Transcript,
+  TranscriptResult,
+  TranscriptionStatus,
+  AudioSource,
+  TranscriptionStreamEvent
+} from "./transcription";
 
 export interface AudioDevice {
   id: string;

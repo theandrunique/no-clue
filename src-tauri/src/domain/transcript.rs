@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::application::transcriptions::TranscriptionStatus;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranscriptResult {
     pub id: Uuid,
@@ -63,4 +65,12 @@ pub struct AudioCaptureConfig {
     pub system_audio_device_id: Option<String>,
     pub capture_microphone: bool,
     pub microphone_device_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(tag = "type", content = "payload", rename_all = "lowercase")]
+pub enum TranscriptionStreamEvent {
+    Status { status: TranscriptionStatus },
+    Result { transcript: TranscriptResult },
+    Error { error: String },
 }
