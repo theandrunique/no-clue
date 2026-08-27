@@ -1,10 +1,10 @@
-import { conversationApi } from "$lib/api/conversation";
-import { overlayApi } from "$lib/api/overlay";
+import { conversationIpc } from "$lib/ipc/conversation";
+import { overlayIpc } from "$lib/ipc/overlay";
 
 function createOverlaySessionService() {
   async function startNew() {
     try {
-      const conversation = await conversationApi.create();
+      const conversation = await conversationIpc.create();
       await start(conversation.id);
     } catch {
       console.log("Failed to create conversation and start");
@@ -13,7 +13,7 @@ function createOverlaySessionService() {
 
   async function start(conversationId: string) {
     try {
-      await overlayApi.start(conversationId);
+      await overlayIpc.start(conversationId);
     } catch (e) {
       console.log("Error while start()", e);
     }
@@ -21,7 +21,7 @@ function createOverlaySessionService() {
 
   async function stop() {
     try {
-      await overlayApi.stop();
+      await overlayIpc.stop();
     } catch (e) {
       console.log("Error while stop()", e);
     }

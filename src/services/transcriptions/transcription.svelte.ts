@@ -1,4 +1,4 @@
-import { transcriptionApi } from "$lib/api/transcription";
+import { transcriptionIpc } from "$lib/ipc/transcription";
 import { Events, listenEvent } from "$lib/events";
 import type { TranscriptResult, Transcript, TranscriptionStatus } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
@@ -33,7 +33,7 @@ export function createTranscriptionService() {
   async function loadInitialTranscripts() {
     if (!conversationId) return;
     try {
-      const transcripts = await transcriptionApi.getTranscripts(conversationId);
+      const transcripts = await transcriptionIpc.getTranscripts(conversationId);
       liveResults = transcripts.map((t: Transcript) => ({
         id: t.id,
         conversation_id: t.conversation_id,
@@ -62,7 +62,7 @@ export function createTranscriptionService() {
     });
 
     try {
-      status = await transcriptionApi.getCurrentState();
+      status = await transcriptionIpc.getCurrentState();
     } catch (e) {
       error = getErrorMessage(e);
     }
@@ -72,8 +72,8 @@ export function createTranscriptionService() {
     if (!conversationId) return;
 
     try {
-      await transcriptionApi.updateSession(conversationId);
-      await transcriptionApi.startTranscription({
+      await transcriptionIpc.updateSession(conversationId);
+      await transcriptionIpc.startTranscription({
         sttProvider: providerSettingsStore.sttProviderId,
         audioConfig: {
           capture_system_audio: audioSettingsStore.capture_system,
@@ -89,7 +89,7 @@ export function createTranscriptionService() {
 
   async function stop() {
     try {
-      await transcriptionApi.stopTranscription();
+      await transcriptionIpc.stopTranscription();
     } catch (e) {
       error = getErrorMessage(e);
     }

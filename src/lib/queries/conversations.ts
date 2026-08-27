@@ -1,17 +1,17 @@
-import { conversationApi } from "$lib/api/conversation";
+import { conversationIpc } from "$lib/ipc/conversation";
 import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 
 export function useConversations() {
   return createQuery(() => ({
     queryKey: ["conversations"],
-    queryFn: conversationApi.list
+    queryFn: conversationIpc.list
   }));
 }
 
 export function useConversation(id: () => string | null) {
   return createQuery(() => ({
     queryKey: ["conversations", id()],
-    queryFn: () => conversationApi.get(id()!),
+    queryFn: () => conversationIpc.get(id()!),
     enabled: id() !== null
   }));
 }
@@ -20,7 +20,7 @@ export function useCreateConversation() {
   const qc = useQueryClient();
 
   return createMutation(() => ({
-    mutationFn: conversationApi.create,
+    mutationFn: conversationIpc.create,
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
     }
@@ -31,7 +31,7 @@ export function useDeleteConversation() {
   const qc = useQueryClient();
 
   return createMutation(() => ({
-    mutationFn: conversationApi.remove,
+    mutationFn: conversationIpc.remove,
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
     }

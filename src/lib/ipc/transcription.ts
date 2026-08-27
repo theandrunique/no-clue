@@ -2,7 +2,7 @@ import type { TranscriptionStatus, AudioCaptureConfig, Transcript } from "$lib/t
 import type { ProviderDescriptor } from "$lib/types/providers";
 import { invoke } from "@tauri-apps/api/core";
 
-export const transcriptionApi = {
+export const transcriptionIpc = {
   startTranscription: (request: { sttProvider: string; audioConfig: AudioCaptureConfig }) =>
     invoke("start_transcription", request),
 

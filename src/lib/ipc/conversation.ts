@@ -1,7 +1,7 @@
 import type { Conversation } from "$lib/types";
 import { invoke } from "@tauri-apps/api/core";
 
-export const conversationApi = {
+export const conversationIpc = {
   create: () => invoke<Conversation>("create_conversation"),
   list: () => invoke<Conversation[]>("get_conversations"),
   get: (id: string) => invoke<Conversation | null>("get_conversation", { id }),

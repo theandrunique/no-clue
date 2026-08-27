@@ -12,11 +12,11 @@ export interface FieldDescriptor {
   placeholder?: string;
 }
 
-export type FieldType = "text" | "password" | { Select: { options: string[] } };
+export type FieldType = "text" | "password" | { select: { options: string[] } };
 
 export function getFieldTypeString(fieldType: FieldType): string {
   if (typeof fieldType === "string") return fieldType;
-  if ("Select" in fieldType) return "select";
+  if ("select" in fieldType) return "select";
   return "text";
 }
 

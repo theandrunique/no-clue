@@ -1,4 +1,4 @@
-import { chatApi } from "$lib/api/chat";
+import { chatIpc } from "$lib/ipc/chat";
 import { Events, listenEvent } from "$lib/events";
 import type { ChatStreamEvent, Message } from "$lib/types";
 import { getErrorMessage } from "$lib/utils/errors";
@@ -33,7 +33,7 @@ export function createLlmChatService() {
     if (!conversationId) return;
     isLoading = true;
     try {
-      messages = await chatApi.getMessages(conversationId);
+      messages = await chatIpc.getMessages(conversationId);
     } catch (e) {
       error = getErrorMessage(e);
     } finally {
@@ -117,7 +117,7 @@ export function createLlmChatService() {
     };
 
     try {
-      const newMessage = await chatApi.sendMessage({
+      const newMessage = await chatIpc.sendMessage({
         provider: lastParams.provider,
         conversationId,
         userMessage: trimmed,
@@ -153,7 +153,7 @@ export function createLlmChatService() {
     reloadOnFinish = true;
 
     try {
-      await chatApi.retryGeneration({
+      await chatIpc.retryGeneration({
         provider: lastParams.provider,
         conversationId,
         userMessageId,
@@ -173,7 +173,7 @@ export function createLlmChatService() {
     if (!isStreaming || !conversationId) return;
     reloadOnFinish = true;
     try {
-      await chatApi.stopMessageStream(conversationId);
+      await chatIpc.stopMessageStream(conversationId);
     } catch (e) {
       reloadOnFinish = false;
       error = getErrorMessage(e);

@@ -2,7 +2,7 @@ import type { Message } from "$lib/types";
 import type { ProviderDescriptor } from "$lib/types/providers";
 import { invoke } from "@tauri-apps/api/core";
 
-export const chatApi = {
+export const chatIpc = {
   sendMessage: (request: {
     provider: string;
     conversationId: string;

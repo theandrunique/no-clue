@@ -23,5 +23,5 @@ pub enum FieldType {
     #[serde(rename = "password")]
     Password,
     #[serde(rename = "select")]
-    Select { options: Vec<String> },
+    Select { options: Vec<&'static str> },
 }

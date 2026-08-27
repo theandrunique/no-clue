@@ -1,7 +1,7 @@
 import { type SystemPrompt } from "$lib/types";
 import { invoke } from "@tauri-apps/api/core";
 
-export const systemPromptsApi = {
+export const systemPromptsIpc = {
   list: () => invoke<SystemPrompt[]>("get_system_prompts"),
 
   create: (request: { name: string; prompt: string }) =>
