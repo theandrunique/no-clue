@@ -1,12 +1,8 @@
-mod get_transcripts;
-mod stt_providers;
 mod transcription_actor;
 mod transcription_handle;
 mod worker;
 
-pub use get_transcripts::get_transcripts;
 use serde::{Deserialize, Serialize};
-pub use stt_providers::{get_stt_provider_settings, get_stt_providers, save_stt_provider_settings};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 pub use transcription_handle::TranscriptionHandle;

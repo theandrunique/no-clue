@@ -5,10 +5,7 @@ use tauri::Manager;
 use crate::{
     application::{
         audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
-        chats::{
-            get_llm_provider_settings, get_llm_providers, get_messages, get_model_info,
-            save_llm_provider_settings, ChatRouter,
-        },
+        chats::ChatRouter,
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
         },
@@ -20,16 +17,17 @@ use crate::{
             create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
             update_system_prompt,
         },
-        transcriptions::{
-            get_stt_provider_settings, get_stt_providers, get_transcripts,
-            save_stt_provider_settings, TranscriptionHandle,
-        },
+        transcriptions::TranscriptionHandle,
     },
     infra::db,
     presentation::{
-        chats::{retry_generation, send_message, stop_generation},
+        chats::{
+            get_llm_provider_settings, get_llm_providers, get_messages, get_model_info,
+            retry_generation, save_llm_provider_settings, send_message, stop_generation,
+        },
         transcriptions::{
-            get_current_state, start_transcription, stop_transcription,
+            get_current_state, get_stt_provider_settings, get_stt_providers, get_transcripts,
+            save_stt_provider_settings, start_transcription, stop_transcription,
             update_transcription_session,
         },
     },
@@ -40,7 +38,7 @@ mod domain;
 mod errors;
 mod infra;
 mod logging;
-pub mod presentation;
+mod presentation;
 mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
