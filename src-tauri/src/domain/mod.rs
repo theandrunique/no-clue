@@ -1,4 +1,5 @@
 pub mod chat;
+pub mod chats;
 pub mod conversation;
 pub mod events;
 pub mod llm;
@@ -7,3 +8,4 @@ pub mod shortcuts;
 pub mod stt;
 pub mod system_prompt;
 pub mod transcript;
+pub mod transcriptions;

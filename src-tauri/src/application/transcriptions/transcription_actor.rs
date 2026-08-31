@@ -158,16 +158,13 @@ impl TranscriptionActor {
         self.status = TranscriptionStatus::Starting;
         self.output.on_status_changed(self.status.clone());
 
-        let cancellation_token = CancellationToken::new();
-        self.cancellation_token = Some(cancellation_token.clone());
+        let ct = CancellationToken::new();
+        self.cancellation_token = Some(ct.clone());
 
         let actor_tx = self.tx.clone();
 
-        tokio::spawn({
-            let token = cancellation_token.clone();
-            async move {
-                worker::run_transcription(provider, audio_config, actor_tx, token).await;
-            }
+        tokio::spawn(async move {
+            worker::run_transcription(provider, audio_config, actor_tx, ct).await;
         });
 
         Ok(())
