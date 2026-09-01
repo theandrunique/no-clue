@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sqlx::SqlitePool;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::{mpsc, oneshot};
+use tauri::{AppHandle, Manager};
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
     application::chats::generation::{build_generation_request, start_generation},
-    domain::{
-        chat::{ChatStreamEvent, FinishReason, Message, MessageRole, TokenUsage},
-        events,
+    domain::chats::{
+        actor::{ChatActorCommand, ChatActorOutput, ChatActorState, ChatGenerationEvent},
+        Message, MessageRole,
     },
     errors::AppError,
     infra::{
@@ -21,104 +21,6 @@ use crate::{
         },
     },
 };
-
-pub trait ChatActorOutput: Send + Sync + 'static {
-    fn on_generation_start(&self, conversation_id: Uuid, message_id: Uuid);
-    fn on_generation_chunk(&self, conversation_id: Uuid, message_id: Uuid, delta: String);
-    fn on_generation_finish(
-        &self,
-        conversation_id: Uuid,
-        message_id: Uuid,
-        finish_reason: FinishReason,
-        created_at: DateTime<Utc>,
-        usage: Option<TokenUsage>,
-    );
-}
-
-pub struct TauriChatActorOutput {
-    pub app: AppHandle,
-}
-
-impl ChatActorOutput for TauriChatActorOutput {
-    fn on_generation_start(&self, conversation_id: Uuid, message_id: Uuid) {
-        let _ = self.app.emit(
-            events::CHAT_STREAM,
-            ChatStreamEvent::Start {
-                message_id,
-                conversation_id,
-            },
-        );
-    }
-
-    fn on_generation_chunk(&self, conversation_id: Uuid, message_id: Uuid, delta: String) {
-        let _ = self.app.emit(
-            events::CHAT_STREAM,
-            ChatStreamEvent::Chunk {
-                message_id,
-                conversation_id,
-                delta,
-            },
-        );
-    }
-
-    fn on_generation_finish(
-        &self,
-        conversation_id: Uuid,
-        message_id: Uuid,
-        finish_reason: FinishReason,
-        created_at: DateTime<Utc>,
-        usage: Option<TokenUsage>,
-    ) {
-        let _ = self.app.emit(
-            events::CHAT_STREAM,
-            ChatStreamEvent::Finish {
-                message_id,
-                conversation_id,
-                finish_reason,
-                created_at,
-                usage,
-            },
-        );
-    }
-}
-
-#[derive(PartialEq)]
-pub enum ChatActorState {
-    Idle,
-    Generation { cancel_token: CancellationToken },
-}
-
-pub enum ChatActorCommand {
-    SendMessage {
-        provider: String,
-        capture_screenshot: bool,
-        system_prompt_id: Option<Uuid>,
-        user_message: String,
-        reply: oneshot::Sender<Result<Message, AppError>>,
-    },
-    Regenerate {
-        provider: String,
-        capture_screenshot: bool,
-        system_prompt_id: Option<Uuid>,
-        user_message_id: Uuid,
-        reply: oneshot::Sender<Result<(), AppError>>,
-    },
-    StopGeneration {
-        reply: oneshot::Sender<Result<(), AppError>>,
-    },
-    GenerationEvent(ChatGenerationEvent),
-}
-
-pub enum ChatGenerationEvent {
-    Started,
-    Chunk {
-        delta: String,
-    },
-    Finished {
-        finish_reason: FinishReason,
-        usage: Option<TokenUsage>,
-    },
-}
 
 pub struct ChatActor {
     app: AppHandle,

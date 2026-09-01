@@ -3,10 +3,7 @@ use futures_util::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    domain::{
-        stt::{AudioChunk, AudioChunkStream},
-        transcript::AudioCaptureConfig,
-    },
+    domain::transcriptions::{AudioCaptureConfig, AudioChunk, AudioChunkStream},
     infra::{
         audio_capture::{AudioInput, AudioStream},
         audio_processing::AudioProcessor,

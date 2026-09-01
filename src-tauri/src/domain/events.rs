@@ -1,8 +1,5 @@
-pub const CHAT_STREAM: &str = "chat-stream";
-pub const TRANSCRIPTION_RESULT: &str = "transcription-result";
-pub const TRANSCRIPTION_STOPPING: &str = "transcription-stopping";
-pub const TRANSCRIPTION_STOPPED: &str = "transcription-stopped";
 pub const SHORTCUT_TRIGGERED: &str = "shortcut-triggered";
+
 pub const TEST_STREAM_ERROR: &str = "test-stream-error";
 pub const TEST_STREAM_STARTED: &str = "test-stream-started";
 pub const TEST_STREAM_PROGRESS: &str = "test-stream-progress";

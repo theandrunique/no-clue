@@ -12,6 +12,12 @@ export interface Message {
   created_at: string;
 }
 
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export type ChatStreamEvent =
   | { type: "start"; payload: { conversation_id: string; message_id: string } }
   | { type: "chunk"; payload: { conversation_id: string; message_id: string; delta: string } }
@@ -25,9 +31,3 @@ export type ChatStreamEvent =
         usage: TokenUsage | null;
       };
     };
-
-export interface TokenUsage {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-}

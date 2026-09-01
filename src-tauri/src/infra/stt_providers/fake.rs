@@ -2,19 +2,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 
-use crate::domain::{
-    provider_schema::ProviderDescriptor,
-    stt::{AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
-    transcript::AudioSource,
+use crate::domain::transcriptions::{
+    AudioChunkStream, AudioSource, SttProvider, SttResultStream, SttTranscriptResult,
 };
-
-pub fn fake_stt_descriptor() -> ProviderDescriptor {
-    ProviderDescriptor {
-        id: "fake".to_string(),
-        label: "Fake (Testing)".to_string(),
-        fields: vec![],
-    }
-}
 
 pub struct FakeSttProvider;
 

@@ -3,20 +3,10 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    application::transcriptions::TranscriptionActorCommand,
-    domain::{
-        stt::{SttProvider, SttTranscriptResult},
-        transcript::AudioCaptureConfig,
-    },
+    domain::transcriptions::actor::{TranscriptionActorCommand, WorkerEvent},
+    domain::transcriptions::{AudioCaptureConfig, SttProvider},
     infra::audio_capture::start_capture_pipeline,
 };
-
-pub enum WorkerEvent {
-    Result(SttTranscriptResult),
-    Error(String),
-    Started,
-    Finished,
-}
 
 pub async fn run_transcription(
     mut provider: Box<dyn SttProvider>,

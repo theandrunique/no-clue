@@ -1,46 +1,50 @@
-export interface ProviderDescriptor {
+export interface Llm {
   id: string;
-  label: string;
-  fields: FieldDescriptor[];
+  display_name: string;
+  provider_id: string;
+  provider_display_name: string;
+  capabilities: LlmCapabilities;
+  runtime_config: ModelRuntimeSettingsSchema;
 }
 
-export interface FieldDescriptor {
+export interface LlmCapabilities {
+  context_window: number;
+  supports_vision: boolean;
+  supports_reasoning: boolean;
+}
+
+export interface LlmProvider {
+  id: string;
+  display_name: string;
+  settings: LlmProviderSettings | null;
+  settings_schema: ProviderSettingsSchema;
+}
+
+export interface ProviderSettingsSchema {
+  fields: ProviderSettingsField[];
+}
+
+export interface ProviderSettingsField {
   key: string;
-  label: string;
+  display_name: string;
   field_type: FieldType;
   required: boolean;
-  placeholder?: string;
+  placeholder: string | null;
 }
 
-export type FieldType = "text" | "password" | { select: { options: string[] } };
+export type FieldType = { type: "text" } | { type: "password" } | { type: "select"; options: string[] };
 
-export function getFieldTypeString(fieldType: FieldType): string {
-  if (typeof fieldType === "string") return fieldType;
-  if ("select" in fieldType) return "select";
-  return "text";
+export interface ModelRuntimeSettingsSchema {
+  fields: RuntimeSettingsField[];
 }
 
-export type LlmProviderSettings =
-  | { type: "Fake" }
-  | { type: "Ollama"; base_url?: string; model: string }
-  | { type: "AiTunnel"; api_key: string; model: string };
-
-export type SttProviderSettings =
-  { type: "Fake" } | { type: "Deepgram"; api_key?: string; language?: string; model?: string };
-
-export function getFieldValue(settings: LlmProviderSettings | SttProviderSettings, key: string): string {
-  if ("Ollama" === settings.type) {
-    if (key === "base_url") return settings.base_url || "";
-    if (key === "model") return settings.model || "";
-  }
-  if ("AiTunnel" === settings.type) {
-    if (key === "api_key") return settings.api_key || "";
-    if (key === "model") return settings.model || "";
-  }
-  if ("Deepgram" === settings.type) {
-    if (key === "api_key") return settings.api_key || "";
-    if (key === "language") return settings.language || "";
-    if (key === "model") return settings.model || "";
-  }
-  return "";
+export interface RuntimeSettingsField {
+  key: string;
+  display_name: string;
+  field_type: RuntimeFieldType;
 }
+
+export type RuntimeFieldType = { type: "boolean" } | { type: "number" } | { type: "select"; options: string[] };
+
+export type LlmProviderSettings = { type: "Fake" } | { type: "AiTunnel"; api_key: string };
+export type SttProviderSettings = { type: "Fake" } | { type: "Deepgram"; api_key: string };

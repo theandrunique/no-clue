@@ -1,5 +1,4 @@
 import type { Message } from "$lib/types";
-import type { ProviderDescriptor } from "$lib/types/providers";
 import { invoke } from "@tauri-apps/api/core";
 
 export const chatIpc = {
@@ -21,7 +20,5 @@ export const chatIpc = {
 
   stopMessageStream: (conversationId: string) => invoke("stop_generation", { conversationId }),
 
-  getMessages: (conversationId: string) => invoke<Message[]>("get_messages", { conversationId }),
-
-  getProviders: () => invoke<ProviderDescriptor[]>("get_llm_providers")
+  getMessages: (conversationId: string) => invoke<Message[]>("get_messages", { conversationId })
 };

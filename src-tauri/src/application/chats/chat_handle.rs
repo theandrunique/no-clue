@@ -5,8 +5,9 @@ use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::{
-    application::chats::chat_actor::{ChatActor, ChatActorCommand, TauriChatActorOutput},
-    domain::chat::Message,
+    application::chats::chat_actor::ChatActor,
+    domain::chats::actor::{ChatActorCommand, TauriChatActorOutput},
+    domain::chats::Message,
     errors::AppError,
 };
 

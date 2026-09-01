@@ -1,125 +1,47 @@
-use once_cell::sync::Lazy;
-use serde::{Serialize};
+use async_trait::async_trait;
+use futures_util::Stream;
 
-#[derive(Serialize)]
-pub struct ProviderSettingsSchema {
-    pub fields: Vec<SettingsField>,
+use crate::domain::chats::{Message, TokenUsage};
+
+pub type LlmChatStream =
+    Box<dyn Stream<Item = Result<LlmChatCompletionChunk, anyhow::Error>> + Send + Unpin>;
+
+#[async_trait]
+pub trait LlmProvider: Send + Sync {
+    async fn stream_chat_completion(
+        &self,
+        request: LlmChatCompletionRequest,
+    ) -> Result<LlmChatStream, anyhow::Error>;
 }
 
-#[derive(Serialize)]
-pub struct SettingsField {
-    pub key: String,
-    pub display_name: String,
-    pub field_type: FieldType,
-    pub required: bool,
-    pub placeholder: Option<String>,
+pub struct LlmChatCompletionChunk {
+    pub content: String,
+    pub is_finish: bool,
+    pub usage: Option<TokenUsage>,
 }
 
-#[derive(Serialize)]
-pub enum FieldType {
-    #[serde(rename = "text")]
-    Text,
-    #[serde(rename = "password")]
-    Password,
-    #[serde(rename = "select")]
-    Select { options: Vec<&'static str> },
+pub struct LlmChatCompletionRequest {
+    pub messages: Vec<Message>,
+    pub system_prompt: Option<String>,
+    pub screenshot_base64: Option<String>,
 }
 
-#[derive(Serialize)]
-pub struct ModelRuntimeSettingsSchema {
-    pub fields: Vec<RuntimeSettingsField>,
-}
+impl LlmChatCompletionRequest {
+    pub fn new(messages: Vec<Message>) -> Self {
+        Self {
+            messages,
+            system_prompt: None,
+            screenshot_base64: None,
+        }
+    }
 
-#[derive(Serialize)]
-pub struct RuntimeSettingsField {
-    pub key: String,
-    pub display_name: String,
-    pub field_type: RuntimeFieldType,
-    pub default_value: serde_json::Value,
-}
+    pub fn with_system_prompt(mut self, prompt: String) -> Self {
+        self.system_prompt = Some(prompt);
+        self
+    }
 
-#[derive(Serialize)]
-pub enum RuntimeFieldType {
-    Boolean,
-    Number,
-    Select { options: Vec<&'static str> }
+    pub fn with_screenshot(mut self, screenshot_base64: String) -> Self {
+        self.screenshot_base64 = Some(screenshot_base64);
+        self
+    }
 }
-
-#[derive(Serialize)]
-pub struct ModelCapabilities {
-    pub context_window: u64,
-    pub supports_vision: bool,
-    pub supports_reasoning: bool,
-}
-
-#[derive(Serialize)]
-pub struct ModelDescriptor {
-    pub id: String,
-    pub display_name: String,
-    pub capabilities: ModelCapabilities,
-    pub runtime_config: ModelRuntimeSettingsSchema,
-}
-
-#[derive(Serialize)]
-pub struct ProviderDescriptor {
-    pub id: String,
-    pub display_name: String,
-    pub config_schema: ProviderSettingsSchema,
-    pub models: Vec<ModelDescriptor>,
-}
-
-pub static LLM_PROVIDERS: Lazy<Vec<ProviderDescriptor>> =
-    Lazy::new(|| {
-        vec![
-            ProviderDescriptor {
-                id: "testing-provider".to_string(),
-                display_name: "Testing Provider".to_string(),
-                config_schema: ProviderSettingsSchema {
-                    fields: vec![]
-                },
-                models: vec![
-                    ModelDescriptor {
-                        id: "fake".to_string(),
-                        display_name: "Fake".to_string(),
-                        capabilities: ModelCapabilities {
-                            context_window: 8000,
-                            supports_reasoning: true,
-                            supports_vision: true,
-                        },
-                        runtime_config: ModelRuntimeSettingsSchema {
-                            fields: vec![]
-                        }
-                    }
-                ]
-            },
-            ProviderDescriptor {
-                id: "ai-tunnel".to_string(),
-                display_name: "AI Tunnel".to_string(),
-                config_schema: ProviderSettingsSchema {
-                    fields: vec![
-                        SettingsField {
-                            key: "api-key".to_string(),
-                            display_name: "API Key".to_string(),
-                            field_type: FieldType::Password,
-                            required: true,
-                            placeholder: None,
-                        }
-                    ]
-                },
-                models: vec![
-                    ModelDescriptor {
-                        id: "qwen3.5-flash-02-23".to_string(),
-                        display_name: "Qwen3.5 Flash 02-23".to_string(),
-                        capabilities: ModelCapabilities {
-                            context_window: 1_000_000,
-                            supports_reasoning: true,
-                            supports_vision: true,
-                        },
-                        runtime_config: ModelRuntimeSettingsSchema {
-                            fields: vec![]
-                        }
-                    }
-                ]
-            }
-        ]
-    });

@@ -5,11 +5,11 @@ use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::{
-    application::transcriptions::{
-        transcription_actor::TranscriptionActor, TauriTranscriptionOutput,
-        TranscriptionActorCommand, TranscriptionStatus,
+    application::transcriptions::transcription_actor::TranscriptionActor,
+    domain::transcriptions::{
+        actor::{TauriTranscriptionOutput, TranscriptionActorCommand, TranscriptionStatus},
+        AudioCaptureConfig,
     },
-    domain::transcript::AudioCaptureConfig,
     errors::AppError,
 };
 

@@ -8,11 +8,11 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
-    application::transcriptions::{
-        worker::{self, WorkerEvent},
-        TranscriptionActorCommand, TranscriptionOutput, TranscriptionStatus,
+    application::transcriptions::worker::{self},
+    domain::transcriptions::{
+        actor::{TranscriptionActorCommand, TranscriptionOutput, TranscriptionStatus, WorkerEvent},
+        AudioCaptureConfig, Transcript, TranscriptResult,
     },
-    domain::transcript::{AudioCaptureConfig, Transcript, TranscriptResult},
     errors::AppError,
     infra::{
         db::{self},

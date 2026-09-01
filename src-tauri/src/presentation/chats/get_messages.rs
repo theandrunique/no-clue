@@ -2,7 +2,7 @@ use sqlx::SqlitePool;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
-use crate::{domain::chat::Message, errors::AppError, infra::db};
+use crate::{domain::chats::Message, errors::AppError, infra::db};
 
 #[tauri::command]
 pub async fn get_messages(app: AppHandle, conversation_id: Uuid) -> Result<Vec<Message>, AppError> {

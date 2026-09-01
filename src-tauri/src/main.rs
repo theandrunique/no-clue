@@ -5,7 +5,10 @@ use tauri::Manager;
 use crate::{
     application::{
         audio::{get_input_devices, get_output_devices, test_microphone_audio, test_system_audio},
-        chats::ChatRouter,
+        chats::{
+            get_available_llms, get_llm_providers, remove_llm_provider_settings,
+            save_llm_provider_settings, ChatRouter,
+        },
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
         },
@@ -21,13 +24,9 @@ use crate::{
     },
     infra::db,
     presentation::{
-        chats::{
-            get_llm_provider_settings, get_llm_providers, get_messages, get_model_info,
-            retry_generation, save_llm_provider_settings, send_message, stop_generation,
-        },
+        chats::{get_messages, retry_generation, send_message, stop_generation},
         transcriptions::{
-            get_current_state, get_stt_provider_settings, get_stt_providers, get_transcripts,
-            save_stt_provider_settings, start_transcription, stop_transcription,
+            get_current_state, get_transcripts, start_transcription, stop_transcription,
             update_transcription_session,
         },
     },
@@ -90,12 +89,9 @@ pub fn main() {
             stop_transcription,
             update_transcription_session,
             get_current_state,
-            save_stt_provider_settings,
-            get_stt_provider_settings,
-            get_stt_providers,
-            get_llm_providers,
-            save_llm_provider_settings,
-            get_llm_provider_settings,
+            // save_stt_provider_settings,
+            // get_stt_provider_settings,
+            // get_stt_providers,
             get_input_devices,
             get_output_devices,
             test_system_audio,
@@ -108,9 +104,12 @@ pub fn main() {
             get_shortcuts,
             save_shortcut,
             delete_shortcut_override,
-            get_model_info,
             start_overlay_session,
             stop_overlay_session,
+            get_llm_providers,
+            save_llm_provider_settings,
+            remove_llm_provider_settings,
+            get_available_llms,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

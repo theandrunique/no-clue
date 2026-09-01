@@ -2,7 +2,7 @@ use sqlx::SqlitePool;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
-use crate::{domain::transcript::Transcript, errors::AppError, infra::db};
+use crate::{domain::transcriptions::Transcript, errors::AppError, infra::db};
 
 #[tauri::command]
 pub async fn get_transcripts(

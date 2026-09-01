@@ -2,8 +2,8 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::{
-    application::transcriptions::{TranscriptionHandle, TranscriptionStatus},
-    domain::transcript::AudioCaptureConfig,
+    application::transcriptions::TranscriptionHandle,
+    domain::transcriptions::{actor::TranscriptionStatus, AudioCaptureConfig},
     errors::AppError,
 };
 

@@ -1,7 +1,7 @@
 use anyhow::Context;
 use sqlx::SqlitePool;
 
-use crate::domain::stt::SttProviderSettings;
+use crate::domain::transcriptions::SttProviderSettings;
 
 pub async fn upsert(
     pool: &SqlitePool,

@@ -1,7 +1,7 @@
 use tauri::State;
 use uuid::Uuid;
 
-use crate::{application::chats::ChatRouter, domain::chat::Message, errors::AppError};
+use crate::{application::chats::ChatRouter, domain::chats::Message, errors::AppError};
 
 #[tauri::command]
 pub async fn send_message(

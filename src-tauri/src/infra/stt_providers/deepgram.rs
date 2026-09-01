@@ -7,41 +7,9 @@ use tokio_tungstenite::{
     tungstenite::{client::IntoClientRequest, Message},
 };
 
-use crate::domain::{
-    provider_schema::{FieldDescriptor, FieldType, ProviderDescriptor},
-    stt::{AudioChunk, AudioChunkStream, SttProvider, SttResultStream, SttTranscriptResult},
-    transcript::AudioSource,
+use crate::domain::transcriptions::{
+    AudioChunk, AudioChunkStream, AudioSource, SttProvider, SttResultStream, SttTranscriptResult,
 };
-
-pub fn deepgram_descriptor() -> ProviderDescriptor {
-    ProviderDescriptor {
-        id: "deepgram".to_string(),
-        label: "Deepgram".to_string(),
-        fields: vec![
-            FieldDescriptor {
-                key: "api_key".to_string(),
-                label: "API Key".to_string(),
-                field_type: FieldType::Password,
-                required: true,
-                placeholder: Some("dg...".to_string()),
-            },
-            FieldDescriptor {
-                key: "language".to_string(),
-                label: "Language".to_string(),
-                field_type: FieldType::Text,
-                required: false,
-                placeholder: Some("en".to_string()),
-            },
-            FieldDescriptor {
-                key: "model".to_string(),
-                label: "Model".to_string(),
-                field_type: FieldType::Text,
-                required: false,
-                placeholder: Some("nova-2".to_string()),
-            },
-        ],
-    }
-}
 
 pub struct DeepgramProvider {
     api_key: Option<String>,

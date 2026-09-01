@@ -3,20 +3,9 @@ use std::time::Instant;
 use async_trait::async_trait;
 use futures_util::Stream;
 
-use crate::domain::{
-    llm::{
-        LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, ModelInfo,
-    },
-    provider_schema::ProviderDescriptor,
+use crate::domain::chats::{
+    LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider,
 };
-
-pub fn fake_provider_descriptor() -> ProviderDescriptor {
-    ProviderDescriptor {
-        id: "fake".into(),
-        label: "Fake (Testing)".into(),
-        fields: vec![],
-    }
-}
 
 pub struct FakeProvider;
 
@@ -118,13 +107,5 @@ That's the way the *poem* goes."#;
         };
 
         Ok(Box::new(FakeStream::new(chars, delay_ms)))
-    }
-
-    async fn get_model_info(&self) -> Result<ModelInfo, anyhow::Error> {
-        Ok(ModelInfo {
-            model_name: "fake-model".into(),
-            context_window: 4096,
-            supports_vision: false,
-        })
     }
 }

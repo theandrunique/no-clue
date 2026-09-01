@@ -6,9 +6,8 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
-    application::chats::chat_actor::{ChatActorCommand, ChatGenerationEvent},
-    domain::chat::{FinishReason, TokenUsage},
-    domain::llm::{LlmChatCompletionRequest, LlmProvider},
+    domain::chats::actor::{ChatActorCommand, ChatGenerationEvent},
+    domain::chats::{FinishReason, LlmChatCompletionRequest, LlmProvider, TokenUsage},
     errors::AppError,
     infra::{db, llm_providers::create_llm_provider},
 };
