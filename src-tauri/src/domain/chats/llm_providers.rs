@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures_util::Stream;
 
-use crate::domain::chats::{Message, TokenUsage};
+use crate::domain::chats::{LlmSettings, Message, TokenUsage};
 
 pub type LlmChatStream =
     Box<dyn Stream<Item = Result<LlmChatCompletionChunk, anyhow::Error>> + Send + Unpin>;
@@ -21,14 +21,16 @@ pub struct LlmChatCompletionChunk {
 }
 
 pub struct LlmChatCompletionRequest {
+    pub model: LlmSettings,
     pub messages: Vec<Message>,
     pub system_prompt: Option<String>,
     pub screenshot_base64: Option<String>,
 }
 
 impl LlmChatCompletionRequest {
-    pub fn new(messages: Vec<Message>) -> Self {
+    pub fn new(model: LlmSettings, messages: Vec<Message>) -> Self {
         Self {
+            model,
             messages,
             system_prompt: None,
             screenshot_base64: None,

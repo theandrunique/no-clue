@@ -7,7 +7,9 @@ use uuid::Uuid;
 
 use crate::{
     domain::chats::actor::{ChatActorCommand, ChatGenerationEvent},
-    domain::chats::{FinishReason, LlmChatCompletionRequest, LlmProvider, TokenUsage},
+    domain::chats::{
+        find_llm_model, FinishReason, LlmChatCompletionRequest, LlmProvider, LlmSettings, TokenUsage,
+    },
     errors::AppError,
     infra::{db, llm_providers::create_llm_provider},
 };
@@ -30,14 +32,18 @@ pub async fn start_generation(
 pub async fn build_generation_request(
     app: &AppHandle,
     conversation_id: &Uuid,
-    provider: &str,
+    model: &LlmSettings,
     system_prompt_id: Option<Uuid>,
     capture_screenshot: bool,
     screenshot_base64: Option<String>,
 ) -> Result<(LlmChatCompletionRequest, Box<dyn LlmProvider>), AppError> {
     let pool = app.state::<SqlitePool>();
 
-    let provider_settings = db::llm_provider_settings::get(&pool, provider)
+    let model_id = model.model_id();
+    let (provider_descriptor, _model_descriptor) = find_llm_model(model_id)
+        .ok_or_else(|| anyhow::anyhow!("No provider found for LLM model '{model_id}'"))?;
+
+    let provider_settings = db::llm_provider_settings::get(&pool, &provider_descriptor.id)
         .await?
         .ok_or(AppError::LlmProviderNotConfigured)?;
 
@@ -53,7 +59,7 @@ pub async fn build_generation_request(
         None
     };
 
-    let mut request = LlmChatCompletionRequest::new(history);
+    let mut request = LlmChatCompletionRequest::new(model.clone(), history);
 
     if let Some(sp) = system_prompt_text {
         request = request.with_system_prompt(sp);

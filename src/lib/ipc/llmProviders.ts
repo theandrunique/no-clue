@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 export const llmProvidersIpc = {
   getProviders: () => invoke<LlmProvider[]>("get_llm_providers"),
 
-  saveProviderSettings: (request: { provider_id: string; settings: LlmProviderSettings }) =>
+  saveProviderSettings: (request: { providerId: string; settings: LlmProviderSettings }) =>
     invoke("save_llm_provider_settings", request),
 
   removeProviderSettings: (providerId: string) => invoke("remove_llm_provider_settings", { providerId }),

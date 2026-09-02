@@ -4,10 +4,26 @@ use async_trait::async_trait;
 use futures_util::Stream;
 
 use crate::domain::chats::{
-    LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider,
+    LlmChatCompletionChunk, LlmChatCompletionRequest, LlmChatStream, LlmProvider, LlmSettings,
 };
 
 pub struct FakeProvider;
+
+impl FakeProvider {
+    fn duration_ms(model_settings: &LlmSettings) -> u64 {
+        match model_settings {
+            LlmSettings::Fake { duration } => parse_duration_secs(duration) * 1000,
+            _ => 15_000,
+        }
+    }
+}
+
+fn parse_duration_secs(value: &str) -> u64 {
+    value
+        .strip_suffix('s')
+        .and_then(|seconds| seconds.parse().ok())
+        .unwrap_or(15)
+}
 
 struct FakeStream {
     chars: Vec<char>,
@@ -74,7 +90,7 @@ impl Stream for FakeStream {
 impl LlmProvider for FakeProvider {
     async fn stream_chat_completion(
         &self,
-        _request: LlmChatCompletionRequest,
+        request: LlmChatCompletionRequest,
     ) -> Result<LlmChatStream, anyhow::Error> {
         let poem = r#"Here's a poem for you:
 
@@ -99,7 +115,7 @@ That's the way the *poem* goes."#;
 
         let chars: Vec<char> = poem.chars().collect();
         let total_chars = chars.len();
-        let duration_ms = 15000u64;
+        let duration_ms = Self::duration_ms(&request.model);
         let delay_ms = if total_chars > 0 {
             duration_ms / (total_chars as u64 / 3)
         } else {

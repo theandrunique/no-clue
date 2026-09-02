@@ -47,6 +47,10 @@
             <LlmChat
               isLoading={llmChatService.isLoading}
               isStreaming={llmChatService.isStreaming}
+              models={llmChatService.models}
+              selectedModel={llmChatService.selectedModel}
+              hasModels={llmChatService.hasModels}
+              onModelChange={(m) => llmChatService.setSelectedModel(m)}
               onSend={(v) => llmChatService.send(v)}
               onStop={() => llmChatService.stop()}
               messages={llmChatService.messages}

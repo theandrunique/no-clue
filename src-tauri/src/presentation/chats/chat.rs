@@ -1,19 +1,23 @@
 use tauri::State;
 use uuid::Uuid;
 
-use crate::{application::chats::ChatRouter, domain::chats::Message, errors::AppError};
+use crate::{
+    application::chats::ChatRouter,
+    domain::chats::{LlmSettings, Message},
+    errors::AppError,
+};
 
 #[tauri::command]
 pub async fn send_message(
     chat_router: State<'_, ChatRouter>,
-    provider: String,
+    model: LlmSettings,
     conversation_id: Uuid,
     user_message: String,
     capture_screenshot: bool,
     system_prompt_id: Option<Uuid>,
 ) -> Result<Message, AppError> {
     tracing::trace!(
-        provider,
+        model_id = %model.model_id(),
         %conversation_id,
         %user_message,
         capture_screenshot,
@@ -22,21 +26,21 @@ pub async fn send_message(
     );
     let chat_handle = chat_router.get_or_create(conversation_id).await;
     chat_handle
-        .send_message(provider, capture_screenshot, system_prompt_id, user_message)
+        .send_message(model, capture_screenshot, system_prompt_id, user_message)
         .await
 }
 
 #[tauri::command]
 pub async fn retry_generation(
     chat_router: State<'_, ChatRouter>,
-    provider: String,
+    model: LlmSettings,
     conversation_id: Uuid,
     user_message_id: Uuid,
     capture_screenshot: bool,
     system_prompt_id: Option<Uuid>,
 ) -> Result<(), AppError> {
     tracing::trace!(
-        provider,
+        model_id = %model.model_id(),
         %conversation_id,
         %user_message_id,
         capture_screenshot,
@@ -46,7 +50,7 @@ pub async fn retry_generation(
     let chat_handle = chat_router.get_or_create(conversation_id).await;
     chat_handle
         .regenerate(
-            provider,
+            model,
             capture_screenshot,
             system_prompt_id,
             user_message_id,

@@ -29,12 +29,15 @@
 
     saveSettingsMutation.mutate(
       {
-        provider_id: currentProvider.id,
+        providerId: currentProvider.id,
         settings: buildSettings(currentProvider, connectValues)
       },
       {
         onError: (e) => {
           console.error(e);
+        },
+        onSuccess: () => {
+          llmProviderConnectModal.close();
         }
       }
     );
@@ -44,7 +47,7 @@
     if (provider.id === "ai-tunnel") {
       return { type: "AiTunnel", api_key: values["api_key"] ?? "" };
     }
-    return { type: "Fake" };
+    return { type: "TestingProvider" };
   }
 
   function fieldErrors(key: string): string[] | undefined {

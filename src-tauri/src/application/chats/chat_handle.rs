@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     application::chats::chat_actor::ChatActor,
     domain::chats::actor::{ChatActorCommand, TauriChatActorOutput},
-    domain::chats::Message,
+    domain::chats::{LlmSettings, Message},
     errors::AppError,
 };
 
@@ -33,7 +33,7 @@ impl ChatHandle {
 
     pub async fn send_message(
         &self,
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message: String,
@@ -42,7 +42,7 @@ impl ChatHandle {
         let _ = self
             .tx
             .send(ChatActorCommand::SendMessage {
-                provider,
+                model,
                 capture_screenshot,
                 system_prompt_id,
                 user_message,
@@ -54,7 +54,7 @@ impl ChatHandle {
 
     pub async fn regenerate(
         &self,
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message_id: Uuid,
@@ -63,7 +63,7 @@ impl ChatHandle {
         let _ = self
             .tx
             .send(ChatActorCommand::Regenerate {
-                provider,
+                model,
                 capture_screenshot,
                 system_prompt_id,
                 user_message_id,

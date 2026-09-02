@@ -1,9 +1,10 @@
+import type { LlmSettings } from "$lib/types/providers";
 import type { Message } from "$lib/types";
 import { invoke } from "@tauri-apps/api/core";
 
 export const chatIpc = {
   sendMessage: (request: {
-    provider: string;
+    model: LlmSettings;
     conversationId: string;
     userMessage: string;
     captureScreenshot: boolean;
@@ -11,7 +12,7 @@ export const chatIpc = {
   }) => invoke<Message>("send_message", request),
 
   retryGeneration: (request: {
-    provider: string;
+    model: LlmSettings;
     conversationId: string;
     userMessageId: string;
     captureScreenshot: boolean;

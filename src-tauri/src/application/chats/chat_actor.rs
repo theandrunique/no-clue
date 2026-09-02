@@ -11,7 +11,7 @@ use crate::{
     application::chats::generation::{build_generation_request, start_generation},
     domain::chats::{
         actor::{ChatActorCommand, ChatActorOutput, ChatActorState, ChatGenerationEvent},
-        Message, MessageRole,
+        LlmSettings, Message, MessageRole,
     },
     errors::AppError,
     infra::{
@@ -60,14 +60,14 @@ impl ChatActor {
         while let Some(command) = self.rx.recv().await {
             match command {
                 ChatActorCommand::SendMessage {
-                    provider,
+                    model,
                     capture_screenshot,
                     system_prompt_id,
                     user_message,
                     reply,
                 } => {
                     tracing::trace!(
-                        provider,
+                        model = %model.model_id(),
                         capture_screenshot,
                         ?system_prompt_id,
                         %user_message,
@@ -75,7 +75,7 @@ impl ChatActor {
                     );
                     let result = self
                         .handle_send_message(
-                            provider,
+                            model,
                             capture_screenshot,
                             system_prompt_id,
                             user_message,
@@ -84,14 +84,14 @@ impl ChatActor {
                     let _ = reply.send(result);
                 }
                 ChatActorCommand::Regenerate {
-                    provider,
+                    model,
                     capture_screenshot,
                     system_prompt_id,
                     user_message_id,
                     reply,
                 } => {
                     tracing::trace!(
-                        provider,
+                        model = %model.model_id(),
                         capture_screenshot,
                         ?system_prompt_id,
                         %user_message_id,
@@ -99,7 +99,7 @@ impl ChatActor {
                     );
                     let result = self
                         .handle_regenerate(
-                            provider,
+                            model,
                             capture_screenshot,
                             system_prompt_id,
                             user_message_id,
@@ -121,7 +121,7 @@ impl ChatActor {
 
     async fn handle_send_message(
         &mut self,
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message: String,
@@ -166,7 +166,7 @@ impl ChatActor {
         let (request, llm_provider) = build_generation_request(
             &self.app,
             &self.conversation_id,
-            &provider,
+            &model,
             system_prompt_id,
             capture_screenshot,
             screenshot_base64,
@@ -191,7 +191,7 @@ impl ChatActor {
 
     async fn handle_regenerate(
         &mut self,
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message_id: Uuid,
@@ -235,7 +235,7 @@ impl ChatActor {
         let (request, llm_provider) = build_generation_request(
             &self.app,
             &self.conversation_id,
-            &provider,
+            &model,
             system_prompt_id,
             capture_screenshot,
             screenshot_base64,

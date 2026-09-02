@@ -1,9 +1,12 @@
 import { chatIpc } from "$lib/ipc/chat";
+import { llmProvidersIpc } from "$lib/ipc/llmProviders";
 import { Events, listenEvent } from "$lib/events";
 import type { ChatStreamEvent, Message } from "$lib/types";
+import type { Llm, LlmSettings } from "$lib/types/providers";
 import { getErrorMessage } from "$lib/utils/errors";
 import { providerSettingsStore } from "$services/settings/providerSettings.svelte";
 import { activePromptStore } from "$services/system-prompts/activePrompt.svelte";
+import { buildLlmSettings, extractRuntime } from "./llmSettings";
 
 function isoNow(): string {
   return new Date().toISOString();
@@ -19,8 +22,11 @@ export function createLlmChatService() {
   let initialized = false;
   let reloadOnFinish = false;
 
+  let models = $state<Llm[]>([]);
+  let selectedModel = $state<LlmSettings | null>(null);
+
   let lastParams = {
-    provider: "",
+    model: null as LlmSettings | null,
     captureScreenshot: false,
     systemPromptId: undefined as string | undefined
   };
@@ -38,6 +44,30 @@ export function createLlmChatService() {
       error = getErrorMessage(e);
     } finally {
       isLoading = false;
+    }
+  }
+
+  function resolveSelection() {
+    if (models.length === 0) {
+      selectedModel = null;
+      providerSettingsStore.llm = null;
+      return;
+    }
+
+    const stored = providerSettingsStore.llm;
+    const storedModel = stored ? models.find((m) => m.id === stored.type) : undefined;
+
+    selectedModel = storedModel ? buildLlmSettings(storedModel, extractRuntime(stored)) : buildLlmSettings(models[0]);
+
+    providerSettingsStore.llm = selectedModel;
+  }
+
+  async function loadModels() {
+    try {
+      models = await llmProvidersIpc.getAvailableModels();
+      resolveSelection();
+    } catch (e) {
+      error = getErrorMessage(e);
     }
   }
 
@@ -75,6 +105,7 @@ export function createLlmChatService() {
   async function init(id: string) {
     conversationId = id;
     await loadMessages();
+    await loadModels();
     if (initialized) return;
     initialized = true;
 
@@ -84,6 +115,9 @@ export function createLlmChatService() {
   async function send(text: string) {
     const trimmed = text.trim();
     if (isStreaming || !conversationId || !trimmed) return;
+
+    const model = providerSettingsStore.llm;
+    if (!model) return;
 
     error = null;
 
@@ -111,14 +145,14 @@ export function createLlmChatService() {
     isStreaming = true;
 
     lastParams = {
-      provider: providerSettingsStore.llmProviderId,
+      model,
       captureScreenshot,
       systemPromptId: activePromptStore.activePromptId ?? undefined
     };
 
     try {
       const newMessage = await chatIpc.sendMessage({
-        provider: lastParams.provider,
+        model,
         conversationId,
         userMessage: trimmed,
         captureScreenshot: lastParams.captureScreenshot,
@@ -135,6 +169,9 @@ export function createLlmChatService() {
 
   async function retry(userMessageId: string) {
     if (isStreaming || !conversationId) return;
+
+    const model = lastParams.model;
+    if (!model) return;
 
     error = null;
 
@@ -154,7 +191,7 @@ export function createLlmChatService() {
 
     try {
       await chatIpc.retryGeneration({
-        provider: lastParams.provider,
+        model,
         conversationId,
         userMessageId,
         captureScreenshot: lastParams.captureScreenshot,
@@ -167,6 +204,11 @@ export function createLlmChatService() {
       await loadMessages();
       error = getErrorMessage(e);
     }
+  }
+
+  function setSelectedModel(model: LlmSettings) {
+    selectedModel = model;
+    providerSettingsStore.llm = model;
   }
 
   async function stop() {
@@ -203,11 +245,21 @@ export function createLlmChatService() {
     get captureScreenshot() {
       return captureScreenshot;
     },
+    get models() {
+      return models;
+    },
+    get selectedModel() {
+      return selectedModel;
+    },
+    get hasModels() {
+      return models.length > 0 && selectedModel !== null;
+    },
     clearError,
     init,
     send,
     retry,
     stop,
+    setSelectedModel,
     toggleCaptureScreenshot
   };
 }

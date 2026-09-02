@@ -1,12 +1,14 @@
+import type { LlmSettings } from "$lib/types/providers";
+
 const STORAGE_KEY = "no-clue-provider-settings";
 
 export interface ProviderSettings {
-  llmProviderId: string;
+  llm: LlmSettings | null;
   sttProviderId: string;
 }
 
 const defaultProviderSettings: ProviderSettings = {
-  llmProviderId: "fake",
+  llm: null,
   sttProviderId: "fake"
 };
 
@@ -14,7 +16,11 @@ function loadProviderSettings(): ProviderSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return { ...defaultProviderSettings, ...JSON.parse(stored) };
+      const parsed = JSON.parse(stored);
+      return {
+        llm: parsed?.llm ?? null,
+        sttProviderId: parsed?.sttProviderId ?? defaultProviderSettings.sttProviderId
+      };
     }
     // eslint-disable-next-line no-empty
   } catch {}
@@ -31,11 +37,11 @@ function createProviderSettingsStore() {
   }
 
   return {
-    get llmProviderId() {
-      return settings.llmProviderId;
+    get llm() {
+      return settings.llm;
     },
-    set llmProviderId(value: string) {
-      settings.llmProviderId = value;
+    set llm(value: LlmSettings | null) {
+      settings.llm = value;
       save();
     },
     get sttProviderId() {

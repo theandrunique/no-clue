@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
-    domain::chats::{ChatStreamEvent, FinishReason, Message, TokenUsage},
+    domain::chats::{ChatStreamEvent, FinishReason, LlmSettings, Message, TokenUsage},
     errors::AppError,
 };
 
@@ -77,14 +77,14 @@ pub enum ChatActorState {
 
 pub enum ChatActorCommand {
     SendMessage {
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message: String,
         reply: oneshot::Sender<Result<Message, AppError>>,
     },
     Regenerate {
-        provider: String,
+        model: LlmSettings,
         capture_screenshot: bool,
         system_prompt_id: Option<Uuid>,
         user_message_id: Uuid,

@@ -42,9 +42,14 @@ export interface RuntimeSettingsField {
   key: string;
   display_name: string;
   field_type: RuntimeFieldType;
+  default_value?: string | number | boolean;
 }
 
 export type RuntimeFieldType = { type: "boolean" } | { type: "number" } | { type: "select"; options: string[] };
 
-export type LlmProviderSettings = { type: "Fake" } | { type: "AiTunnel"; api_key: string };
-export type SttProviderSettings = { type: "Fake" } | { type: "Deepgram"; api_key: string };
+export type LlmProviderSettings = { type: "TestingProvider" } | { type: "AiTunnel"; api_key: string };
+export type SttProviderSettings = { type: "TestingProvider" } | { type: "Deepgram"; api_key: string };
+
+export type LlmSettings = { type: "Fake"; duration: string } | { type: "Qwen3_5Flash"; temperature: number };
+
+export type LlmRuntimeConfig = Record<string, string | number | boolean>;
