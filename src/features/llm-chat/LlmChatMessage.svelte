@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { RotateCw, Copy } from "@lucide/svelte";
+  import { Copy } from "@lucide/svelte";
   import type { Message } from "$lib/types";
   import Markdown from "$lib/components/Markdown.svelte";
   import ErrorMessage from "$lib/components/ErrorMessage.svelte";
   import { Button } from "$lib/components/ui";
 
-  let { message, onRetry }: { message: Message; onRetry?: () => void } = $props();
+  let { message }: { message: Message } = $props();
 
   function errorText(message: Message): string | null {
     if (message.finish_reason?.type === "error") {
@@ -43,10 +43,6 @@
     <div class="mt-2 flex items-center justify-start gap-1">
       <Button variant="icon">
         <Copy class="size-3.5" />
-      </Button>
-
-      <Button variant="icon" onclick={() => onRetry?.()}>
-        <RotateCw class="size-3.5" />
       </Button>
     </div>
   {/if}

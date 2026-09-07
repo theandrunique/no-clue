@@ -4,7 +4,7 @@
   import { TranscriptList } from "$features/transcript-list";
   import { Button, Card, Tabs } from "$lib/components/ui";
   import { useConversation, useDeleteConversation } from "$lib/queries/conversations";
-  import { createLlmChatService } from "$services/llm-chat/llmChat.svelte";
+  import LlmChatContextProvider from "$services/llm-chat/LlmChatContextProvider.svelte";
   import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
   import { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
   import { FileText, MessageSquare, Play, Trash2 } from "@lucide/svelte";
@@ -32,13 +32,6 @@
     }).format(new Date(value));
   }
 
-  let llmChatService = $derived.by(() => {
-    if (selectedId === null) return;
-    const service = createLlmChatService();
-    service.init(selectedId);
-    return service;
-  });
-
   let transcriptionService = $derived.by(() => {
     if (selectedId === null) return;
     const service = createTranscriptionService();
@@ -53,7 +46,7 @@
   </Card>
 
   <div class="flex min-h-0 flex-1 flex-col">
-    {#if selectedId && llmChatService && transcriptionService}
+    {#if selectedId && transcriptionService}
       {#key selectedId}
         <Card class="flex min-h-0 flex-1 flex-col gap-3">
           <div class="flex shrink-0 items-center justify-between gap-2 border-b border-(--color-border) pb-3">
@@ -86,20 +79,9 @@
             </Tabs.List>
 
             <Tabs.Content value="chat" class="min-h-0 flex-1">
-              <LlmChat
-                isLoading={llmChatService.isLoading}
-                isStreaming={llmChatService.isStreaming}
-                models={llmChatService.models}
-                selectedModel={llmChatService.selectedModel}
-                hasModels={llmChatService.hasModels}
-                onModelChange={(m) => llmChatService.setSelectedModel(m)}
-                onSend={(v) => llmChatService.send(v)}
-                onStop={() => llmChatService.stop()}
-                onRetry={(userMessageId) => llmChatService.retry(userMessageId)}
-                messages={llmChatService.messages}
-                error={llmChatService.error}
-                clearError={() => llmChatService.clearError()}
-              />
+              <LlmChatContextProvider conversationId={selectedId}>
+                <LlmChat />
+              </LlmChatContextProvider>
             </Tabs.Content>
 
             <Tabs.Content value="transcript" class="min-h-0 flex-1">

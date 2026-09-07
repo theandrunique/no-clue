@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     screenshot_path TEXT,
     created_at INTEGER NOT NULL,
+    finish_reason TEXT,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
@@ -38,14 +39,10 @@ CREATE TABLE IF NOT EXISTS llm_provider_settings (
     settings TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO llm_provider_settings (id, settings) VALUES ('fake', '{"type":"Fake"}');
-
 CREATE TABLE IF NOT EXISTS stt_providers_settings (
     id TEXT PRIMARY KEY NOT NULL,
     settings TEXT NOT NULL
 );
-
-INSERT OR IGNORE INTO stt_providers_settings (id, settings) VALUES ('fake', '{"type":"Fake"}');
 
 CREATE TABLE IF NOT EXISTS shortcut_overrides (
     id TEXT PRIMARY KEY NOT NULL,

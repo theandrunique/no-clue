@@ -7,19 +7,12 @@
   import { FileText, MessageSquare } from "@lucide/svelte";
   import { cubicInOut } from "svelte/easing";
   import { fly } from "svelte/transition";
-  import { createLlmChatService } from "$services/llm-chat/llmChat.svelte";
+  import LlmChatContextProvider from "$services/llm-chat/LlmChatContextProvider.svelte";
   import { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
   import { overlayStateStore } from "$services/overlay/overlayState.svelte";
 
   const conversationId = $derived(page.params.conversationId);
   let tab = $state("chat");
-
-  let llmChatService = $derived.by(() => {
-    if (!conversationId) return;
-    const service = createLlmChatService();
-    service.init(conversationId);
-    return service;
-  });
 
   let transcriptionService = $derived.by(() => {
     if (!conversationId) return;
@@ -30,11 +23,13 @@
 </script>
 
 <div class="flex h-screen flex-col gap-1 overflow-hidden">
-  {#if llmChatService && transcriptionService}
-    <OverlayMenu {llmChatService} {transcriptionService} />
+  {#if conversationId && transcriptionService}
+    <LlmChatContextProvider {conversationId}>
+      <OverlayMenu {transcriptionService} />
+    </LlmChatContextProvider>
   {/if}
 
-  {#if overlayStateStore.expanded && llmChatService && transcriptionService}
+  {#if overlayStateStore.expanded && conversationId && transcriptionService}
     <div transition:fly={{ y: 16, duration: 200, easing: cubicInOut }} class="min-h-0 flex-1">
       <Card class="h-full bg-(--bg-card)/50">
         <Tabs.Root bind:value={tab} class="flex h-full flex-col">
@@ -44,19 +39,9 @@
           </Tabs.List>
 
           <Tabs.Content value="chat" class="min-h-0 flex-1">
-            <LlmChat
-              isLoading={llmChatService.isLoading}
-              isStreaming={llmChatService.isStreaming}
-              models={llmChatService.models}
-              selectedModel={llmChatService.selectedModel}
-              hasModels={llmChatService.hasModels}
-              onModelChange={(m) => llmChatService.setSelectedModel(m)}
-              onSend={(v) => llmChatService.send(v)}
-              onStop={() => llmChatService.stop()}
-              messages={llmChatService.messages}
-              error={llmChatService.error}
-              clearError={() => llmChatService.clearError()}
-            />
+            <LlmChatContextProvider {conversationId}>
+              <LlmChat />
+            </LlmChatContextProvider>
           </Tabs.Content>
 
           <Tabs.Content value="transcript" class="min-h-0 flex-1">

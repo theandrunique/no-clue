@@ -8,6 +8,7 @@ use crate::{
         chats::{
             get_available_llms, get_llm_providers, remove_llm_provider_settings,
             save_llm_provider_settings, ChatRouter,
+            get_messages, retry_generation, send_message, stop_generation,
         },
         conversations::{
             create_conversation, delete_conversation, get_conversation, get_conversations,
@@ -20,16 +21,13 @@ use crate::{
             create_system_prompt, delete_system_prompt, get_system_prompt, get_system_prompts,
             update_system_prompt,
         },
-        transcriptions::TranscriptionHandle,
-    },
-    infra::db,
-    presentation::{
-        chats::{get_messages, retry_generation, send_message, stop_generation},
         transcriptions::{
+            TranscriptionHandle,
             get_current_state, get_transcripts, start_transcription, stop_transcription,
             update_transcription_session,
         },
     },
+    infra::db,
 };
 
 mod application;
@@ -37,7 +35,6 @@ mod domain;
 mod errors;
 mod infra;
 mod logging;
-mod presentation;
 mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
