@@ -40,7 +40,7 @@
 
           <Tabs.Content value="chat" class="min-h-0 flex-1">
             <LlmChatContextProvider {conversationId}>
-              <LlmChat />
+              <LlmChat conversationId={conversationId} />
             </LlmChatContextProvider>
           </Tabs.Content>
 

@@ -35,6 +35,8 @@ function createModelSettingsStore() {
     providerSettingsStore.llm = model;
   }
 
+  loadModels();
+
   return {
     get models() {
       return models;

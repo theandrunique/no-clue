@@ -1,16 +1,38 @@
 <script lang="ts">
-  import ErrorMessage from "$lib/components/ErrorMessage.svelte";
   import { Button, Loader } from "$lib/components/ui";
-  import { useMessages } from "$lib/queries/messages";
   import { modelSettingsStore } from "$services/settings/modelSettings.svelte";
   import { getLlmChatContext } from "$services/llm-chat/llmChatContext";
   import LlmChatInput from "./LlmChatInput.svelte";
   import LlmChatMessage from "./LlmChatMessage.svelte";
   import LlmChatQuickActions from "./LlmChatQuickActions.svelte";
   import ModelBar from "./ModelBar.svelte";
+  import { useCreateConversation } from "$lib/queries/conversations";
+  import { useMessages, useSendMessage, useStopMessageStream } from "$lib/queries/chat";
+  import { page } from "$app/state";
+
+  let { conversationId }: { conversationId: string | null; } = $props();
 
   const ctx = getLlmChatContext();
-  const messagesQuery = useMessages(() => ctx.conversationId);
+  const messagesQuery = useMessages(() => conversationId ?? null);
+  const createConversationMutation = useCreateConversation();
+  const sendMessageMutation = useSendMessage();
+  const stopMessageStreamMutation = useStopMessageStream();
+
+  async function handleSend(text: string) {
+    let id = conversationId;
+    if (!id) {
+      const newConversation = await createConversationMutation.mutateAsync();
+      id = newConversation.id;
+    }
+    page.params.id = id;
+    await sendMessageMutation.mutateAsync({
+      conversationId: id,
+      userMessage: text,
+      systemPromptId: undefined,
+      captureScreenshot: true,
+      model: { type: "Fake", duration: "15s" },
+    })
+  }
 
   let listEl: HTMLDivElement;
 
@@ -21,10 +43,6 @@
 </script>
 
 <div class="flex h-full flex-col gap-2 py-2">
-  {#if ctx.error}
-    <ErrorMessage error={ctx.error} onClear={() => ctx.clearError()} />
-  {/if}
-
   <div bind:this={listEl} class="mx-auto min-h-0 flex-1 pr-1">
     {#if messagesQuery.isLoading}
       <div class="flex h-full items-center justify-center">
@@ -49,15 +67,15 @@
   {:else}
     <LlmChatQuickActions
       isStreaming={ctx.isStreaming}
-      isLoading={messagesQuery.isLoading}
-      onSend={(v) => ctx.send(v)}
+      isLoading={sendMessageMutation.isPending}
+      onSend={(v) => handleSend(v)}
     />
 
     <LlmChatInput
       isStreaming={ctx.isStreaming}
       isLoading={messagesQuery.isLoading}
-      onSend={(v) => ctx.send(v)}
-      onStop={() => ctx.stop()}
+      onSend={(v) => handleSend(v)}
+      onStop={() => stopMessageStreamMutation.mutate(conversationId ?? "")}
     />
 
     <ModelBar

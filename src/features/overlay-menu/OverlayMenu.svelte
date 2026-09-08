@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button, Card } from "$lib/components/ui";
-  import { getLlmChatContext } from "$services/llm-chat/llmChatContext";
   import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
   import { overlayStateStore } from "$services/overlay/overlayState.svelte";
   import type { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
@@ -11,11 +10,9 @@
   }: {
     transcriptionService: ReturnType<typeof createTranscriptionService>;
   } = $props();
-
-  const ctx = getLlmChatContext();
 </script>
 
-<Card class="flex h-[54px] items-center justify-between bg-(--bg-card)/50 px-1.5" data-tauri-drag-region>
+<Card class="flex h-13.5 items-center justify-between bg-(--bg-card)/50 px-1.5" data-tauri-drag-region>
   <span class="flex items-center">
     <Button variant="icon" onclick={() => overlayStateStore.toggleExpanded()}>
       {#if overlayStateStore.expanded}
@@ -37,8 +34,8 @@
       {/if}
     </Button>
 
-    <Button variant="icon" onclick={() => ctx.toggleCaptureScreenshot()}>
-      {#if ctx.captureScreenshot}
+    <Button variant="icon">
+      {#if true}
         <Camera />
       {:else}
         <CameraOff />
