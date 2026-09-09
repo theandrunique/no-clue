@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { ConversationList } from '$features/conversation-list';
-  import { Card } from '$lib/components/ui';
-  import { useDeleteConversation } from '$lib/queries/conversations';
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
+  import { page } from "$app/state";
+  import { ConversationList } from "$features/conversation-list";
+  import { Card } from "$lib/components/ui";
+  import { useDeleteConversation } from "$lib/queries/conversations";
 
   let { children } = $props();
 
@@ -24,10 +26,10 @@
     <ConversationList
       selectedId={page.params.id || null}
       onSelect={(id) => {
-        console.log(id);
-        page.params.id = id;
+        goto(resolve("/(dashboard)/conversations/[id]", { id }));
       }}
-      onDelete={handleDelete} />
+      onDelete={handleDelete}
+    />
   </Card>
 
   {@render children()}

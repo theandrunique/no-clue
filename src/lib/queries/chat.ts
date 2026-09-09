@@ -22,6 +22,6 @@ export function useSendMessage() {
 
 export function useStopMessageStream() {
   return createMutation(() => ({
-    mutationFn: chatIpc.stopMessageStream,
+    mutationFn: chatIpc.stopMessageStream
   }));
 }

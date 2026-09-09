@@ -6,32 +6,23 @@
   import LlmChatMessage from "./LlmChatMessage.svelte";
   import LlmChatQuickActions from "./LlmChatQuickActions.svelte";
   import ModelBar from "./ModelBar.svelte";
-  import { useCreateConversation } from "$lib/queries/conversations";
   import { useMessages, useSendMessage, useStopMessageStream } from "$lib/queries/chat";
-  import { page } from "$app/state";
 
-  let { conversationId }: { conversationId: string | null; } = $props();
+  let { conversationId }: { conversationId: string } = $props();
 
   const ctx = getLlmChatContext();
   const messagesQuery = useMessages(() => conversationId ?? null);
-  const createConversationMutation = useCreateConversation();
   const sendMessageMutation = useSendMessage();
   const stopMessageStreamMutation = useStopMessageStream();
 
   async function handleSend(text: string) {
-    let id = conversationId;
-    if (!id) {
-      const newConversation = await createConversationMutation.mutateAsync();
-      id = newConversation.id;
-    }
-    page.params.id = id;
     await sendMessageMutation.mutateAsync({
-      conversationId: id,
+      conversationId: conversationId,
       userMessage: text,
       systemPromptId: undefined,
       captureScreenshot: true,
-      model: { type: "Fake", duration: "15s" },
-    })
+      model: { type: "Fake", duration: "15s" }
+    });
   }
 
   let listEl: HTMLDivElement;

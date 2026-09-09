@@ -25,14 +25,14 @@
         role: "assistant",
         created_at: new Date().toISOString(),
         finish_reason: null,
-        screenshot_path: null,
-      }
+        screenshot_path: null
+      };
       return;
     } else if (event.type === "chunk") {
       if (currentMessage !== null) {
         currentMessage.content += event.payload.delta;
       } else {
-        console.warn("currentMessage was null but delta is recieved")
+        console.warn("currentMessage was null but delta is recieved");
       }
       return;
     } else if (event.type === "finish") {
@@ -40,8 +40,8 @@
       currentMessage = {
         ...currentMessage!,
         created_at: event.payload.created_at,
-        finish_reason: event.payload.finish_reason,
-      }
+        finish_reason: event.payload.finish_reason
+      };
 
       queryClient.invalidateQueries({ queryKey: ["messages", conversationId] }).then(() => {
         currentMessage = null;
@@ -54,7 +54,7 @@
     let unlisten = listenEvent(Events.chatStream, handleStreamEvent);
 
     return () => {
-      unlisten.then(fn => fn());
+      unlisten.then((fn) => fn());
     };
   });
 
@@ -64,7 +64,7 @@
     },
     get currentMessage() {
       return currentMessage;
-    },
+    }
   };
 
   setLlmChatContext(context);

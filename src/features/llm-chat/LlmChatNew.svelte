@@ -7,7 +7,8 @@
   import ModelBar from "./ModelBar.svelte";
   import { useCreateConversation } from "$lib/queries/conversations";
   import { useSendMessage } from "$lib/queries/chat";
-  import { page } from "$app/state";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
 
   const ctx = getLlmChatContext();
   const createConversationMutation = useCreateConversation();
@@ -15,18 +16,18 @@
 
   async function handleSend(text: string) {
     const newConversation = await createConversationMutation.mutateAsync();
-    page.params.id = newConversation.id;
+    await goto(resolve("/(dashboard)/conversations/[id]", { id: newConversation.id }), { replaceState: true });
     await sendMessageMutation.mutateAsync({
       conversationId: newConversation.id,
       userMessage: text,
       systemPromptId: undefined,
       captureScreenshot: true,
-      model: { type: "Fake", duration: "15s" },
-    })
+      model: { type: "Fake", duration: "15s" }
+    });
   }
 </script>
 
-<div class="flex-1 min-w-0 flex flex-col gap-2">
+<div class="flex min-w-0 flex-1 flex-col gap-2">
   {#if !modelSettingsStore.hasModels}
     <div class="flex items-center justify-center gap-1 py-4">
       <p class="text-sm">Connect LLM provider to start chatting</p>

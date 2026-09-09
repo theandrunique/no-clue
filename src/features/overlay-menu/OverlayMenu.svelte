@@ -2,14 +2,10 @@
   import { Button, Card } from "$lib/components/ui";
   import { overlaySessionService } from "$services/overlay/overlaySession.svelte";
   import { overlayStateStore } from "$services/overlay/overlayState.svelte";
-  import type { createTranscriptionService } from "$services/transcriptions/transcription.svelte";
+  import { getTranscriptionContext } from "$services/transcriptions/transcriptionContext";
   import { Camera, CameraOff, ChevronDown, ChevronUp, Mic, MicOff, X } from "@lucide/svelte";
 
-  let {
-    transcriptionService
-  }: {
-    transcriptionService: ReturnType<typeof createTranscriptionService>;
-  } = $props();
+  const transcriptionContext = getTranscriptionContext();
 </script>
 
 <Card class="flex h-13.5 items-center justify-between bg-(--bg-card)/50 px-1.5" data-tauri-drag-region>
@@ -22,12 +18,8 @@
       {/if}
     </Button>
 
-    <Button
-      variant="icon"
-      onclick={() => transcriptionService.toggle()}
-      class={transcriptionService.error ? "text-(--text-error)" : ""}
-    >
-      {#if transcriptionService.isRecording}
+    <Button variant="icon" onclick={() => transcriptionContext.toggle()}>
+      {#if ["starting", "running", "stopping"].includes(transcriptionContext.status)}
         <Mic />
       {:else}
         <MicOff />
@@ -43,13 +35,7 @@
     </Button>
   </span>
 
-  <span class="flex min-w-0 items-center justify-center px-2">
-    {#if transcriptionService.error}
-      <span class="truncate text-sm font-semibold text-(--text-error)">
-        {transcriptionService.error}
-      </span>
-    {/if}
-  </span>
+  <span class="flex min-w-0 items-center justify-center px-2"> </span>
 
   <Button variant="icon" onclick={() => overlaySessionService.stop()}>
     <X />
